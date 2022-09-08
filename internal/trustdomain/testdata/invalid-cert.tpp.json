@@ -1,0 +1,5 @@
+{
+  "instanceUrl": "https://tpp.venafi.example/vedsdk",
+  "zone": "some-zone",
+  "caBundle": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCmJldCB5b3UgdGhvdWdodCB0aGVyZSdkIGJlIHNv\nbWV0aGluZyB2YWxpZCBoZXJlIGh1aD8KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+}
