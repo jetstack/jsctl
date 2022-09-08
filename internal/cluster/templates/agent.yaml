@@ -1,0 +1,439 @@
+# This configuration has been generated in JSS UI and adapted as an agent template
+# - Gatherer for OpenShift Routes has been removed
+# - Organization name, cluster name and secret contents have been parameterized
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: jetstack-secure
+  labels:
+    name: jetstack-secure
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+  namespace: jetstack-secure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agent
+    spec:
+      serviceAccountName: agent
+      volumes:
+        - name: config
+          configMap:
+            name: agent-config
+        - name: credentials
+          secret:
+            secretName: agent-credentials
+      containers:
+        - name: agent
+          image: quay.io/jetstack/preflight:v0.1.38
+          args:
+            - "agent"
+            - "-c"
+            - "/etc/jetstack-secure/agent/config/config.yaml"
+            - "-k"
+            - "/var/run/secrets/platform.jetstack.io/credentials.json"
+            - "-p"
+            - "0h1m0s"
+          volumeMounts:
+            - name: config
+              mountPath: "/etc/jetstack-secure/agent/config"
+              readOnly: true
+            - name: credentials
+              mountPath: /var/run/secrets/platform.jetstack.io
+              readOnly: true
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 200m
+            limits:
+              memory: 1Gi
+              cpu: 1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent
+  namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jetstack-secure-agent-cert-manager-reader
+rules:
+  - apiGroups:
+      - cert-manager.io
+    resources:
+      - certificates
+      - certificaterequests
+      - issuers
+      - clusterissuers
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jetstack-secure-agent-node-reader
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jetstack-secure-agent-secret-reader
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jetstack-secure-agent-cert-manager-reader
+rules:
+  - apiGroups: ["cert-manager.io"]
+    resources:
+      - certificates
+      - certificaterequests
+      - issuers
+      - clusterissuers
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jetstack-secure-agent-googlecas-reader
+rules:
+  - apiGroups: ["cas-issuer.jetstack.io"]
+    resources:
+      - googlecasissuers
+      - googlecasclusterissuers
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jetstack-secure-agent-awspca-reader
+rules:
+  - apiGroups: ["awspca.cert-manager.io"]
+    resources:
+      - awspcaissuers
+      - awspcaclusterissuers
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jetstack-secure-agent-get-webhooks
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources:
+      - validatingwebhookconfigurations
+      - mutatingwebhookconfigurations
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jetstack-secure-agent-secret-reader
+roleRef:
+  kind: ClusterRole
+  name: jetstack-secure-agent-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jetstack-secure-agent-cert-manager-reader
+roleRef:
+  kind: ClusterRole
+  name: jetstack-secure-agent-cert-manager-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jetstack-secure-agent-googlecas-reader
+roleRef:
+  kind: ClusterRole
+  name: jetstack-secure-agent-googlecas-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jetstack-secure-agent-istio-reader
+rules:
+  - apiGroups: ["networking.istio.io"]
+    resources:
+      - virtualservices
+      - gateways
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jetstack-secure-agent-awspca-reader
+roleRef:
+  kind: ClusterRole
+  name: jetstack-secure-agent-awspca-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jetstack-secure-agent-get-webhooks
+roleRef:
+  kind: ClusterRole
+  name: jetstack-secure-agent-get-webhooks
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jetstack-secure-agent-node-reader
+roleRef:
+  kind: ClusterRole
+  name: jetstack-secure-agent-node-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jetstack-secure-agent-cluster-viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jetstack-secure-agent-istio-reader
+roleRef:
+  kind: ClusterRole
+  name: jetstack-secure-agent-istio-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: jetstack-secure
+---
+apiVersion: v1
+data:
+  config.yaml: |
+    server: "https://platform.jetstack.io"
+    organization_id: "{{ .Organization }}"
+    cluster_id: "{{ .Name }}"
+    data-gatherers:
+    # gather k8s apiserver version information
+    - kind: "k8s-discovery"
+      name: "k8s-discovery"
+    # pods data is used in the pods and application_versions packages
+    - kind: "k8s-dynamic"
+      name: "k8s/pods"
+      config:
+        resource-type:
+          resource: pods
+          version: v1
+    # gather services for pod readiness probe rules
+    - kind: "k8s-dynamic"
+      name: "k8s/services"
+      config:
+        resource-type:
+          resource: services
+          version: v1
+    # gather higher level resources to ensure data to determine ownership is present
+    - kind: "k8s-dynamic"
+      name: "k8s/deployments"
+      config:
+        resource-type:
+          version: v1
+          resource: deployments
+          group: apps
+    - kind: "k8s-dynamic"
+      name: "k8s/replicasets"
+      config:
+        resource-type:
+          version: v1
+          resource: replicasets
+          group: apps
+    - kind: "k8s-dynamic"
+      name: "k8s/statefulsets"
+      config:
+        resource-type:
+          version: v1
+          resource: statefulsets
+          group: apps
+    - kind: "k8s-dynamic"
+      name: "k8s/daemonsets"
+      config:
+        resource-type:
+          version: v1
+          resource: daemonsets
+          group: apps
+    - kind: "k8s-dynamic"
+      name: "k8s/jobs"
+      config:
+        resource-type:
+          version: v1
+          resource: jobs
+          group: batch
+    - kind: "k8s-dynamic"
+      name: "k8s/cronjobs"
+      config:
+        resource-type:
+          version: v1beta1
+          resource: cronjobs
+          group: batch
+    # gather resources for cert-manager package
+    - kind: "k8s-dynamic"
+      name: "k8s/secrets"
+      config:
+        resource-type:
+          version: v1
+          resource: secrets
+    - kind: "k8s-dynamic"
+      name: "k8s/certificates"
+      config:
+        resource-type:
+          group: cert-manager.io
+          version: v1
+          resource: certificates
+    - kind: "k8s-dynamic"
+      name: "k8s/ingresses"
+      config:
+        resource-type:
+          group: networking.k8s.io
+          version: v1
+          resource: ingresses
+    - kind: "k8s-dynamic"
+      name: "k8s/certificaterequests"
+      config:
+        resource-type:
+          group: cert-manager.io
+          version: v1
+          resource: certificaterequests
+    - kind: "k8s-dynamic"
+      name: "k8s/issuers"
+      config:
+        resource-type:
+          group: cert-manager.io
+          version: v1
+          resource: issuers
+    - kind: "k8s-dynamic"
+      name: "k8s/clusterissuers"
+      config:
+        resource-type:
+          group: cert-manager.io
+          version: v1
+          resource: clusterissuers
+    - kind: "k8s-dynamic"
+      name: "k8s/googlecasissuers"
+      config:
+        resource-type:
+          group: cas-issuer.jetstack.io
+          version: v1beta1
+          resource: googlecasissuers
+    - kind: "k8s-dynamic"
+      name: "k8s/googlecasclusterissuers"
+      config:
+        resource-type:
+          group: cas-issuer.jetstack.io
+          version: v1beta1
+          resource: googlecasclusterissuers
+    - kind: "k8s-dynamic"
+      name: "k8s/awspcaissuer"
+      config:
+        resource-type:
+          group: awspca.cert-manager.io
+          version: v1beta1
+          resource: awspcaissuers
+    - kind: "k8s-dynamic"
+      name: "k8s/awspcaclusterissuers"
+      config:
+        resource-type:
+          group: awspca.cert-manager.io
+          version: v1beta1
+          resource: awspcaclusterissuers
+    - kind: "k8s-dynamic"
+      name: "k8s/mutatingwebhookconfigurations"
+      config:
+        resource-type:
+          group: admissionregistration.k8s.io
+          version: v1
+          resource: mutatingwebhookconfigurations
+    - kind: "k8s-dynamic"
+      name: "k8s/validatingwebhookconfigurations"
+      config:
+        resource-type:
+          group: admissionregistration.k8s.io
+          version: v1
+          resource: validatingwebhookconfigurations
+    - kind: "k8s-dynamic"
+      name: "k8s/gateways"
+      config:
+        resource-type:
+          group: networking.istio.io
+          version: v1alpha3
+          resource: gateways
+    - kind: "k8s-dynamic"
+      name: "k8s/virtualservices"
+      config:
+        resource-type:
+          group: networking.istio.io
+          version: v1alpha3
+          resource: virtualservices
+kind: ConfigMap
+metadata:
+  name: agent-config
+  namespace: jetstack-secure
+---
+apiVersion: v1
+data:
+  credentials.json: {{ .CredentialsJSON }}
+kind: Secret
+metadata:
+  name: agent-credentials
+  namespace: jetstack-secure
+type: Opaque
