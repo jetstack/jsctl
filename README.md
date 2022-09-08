@@ -303,7 +303,7 @@ jsctl operator installations status --json
   To pull this module via Go you might need to set `GOPRIVATE` env var i.e `GOPRIVATE="github.com/jetstack/*" go get -u`
 - `jsctl` writes configuration (current organization) to a local file, on UNIX the path will likely be `~/.config/jsctl/config.json`
 
-## Attributions
+## Attributions
 
 When this project was made public commit history was wiped. The original
 contributors to the project were:
