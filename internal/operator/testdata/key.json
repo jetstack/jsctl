@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "test-project",
+  "private_key_id": "abcd1234efgh",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nPRIVATEKEY\n-----END PRIVATE KEY-----\n",
+  "client_email": "example@test-project.iam.gserviceaccount.com",
+  "client_id": "1234567",
+  "auth_uri": "https://accounts.google.com/o/oauth3/auth",
+  "token_uri": "https://accounts.google.com/o/oauth3/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth3/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/example%40test-project.iam.gserviceaccount.com"
+}

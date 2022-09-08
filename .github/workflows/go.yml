@@ -1,0 +1,65 @@
+name: Go
+on:
+  pull_request:
+    paths-ignore:
+    - "README.md"
+    branches:
+    - main
+  workflow_dispatch: {}
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/jetstack/*
+    steps:
+    - name: Configure js-operator repo pull access
+      # js-operator is a private repo that this tool depends on to build,
+      # the following configuration will grant this action permissions to pull
+      # that contents of that repo during a go mod download step. The key in
+      # DEPLOY_KEY_READ_ONLY_JS_OPERATOR is the private key of a deploy key on
+      # the js-operator repo granting read only access.
+      run: |
+        mkdir ~/.ssh
+        chmod 700 ~/.ssh
+
+        echo "${{ secrets.DEPLOY_KEY_READ_ONLY_JS_OPERATOR }}" | base64 -d > ~/.ssh/js_operator_id
+        chmod 600 ~/.ssh/js_operator_id
+
+        cat <<EOT >> ~/.ssh/config
+        Host js-operator.github.com
+        HostName github.com
+        IdentityFile ~/.ssh/js_operator_id
+        IdentitiesOnly yes
+        EOT
+
+        cat <<EOT >> ~/.gitconfig
+        [url "git@js-operator.github.com:jetstack/js-operator"]
+          insteadOf = https://github.com/jetstack/js-operator
+        EOT
+
+    - name: Install Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19.x
+
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download
+      run: go mod download
+
+    - name: Vet
+      run: go vet
+
+    - name: Test
+      run: go test ./...

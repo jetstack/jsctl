@@ -1,0 +1,3396 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  creationTimestamp: null
+  name: installations.operator.jetstack.io
+spec:
+  group: operator.jetstack.io
+  names:
+    kind: Installation
+    listKind: InstallationList
+    plural: installations
+    singular: installation
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Installation Ready
+      jsonPath: .status.conditions[?(@.type == "Ready")].status
+      name: Ready
+      type: string
+    - description: Timestamp Installation was created
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Installation represents an installation of cert-manager and related components.
+        type: object
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: InstallationSpec defines the desired state of Installation
+            type: object
+            required:
+            - approverPolicy
+            - certManager
+            properties:
+              approverPolicy:
+                description: ApproverPolicy contains configuration options for the Installation's approver-policy installation. This field must be set as approver-policy is a required component. https://github.com/cert-manager/approver-policy
+                type: object
+                properties:
+                  replicas:
+                    description: ReplicaCount is the number of approver-policy instances to run. Defaults to 2 instances.
+                    type: integer
+                    minimum: 1
+                  version:
+                    description: 'Version is the version of approver-policy to install https://github.com/cert-manager/approver-policy/releases Default: v0.3.0 Supported Versions: v0.3.0,v0.2.0, v0.1.0'
+                    type: string
+              certManager:
+                description: CertManager contains configuration options for the Installation's cert-manager installation This field must be set as cert-manager is a required component.
+                type: object
+                properties:
+                  controller:
+                    description: Controller wraps the configuration options for the cert-manager controller
+                    type: object
+                    properties:
+                      replicas:
+                        description: ReplicaCount is the number of controller instances to run. Only one instance at a time will be a leader. Defaults to 2.
+                        type: integer
+                        minimum: 1
+                  version:
+                    description: 'Version is the version of cert-manager release to install https://github.com/jetstack/cert-manager/releases. Default: v1.8.0 Supported Versions: v1.8.0, v1.7.1, v1.7.0, v1.6.2, v1.6.1, v1.6.0'
+                    type: string
+                  webhook:
+                    description: Webhook wraps the configuration options for the cert-manager webhook deployment
+                    type: object
+                    properties:
+                      replicas:
+                        description: ReplicaCount is the number of webhook instances to run, default 2
+                        type: integer
+                        minimum: 1
+              csiDrivers:
+                description: CSIDrivers contains configuration for the different CSI Drivers available for installation
+                type: object
+                properties:
+                  certManager:
+                    description: certManager refers to the configuration of a cert-manager.io/csi-driver as per https://github.com/cert-manager/csi-driver
+                    type: object
+                    properties:
+                      version:
+                        description: 'Version is the version of csi-driver to install https://github.com/cert-manager/csi-driver/releases Default: v0.2.0 Supported Versions: v0.2.0, v0.1.0'
+                        type: string
+                  certManagerSpiffe:
+                    description: CertManagerSpiffe refers to the configuration of cert-manager/csi-driver-spiffe that can be used to issue SPIFFE certs for workloads
+                    type: object
+                    properties:
+                      issuerRef:
+                        description: IssuerRef is a reference to the issuer that will be used to issue certs by csi-spiffe. This must correspond to an issuer configured in Installation.spec.issuers and must be either a cluster-scoped issuer or be in the same namespace as the pods that will request the certificate volumes. Defaults to a cert-manager.io ClusterIssuer named spiffe-ca.
+                        type: object
+                        required:
+                        - name
+                        properties:
+                          group:
+                            description: Group of the resource being referred to.
+                            type: string
+                          kind:
+                            description: Kind of the resource being referred to.
+                            type: string
+                          name:
+                            description: Name of the resource being referred to.
+                            type: string
+                      replicas:
+                        description: ReplicaCount is the number of approver (component responsible for verifying requests for SVID certs from the configured issuer) instances to run. Defaults to 2.
+                        type: integer
+                        minimum: 1
+                      version:
+                        description: 'Version is the version of cert-manager/csi-driver-spiffe to install https://github.com/cert-manager/csi-driver-spiffe/releases Default: v0.2.0 Supported Versions: v0.2.0,v0.1.0'
+                        type: string
+              issuers:
+                description: Issuers can be used to configure issuers that the operator will deploy. Currently only cert-manager.io Issuer and ClusterIssuer types are supported.
+                type: array
+                items:
+                  type: object
+                  required:
+                  - name
+                  properties:
+                    acme:
+                      description: ACME configures this issuer to communicate with a RFC8555 (ACME) server to obtain signed x509 certificates. https://cert-manager.io/docs/configuration/acme/
+                      type: object
+                      required:
+                      - privateKeySecretRef
+                      - server
+                      properties:
+                        disableAccountKeyGeneration:
+                          description: Enables or disables generating a new ACME account key. If true, the Issuer resource will *not* request a new account but will expect the account key to be supplied via an existing secret. If false, the cert-manager system will generate a new ACME account key for the Issuer. Defaults to false.
+                          type: boolean
+                        email:
+                          description: Email is the email address to be associated with the ACME account. This field is optional, but it is strongly recommended to be set. It will be used to contact you in case of issues with your account or certificates, including expiry notification emails. This field may be updated after the account is initially registered.
+                          type: string
+                        enableDurationFeature:
+                          description: Enables requesting a Not After date on certificates that matches the duration of the certificate. This is not supported by all ACME servers like Let's Encrypt. If set to true when the ACME server does not support it it will create an error on the Order. Defaults to false.
+                          type: boolean
+                        externalAccountBinding:
+                          description: ExternalAccountBinding is a reference to a CA external account of the ACME server. If set, upon registration cert-manager will attempt to associate the given external account credentials with the registered ACME account.
+                          type: object
+                          required:
+                          - keyID
+                          - keySecretRef
+                          properties:
+                            keyAlgorithm:
+                              description: 'Deprecated: keyAlgorithm field exists for historical compatibility reasons and should not be used. The algorithm is now hardcoded to HS256 in golang/x/crypto/acme.'
+                              type: string
+                              enum:
+                              - HS256
+                              - HS384
+                              - HS512
+                            keyID:
+                              description: keyID is the ID of the CA key that the External Account is bound to.
+                              type: string
+                            keySecretRef:
+                              description: keySecretRef is a Secret Key Selector referencing a data item in a Kubernetes Secret which holds the symmetric MAC key of the External Account Binding. The `key` is the index string that is paired with the key data in the Secret and should not be confused with the key data itself, or indeed with the External Account Binding keyID above. The secret key stored in the Secret **must** be un-padded, base64 URL encoded data.
+                              type: object
+                              required:
+                              - name
+                              properties:
+                                key:
+                                  description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                  type: string
+                                name:
+                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  type: string
+                        preferredChain:
+                          description: 'PreferredChain is the chain to use if the ACME server outputs multiple. PreferredChain is no guarantee that this one gets delivered by the ACME endpoint. For example, for Let''s Encrypt''s DST crosssign you would use: "DST Root CA X3" or "ISRG Root X1" for the newer Let''s Encrypt root CA. This value picks the first certificate bundle in the ACME alternative chains that has a certificate with this value as its issuer''s CN'
+                          type: string
+                          maxLength: 64
+                        privateKeySecretRef:
+                          description: PrivateKey is the name of a Kubernetes Secret resource that will be used to store the automatically generated ACME account private key. Optionally, a `key` may be specified to select a specific entry within the named Secret resource. If `key` is not specified, a default of `tls.key` will be used.
+                          type: object
+                          required:
+                          - name
+                          properties:
+                            key:
+                              description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                              type: string
+                            name:
+                              description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              type: string
+                        server:
+                          description: 'Server is the URL used to access the ACME server''s ''directory'' endpoint. For example, for Let''s Encrypt''s staging endpoint, you would use: "https://acme-staging-v02.api.letsencrypt.org/directory". Only ACME v2 endpoints (i.e. RFC 8555) are supported.'
+                          type: string
+                        skipTLSVerify:
+                          description: Enables or disables validation of the ACME server TLS certificate. If true, requests to the ACME server will not have their TLS certificate validated (i.e. insecure connections will be allowed). Only enable this option in development environments. The cert-manager system installed roots will be used to verify connections to the ACME server if this is false. Defaults to false.
+                          type: boolean
+                        solvers:
+                          description: 'Solvers is a list of challenge solvers that will be used to solve ACME challenges for the matching domains. Solver configurations must be provided in order to obtain certificates from an ACME server. For more information, see: https://cert-manager.io/docs/configuration/acme/'
+                          type: array
+                          items:
+                            description: An ACMEChallengeSolver describes how to solve ACME challenges for the issuer it is part of. A selector may be provided to use different solving strategies for different DNS names. Only one of HTTP01 or DNS01 must be provided.
+                            type: object
+                            properties:
+                              dns01:
+                                description: Configures cert-manager to attempt to complete authorizations by performing the DNS01 challenge flow.
+                                type: object
+                                properties:
+                                  acmeDNS:
+                                    description: Use the 'ACME DNS' (https://github.com/joohoi/acme-dns) API to manage DNS01 challenge records.
+                                    type: object
+                                    required:
+                                    - accountSecretRef
+                                    - host
+                                    properties:
+                                      accountSecretRef:
+                                        description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                      host:
+                                        type: string
+                                  akamai:
+                                    description: Use the Akamai DNS zone management API to manage DNS01 challenge records.
+                                    type: object
+                                    required:
+                                    - accessTokenSecretRef
+                                    - clientSecretSecretRef
+                                    - clientTokenSecretRef
+                                    - serviceConsumerDomain
+                                    properties:
+                                      accessTokenSecretRef:
+                                        description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                      clientSecretSecretRef:
+                                        description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                      clientTokenSecretRef:
+                                        description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                      serviceConsumerDomain:
+                                        type: string
+                                  azureDNS:
+                                    description: Use the Microsoft Azure DNS API to manage DNS01 challenge records.
+                                    type: object
+                                    required:
+                                    - resourceGroupName
+                                    - subscriptionID
+                                    properties:
+                                      clientID:
+                                        description: if both this and ClientSecret are left unset MSI will be used
+                                        type: string
+                                      clientSecretSecretRef:
+                                        description: if both this and ClientID are left unset MSI will be used
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                      environment:
+                                        description: name of the Azure environment (default AzurePublicCloud)
+                                        type: string
+                                        enum:
+                                        - AzurePublicCloud
+                                        - AzureChinaCloud
+                                        - AzureGermanCloud
+                                        - AzureUSGovernmentCloud
+                                      hostedZoneName:
+                                        description: name of the DNS zone that should be used
+                                        type: string
+                                      managedIdentity:
+                                        description: managed identity configuration, can not be used at the same time as clientID, clientSecretSecretRef or tenantID
+                                        type: object
+                                        properties:
+                                          clientID:
+                                            description: client ID of the managed identity, can not be used at the same time as resourceID
+                                            type: string
+                                          resourceID:
+                                            description: resource ID of the managed identity, can not be used at the same time as clientID
+                                            type: string
+                                      resourceGroupName:
+                                        description: resource group the DNS zone is located in
+                                        type: string
+                                      subscriptionID:
+                                        description: ID of the Azure subscription
+                                        type: string
+                                      tenantID:
+                                        description: when specifying ClientID and ClientSecret then this field is also needed
+                                        type: string
+                                  cloudDNS:
+                                    description: Use the Google Cloud DNS API to manage DNS01 challenge records.
+                                    type: object
+                                    required:
+                                    - project
+                                    properties:
+                                      hostedZoneName:
+                                        description: HostedZoneName is an optional field that tells cert-manager in which Cloud DNS zone the challenge record has to be created. If left empty cert-manager will automatically choose a zone.
+                                        type: string
+                                      project:
+                                        type: string
+                                      serviceAccountSecretRef:
+                                        description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                  cloudflare:
+                                    description: Use the Cloudflare API to manage DNS01 challenge records.
+                                    type: object
+                                    properties:
+                                      apiKeySecretRef:
+                                        description: 'API key to use to authenticate with Cloudflare. Note: using an API token to authenticate is now the recommended method as it allows greater control of permissions.'
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                      apiTokenSecretRef:
+                                        description: API token used to authenticate with Cloudflare.
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                      email:
+                                        description: Email of the account, only required when using API key based authentication.
+                                        type: string
+                                  cnameStrategy:
+                                    description: CNAMEStrategy configures how the DNS01 provider should handle CNAME records when found in DNS zones.
+                                    type: string
+                                    enum:
+                                    - None
+                                    - Follow
+                                  digitalocean:
+                                    description: Use the DigitalOcean DNS API to manage DNS01 challenge records.
+                                    type: object
+                                    required:
+                                    - tokenSecretRef
+                                    properties:
+                                      tokenSecretRef:
+                                        description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                  rfc2136:
+                                    description: Use RFC2136 ("Dynamic Updates in the Domain Name System") (https://datatracker.ietf.org/doc/rfc2136/) to manage DNS01 challenge records.
+                                    type: object
+                                    required:
+                                    - nameserver
+                                    properties:
+                                      nameserver:
+                                        description: The IP address or hostname of an authoritative DNS server supporting RFC2136 in the form host:port. If the host is an IPv6 address it must be enclosed in square brackets (e.g [2001:db8::1]) ; port is optional. This field is required.
+                                        type: string
+                                      tsigAlgorithm:
+                                        description: 'The TSIG Algorithm configured in the DNS supporting RFC2136. Used only when ``tsigSecretSecretRef`` and ``tsigKeyName`` are defined. Supported values are (case-insensitive): ``HMACMD5`` (default), ``HMACSHA1``, ``HMACSHA256`` or ``HMACSHA512``.'
+                                        type: string
+                                      tsigKeyName:
+                                        description: The TSIG Key name configured in the DNS. If ``tsigSecretSecretRef`` is defined, this field is required.
+                                        type: string
+                                      tsigSecretSecretRef:
+                                        description: The name of the secret containing the TSIG value. If ``tsigKeyName`` is defined, this field is required.
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                  route53:
+                                    description: Use the AWS Route53 API to manage DNS01 challenge records.
+                                    type: object
+                                    required:
+                                    - region
+                                    properties:
+                                      accessKeyID:
+                                        description: 'The AccessKeyID is used for authentication. If not set we fall-back to using env vars, shared credentials file or AWS Instance metadata see: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials'
+                                        type: string
+                                      hostedZoneID:
+                                        description: If set, the provider will manage only this zone in Route53 and will not do an lookup using the route53:ListHostedZonesByName api call.
+                                        type: string
+                                      region:
+                                        description: Always set the region when using AccessKeyID and SecretAccessKey
+                                        type: string
+                                      role:
+                                        description: Role is a Role ARN which the Route53 provider will assume using either the explicit credentials AccessKeyID/SecretAccessKey or the inferred credentials from environment variables, shared credentials file or AWS Instance metadata
+                                        type: string
+                                      secretAccessKeySecretRef:
+                                        description: The SecretAccessKey is used for authentication. If not set we fall-back to using env vars, shared credentials file or AWS Instance metadata https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                  webhook:
+                                    description: Configure an external webhook based DNS01 challenge solver to manage DNS01 challenge records.
+                                    type: object
+                                    required:
+                                    - groupName
+                                    - solverName
+                                    properties:
+                                      config:
+                                        description: Additional configuration that should be passed to the webhook apiserver when challenges are processed. This can contain arbitrary JSON data. Secret values should not be specified in this stanza. If secret values are needed (e.g. credentials for a DNS service), you should use a SecretKeySelector to reference a Secret resource. For details on the schema of this field, consult the webhook provider implementation's documentation.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                      groupName:
+                                        description: The API group name that should be used when POSTing ChallengePayload resources to the webhook apiserver. This should be the same as the GroupName specified in the webhook provider implementation.
+                                        type: string
+                                      solverName:
+                                        description: The name of the solver to use, as defined in the webhook provider implementation. This will typically be the name of the provider, e.g. 'cloudflare'.
+                                        type: string
+                              http01:
+                                description: Configures cert-manager to attempt to complete authorizations by performing the HTTP01 challenge flow. It is not possible to obtain certificates for wildcard domain names (e.g. `*.example.com`) using the HTTP01 challenge mechanism.
+                                type: object
+                                properties:
+                                  gatewayHTTPRoute:
+                                    description: The Gateway API is a sig-network community API that models service networking in Kubernetes (https://gateway-api.sigs.k8s.io/). The Gateway solver will create HTTPRoutes with the specified labels in the same namespace as the challenge. This solver is experimental, and fields / behaviour may change in the future.
+                                    type: object
+                                    properties:
+                                      labels:
+                                        description: The labels that cert-manager will use when creating the temporary HTTPRoute needed for solving the HTTP-01 challenge. These labels must match the label selector of at least one Gateway.
+                                        type: object
+                                        additionalProperties:
+                                          type: string
+                                      serviceType:
+                                        description: Optional service type for Kubernetes solver service. Supported values are NodePort or ClusterIP. If unset, defaults to NodePort.
+                                        type: string
+                                  ingress:
+                                    description: The ingress based HTTP01 challenge solver will solve challenges by creating or modifying Ingress resources in order to route requests for '/.well-known/acme-challenge/XYZ' to 'challenge solver' pods that are provisioned by cert-manager for each Challenge to be completed.
+                                    type: object
+                                    properties:
+                                      class:
+                                        description: The ingress class to use when creating Ingress resources to solve ACME challenges that use this challenge solver. Only one of 'class' or 'name' may be specified.
+                                        type: string
+                                      ingressTemplate:
+                                        description: Optional ingress template used to configure the ACME challenge solver ingress used for HTTP01 challenges.
+                                        type: object
+                                        properties:
+                                          metadata:
+                                            description: ObjectMeta overrides for the ingress used to solve HTTP01 challenges. Only the 'labels' and 'annotations' fields may be set. If labels or annotations overlap with in-built values, the values here will override the in-built values.
+                                            type: object
+                                            properties:
+                                              annotations:
+                                                description: Annotations that should be added to the created ACME HTTP01 solver ingress.
+                                                type: object
+                                                additionalProperties:
+                                                  type: string
+                                              labels:
+                                                description: Labels that should be added to the created ACME HTTP01 solver ingress.
+                                                type: object
+                                                additionalProperties:
+                                                  type: string
+                                      name:
+                                        description: The name of the ingress resource that should have ACME challenge solving routes inserted into it in order to solve HTTP01 challenges. This is typically used in conjunction with ingress controllers like ingress-gce, which maintains a 1:1 mapping between external IPs and ingress resources.
+                                        type: string
+                                      podTemplate:
+                                        description: Optional pod template used to configure the ACME challenge solver pods used for HTTP01 challenges.
+                                        type: object
+                                        properties:
+                                          metadata:
+                                            description: ObjectMeta overrides for the pod used to solve HTTP01 challenges. Only the 'labels' and 'annotations' fields may be set. If labels or annotations overlap with in-built values, the values here will override the in-built values.
+                                            type: object
+                                            properties:
+                                              annotations:
+                                                description: Annotations that should be added to the create ACME HTTP01 solver pods.
+                                                type: object
+                                                additionalProperties:
+                                                  type: string
+                                              labels:
+                                                description: Labels that should be added to the created ACME HTTP01 solver pods.
+                                                type: object
+                                                additionalProperties:
+                                                  type: string
+                                          spec:
+                                            description: PodSpec defines overrides for the HTTP01 challenge solver pod. Only the 'priorityClassName', 'nodeSelector', 'affinity', 'serviceAccountName' and 'tolerations' fields are supported currently. All other fields will be ignored.
+                                            type: object
+                                            properties:
+                                              affinity:
+                                                description: If specified, the pod's scheduling constraints
+                                                type: object
+                                                properties:
+                                                  nodeAffinity:
+                                                    description: Describes node affinity scheduling rules for the pod.
+                                                    type: object
+                                                    properties:
+                                                      preferredDuringSchedulingIgnoredDuringExecution:
+                                                        description: The scheduler will prefer to schedule pods to nodes that satisfy the affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, requiredDuringScheduling affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding "weight" to the sum if the node matches the corresponding matchExpressions; the node(s) with the highest sum are the most preferred.
+                                                        type: array
+                                                        items:
+                                                          description: An empty preferred scheduling term matches all objects with implicit weight 0 (i.e. it's a no-op). A null preferred scheduling term matches no objects (i.e. is also a no-op).
+                                                          type: object
+                                                          required:
+                                                          - preference
+                                                          - weight
+                                                          properties:
+                                                            preference:
+                                                              description: A node selector term, associated with the corresponding weight.
+                                                              type: object
+                                                              properties:
+                                                                matchExpressions:
+                                                                  description: A list of node selector requirements by node's labels.
+                                                                  type: array
+                                                                  items:
+                                                                    description: A node selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                    type: object
+                                                                    required:
+                                                                    - key
+                                                                    - operator
+                                                                    properties:
+                                                                      key:
+                                                                        description: The label key that the selector applies to.
+                                                                        type: string
+                                                                      operator:
+                                                                        description: Represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+                                                                        type: string
+                                                                      values:
+                                                                        description: An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+                                                                        type: array
+                                                                        items:
+                                                                          type: string
+                                                                matchFields:
+                                                                  description: A list of node selector requirements by node's fields.
+                                                                  type: array
+                                                                  items:
+                                                                    description: A node selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                    type: object
+                                                                    required:
+                                                                    - key
+                                                                    - operator
+                                                                    properties:
+                                                                      key:
+                                                                        description: The label key that the selector applies to.
+                                                                        type: string
+                                                                      operator:
+                                                                        description: Represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+                                                                        type: string
+                                                                      values:
+                                                                        description: An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+                                                                        type: array
+                                                                        items:
+                                                                          type: string
+                                                            weight:
+                                                              description: Weight associated with matching the corresponding nodeSelectorTerm, in the range 1-100.
+                                                              type: integer
+                                                              format: int32
+                                                      requiredDuringSchedulingIgnoredDuringExecution:
+                                                        description: If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to an update), the system may or may not try to eventually evict the pod from its node.
+                                                        type: object
+                                                        required:
+                                                        - nodeSelectorTerms
+                                                        properties:
+                                                          nodeSelectorTerms:
+                                                            description: Required. A list of node selector terms. The terms are ORed.
+                                                            type: array
+                                                            items:
+                                                              description: A null or empty node selector term matches no objects. The requirements of them are ANDed. The TopologySelectorTerm type implements a subset of the NodeSelectorTerm.
+                                                              type: object
+                                                              properties:
+                                                                matchExpressions:
+                                                                  description: A list of node selector requirements by node's labels.
+                                                                  type: array
+                                                                  items:
+                                                                    description: A node selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                    type: object
+                                                                    required:
+                                                                    - key
+                                                                    - operator
+                                                                    properties:
+                                                                      key:
+                                                                        description: The label key that the selector applies to.
+                                                                        type: string
+                                                                      operator:
+                                                                        description: Represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+                                                                        type: string
+                                                                      values:
+                                                                        description: An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+                                                                        type: array
+                                                                        items:
+                                                                          type: string
+                                                                matchFields:
+                                                                  description: A list of node selector requirements by node's fields.
+                                                                  type: array
+                                                                  items:
+                                                                    description: A node selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                    type: object
+                                                                    required:
+                                                                    - key
+                                                                    - operator
+                                                                    properties:
+                                                                      key:
+                                                                        description: The label key that the selector applies to.
+                                                                        type: string
+                                                                      operator:
+                                                                        description: Represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+                                                                        type: string
+                                                                      values:
+                                                                        description: An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+                                                                        type: array
+                                                                        items:
+                                                                          type: string
+                                                  podAffinity:
+                                                    description: Describes pod affinity scheduling rules (e.g. co-locate this pod in the same node, zone, etc. as some other pod(s)).
+                                                    type: object
+                                                    properties:
+                                                      preferredDuringSchedulingIgnoredDuringExecution:
+                                                        description: The scheduler will prefer to schedule pods to nodes that satisfy the affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, requiredDuringScheduling affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding "weight" to the sum if the node has pods which matches the corresponding podAffinityTerm; the node(s) with the highest sum are the most preferred.
+                                                        type: array
+                                                        items:
+                                                          description: The weights of all of the matched WeightedPodAffinityTerm fields are added per-node to find the most preferred node(s)
+                                                          type: object
+                                                          required:
+                                                          - podAffinityTerm
+                                                          - weight
+                                                          properties:
+                                                            podAffinityTerm:
+                                                              description: Required. A pod affinity term, associated with the corresponding weight.
+                                                              type: object
+                                                              required:
+                                                              - topologyKey
+                                                              properties:
+                                                                labelSelector:
+                                                                  description: A label query over a set of resources, in this case pods.
+                                                                  type: object
+                                                                  properties:
+                                                                    matchExpressions:
+                                                                      description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                                                      type: array
+                                                                      items:
+                                                                        description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                        type: object
+                                                                        required:
+                                                                        - key
+                                                                        - operator
+                                                                        properties:
+                                                                          key:
+                                                                            description: key is the label key that the selector applies to.
+                                                                            type: string
+                                                                          operator:
+                                                                            description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                                            type: string
+                                                                          values:
+                                                                            description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                                                            type: array
+                                                                            items:
+                                                                              type: string
+                                                                    matchLabels:
+                                                                      description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                                                      type: object
+                                                                      additionalProperties:
+                                                                        type: string
+                                                                namespaceSelector:
+                                                                  description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces. This field is beta-level and is only honored when PodAffinityNamespaceSelector feature is enabled.
+                                                                  type: object
+                                                                  properties:
+                                                                    matchExpressions:
+                                                                      description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                                                      type: array
+                                                                      items:
+                                                                        description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                        type: object
+                                                                        required:
+                                                                        - key
+                                                                        - operator
+                                                                        properties:
+                                                                          key:
+                                                                            description: key is the label key that the selector applies to.
+                                                                            type: string
+                                                                          operator:
+                                                                            description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                                            type: string
+                                                                          values:
+                                                                            description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                                                            type: array
+                                                                            items:
+                                                                              type: string
+                                                                    matchLabels:
+                                                                      description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                                                      type: object
+                                                                      additionalProperties:
+                                                                        type: string
+                                                                namespaces:
+                                                                  description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace"
+                                                                  type: array
+                                                                  items:
+                                                                    type: string
+                                                                topologyKey:
+                                                                  description: This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching the labelSelector in the specified namespaces, where co-located is defined as running on a node whose value of the label with key topologyKey matches that of any node on which any of the selected pods is running. Empty topologyKey is not allowed.
+                                                                  type: string
+                                                            weight:
+                                                              description: weight associated with matching the corresponding podAffinityTerm, in the range 1-100.
+                                                              type: integer
+                                                              format: int32
+                                                      requiredDuringSchedulingIgnoredDuringExecution:
+                                                        description: If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a pod label update), the system may or may not try to eventually evict the pod from its node. When there are multiple elements, the lists of nodes corresponding to each podAffinityTerm are intersected, i.e. all terms must be satisfied.
+                                                        type: array
+                                                        items:
+                                                          description: Defines a set of pods (namely those matching the labelSelector relative to the given namespace(s)) that this pod should be co-located (affinity) or not co-located (anti-affinity) with, where co-located is defined as running on a node whose value of the label with key <topologyKey> matches that of any node on which a pod of the set of pods is running
+                                                          type: object
+                                                          required:
+                                                          - topologyKey
+                                                          properties:
+                                                            labelSelector:
+                                                              description: A label query over a set of resources, in this case pods.
+                                                              type: object
+                                                              properties:
+                                                                matchExpressions:
+                                                                  description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                                                  type: array
+                                                                  items:
+                                                                    description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                    type: object
+                                                                    required:
+                                                                    - key
+                                                                    - operator
+                                                                    properties:
+                                                                      key:
+                                                                        description: key is the label key that the selector applies to.
+                                                                        type: string
+                                                                      operator:
+                                                                        description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                                        type: string
+                                                                      values:
+                                                                        description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                                                        type: array
+                                                                        items:
+                                                                          type: string
+                                                                matchLabels:
+                                                                  description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                                                  type: object
+                                                                  additionalProperties:
+                                                                    type: string
+                                                            namespaceSelector:
+                                                              description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces. This field is beta-level and is only honored when PodAffinityNamespaceSelector feature is enabled.
+                                                              type: object
+                                                              properties:
+                                                                matchExpressions:
+                                                                  description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                                                  type: array
+                                                                  items:
+                                                                    description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                    type: object
+                                                                    required:
+                                                                    - key
+                                                                    - operator
+                                                                    properties:
+                                                                      key:
+                                                                        description: key is the label key that the selector applies to.
+                                                                        type: string
+                                                                      operator:
+                                                                        description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                                        type: string
+                                                                      values:
+                                                                        description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                                                        type: array
+                                                                        items:
+                                                                          type: string
+                                                                matchLabels:
+                                                                  description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                                                  type: object
+                                                                  additionalProperties:
+                                                                    type: string
+                                                            namespaces:
+                                                              description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace"
+                                                              type: array
+                                                              items:
+                                                                type: string
+                                                            topologyKey:
+                                                              description: This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching the labelSelector in the specified namespaces, where co-located is defined as running on a node whose value of the label with key topologyKey matches that of any node on which any of the selected pods is running. Empty topologyKey is not allowed.
+                                                              type: string
+                                                  podAntiAffinity:
+                                                    description: Describes pod anti-affinity scheduling rules (e.g. avoid putting this pod in the same node, zone, etc. as some other pod(s)).
+                                                    type: object
+                                                    properties:
+                                                      preferredDuringSchedulingIgnoredDuringExecution:
+                                                        description: The scheduler will prefer to schedule pods to nodes that satisfy the anti-affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, requiredDuringScheduling anti-affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding "weight" to the sum if the node has pods which matches the corresponding podAffinityTerm; the node(s) with the highest sum are the most preferred.
+                                                        type: array
+                                                        items:
+                                                          description: The weights of all of the matched WeightedPodAffinityTerm fields are added per-node to find the most preferred node(s)
+                                                          type: object
+                                                          required:
+                                                          - podAffinityTerm
+                                                          - weight
+                                                          properties:
+                                                            podAffinityTerm:
+                                                              description: Required. A pod affinity term, associated with the corresponding weight.
+                                                              type: object
+                                                              required:
+                                                              - topologyKey
+                                                              properties:
+                                                                labelSelector:
+                                                                  description: A label query over a set of resources, in this case pods.
+                                                                  type: object
+                                                                  properties:
+                                                                    matchExpressions:
+                                                                      description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                                                      type: array
+                                                                      items:
+                                                                        description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                        type: object
+                                                                        required:
+                                                                        - key
+                                                                        - operator
+                                                                        properties:
+                                                                          key:
+                                                                            description: key is the label key that the selector applies to.
+                                                                            type: string
+                                                                          operator:
+                                                                            description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                                            type: string
+                                                                          values:
+                                                                            description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                                                            type: array
+                                                                            items:
+                                                                              type: string
+                                                                    matchLabels:
+                                                                      description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                                                      type: object
+                                                                      additionalProperties:
+                                                                        type: string
+                                                                namespaceSelector:
+                                                                  description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces. This field is beta-level and is only honored when PodAffinityNamespaceSelector feature is enabled.
+                                                                  type: object
+                                                                  properties:
+                                                                    matchExpressions:
+                                                                      description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                                                      type: array
+                                                                      items:
+                                                                        description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                        type: object
+                                                                        required:
+                                                                        - key
+                                                                        - operator
+                                                                        properties:
+                                                                          key:
+                                                                            description: key is the label key that the selector applies to.
+                                                                            type: string
+                                                                          operator:
+                                                                            description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                                            type: string
+                                                                          values:
+                                                                            description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                                                            type: array
+                                                                            items:
+                                                                              type: string
+                                                                    matchLabels:
+                                                                      description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                                                      type: object
+                                                                      additionalProperties:
+                                                                        type: string
+                                                                namespaces:
+                                                                  description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace"
+                                                                  type: array
+                                                                  items:
+                                                                    type: string
+                                                                topologyKey:
+                                                                  description: This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching the labelSelector in the specified namespaces, where co-located is defined as running on a node whose value of the label with key topologyKey matches that of any node on which any of the selected pods is running. Empty topologyKey is not allowed.
+                                                                  type: string
+                                                            weight:
+                                                              description: weight associated with matching the corresponding podAffinityTerm, in the range 1-100.
+                                                              type: integer
+                                                              format: int32
+                                                      requiredDuringSchedulingIgnoredDuringExecution:
+                                                        description: If the anti-affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the anti-affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a pod label update), the system may or may not try to eventually evict the pod from its node. When there are multiple elements, the lists of nodes corresponding to each podAffinityTerm are intersected, i.e. all terms must be satisfied.
+                                                        type: array
+                                                        items:
+                                                          description: Defines a set of pods (namely those matching the labelSelector relative to the given namespace(s)) that this pod should be co-located (affinity) or not co-located (anti-affinity) with, where co-located is defined as running on a node whose value of the label with key <topologyKey> matches that of any node on which a pod of the set of pods is running
+                                                          type: object
+                                                          required:
+                                                          - topologyKey
+                                                          properties:
+                                                            labelSelector:
+                                                              description: A label query over a set of resources, in this case pods.
+                                                              type: object
+                                                              properties:
+                                                                matchExpressions:
+                                                                  description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                                                  type: array
+                                                                  items:
+                                                                    description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                    type: object
+                                                                    required:
+                                                                    - key
+                                                                    - operator
+                                                                    properties:
+                                                                      key:
+                                                                        description: key is the label key that the selector applies to.
+                                                                        type: string
+                                                                      operator:
+                                                                        description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                                        type: string
+                                                                      values:
+                                                                        description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                                                        type: array
+                                                                        items:
+                                                                          type: string
+                                                                matchLabels:
+                                                                  description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                                                  type: object
+                                                                  additionalProperties:
+                                                                    type: string
+                                                            namespaceSelector:
+                                                              description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces. This field is beta-level and is only honored when PodAffinityNamespaceSelector feature is enabled.
+                                                              type: object
+                                                              properties:
+                                                                matchExpressions:
+                                                                  description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                                                  type: array
+                                                                  items:
+                                                                    description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                                                    type: object
+                                                                    required:
+                                                                    - key
+                                                                    - operator
+                                                                    properties:
+                                                                      key:
+                                                                        description: key is the label key that the selector applies to.
+                                                                        type: string
+                                                                      operator:
+                                                                        description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                                        type: string
+                                                                      values:
+                                                                        description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                                                        type: array
+                                                                        items:
+                                                                          type: string
+                                                                matchLabels:
+                                                                  description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                                                  type: object
+                                                                  additionalProperties:
+                                                                    type: string
+                                                            namespaces:
+                                                              description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace"
+                                                              type: array
+                                                              items:
+                                                                type: string
+                                                            topologyKey:
+                                                              description: This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching the labelSelector in the specified namespaces, where co-located is defined as running on a node whose value of the label with key topologyKey matches that of any node on which any of the selected pods is running. Empty topologyKey is not allowed.
+                                                              type: string
+                                              nodeSelector:
+                                                description: 'NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node''s labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+                                                type: object
+                                                additionalProperties:
+                                                  type: string
+                                              priorityClassName:
+                                                description: If specified, the pod's priorityClassName.
+                                                type: string
+                                              serviceAccountName:
+                                                description: If specified, the pod's service account
+                                                type: string
+                                              tolerations:
+                                                description: If specified, the pod's tolerations.
+                                                type: array
+                                                items:
+                                                  description: The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
+                                                  type: object
+                                                  properties:
+                                                    effect:
+                                                      description: Effect indicates the taint effect to match. Empty means match all taint effects. When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                                                      type: string
+                                                    key:
+                                                      description: Key is the taint key that the toleration applies to. Empty means match all taint keys. If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                                                      type: string
+                                                    operator:
+                                                      description: Operator represents a key's relationship to the value. Valid operators are Exists and Equal. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.
+                                                      type: string
+                                                    tolerationSeconds:
+                                                      description: TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.
+                                                      type: integer
+                                                      format: int64
+                                                    value:
+                                                      description: Value is the taint value the toleration matches to. If the operator is Exists, the value should be empty, otherwise just a regular string.
+                                                      type: string
+                                      serviceType:
+                                        description: Optional service type for Kubernetes solver service. Supported values are NodePort or ClusterIP. If unset, defaults to NodePort.
+                                        type: string
+                              selector:
+                                description: Selector selects a set of DNSNames on the Certificate resource that should be solved using this challenge solver. If not specified, the solver will be treated as the 'default' solver with the lowest priority, i.e. if any other solver has a more specific match, it will be used instead.
+                                type: object
+                                properties:
+                                  dnsNames:
+                                    description: List of DNSNames that this solver will be used to solve. If specified and a match is found, a dnsNames selector will take precedence over a dnsZones selector. If multiple solvers match with the same dnsNames value, the solver with the most matching labels in matchLabels will be selected. If neither has more matches, the solver defined earlier in the list will be selected.
+                                    type: array
+                                    items:
+                                      type: string
+                                  dnsZones:
+                                    description: List of DNSZones that this solver will be used to solve. The most specific DNS zone match specified here will take precedence over other DNS zone matches, so a solver specifying sys.example.com will be selected over one specifying example.com for the domain www.sys.example.com. If multiple solvers match with the same dnsZones value, the solver with the most matching labels in matchLabels will be selected. If neither has more matches, the solver defined earlier in the list will be selected.
+                                    type: array
+                                    items:
+                                      type: string
+                                  matchLabels:
+                                    description: A label selector that is used to refine the set of certificate's that this challenge solver will apply to.
+                                    type: object
+                                    additionalProperties:
+                                      type: string
+                    annotations:
+                      description: 'Annotations to set on the created issuer. More info: http://kubernetes.io/docs/user-guide/annotations'
+                      type: object
+                      additionalProperties:
+                        type: string
+                    ca:
+                      description: CA configures this issuer to sign certificates using a signing CA keypair stored in a Secret resource. This is used to build internal PKIs that are managed by cert-manager. https://cert-manager.io/docs/configuration/ca/
+                      type: object
+                      required:
+                      - secretName
+                      properties:
+                        crlDistributionPoints:
+                          description: The CRL distribution points is an X.509 v3 certificate extension which identifies the location of the CRL from which the revocation of this certificate can be checked. If not set, certificates will be issued without distribution points set.
+                          type: array
+                          items:
+                            type: string
+                        ocspServers:
+                          description: The OCSP server list is an X.509 v3 extension that defines a list of URLs of OCSP responders. The OCSP responders can be queried for the revocation status of an issued certificate. If not set, the certificate will be issued with no OCSP servers set. For example, an OCSP server URL could be "http://ocsp.int-x3.letsencrypt.org".
+                          type: array
+                          items:
+                            type: string
+                        secretName:
+                          description: SecretName is the name of the secret used to sign Certificates issued by this Issuer.
+                          type: string
+                        selfSignedCA:
+                          description: SelfSignedCA can be used to bootstrap the CA issuer with a CA cert issued by self-signed issuer. If this field is set, the operator will create a self-signed issuer and use that to issue a self-signed CA cert which will be stored in SecretName secret.
+                          type: object
+                          properties:
+                            commonName:
+                              description: CommonName is a common name to be used on the Certificate. The CommonName should have a length of 64 characters or fewer to avoid generating invalid CSRs.
+                              type: string
+                            subject:
+                              description: Full X509 name specification (https://golang.org/pkg/crypto/x509/pkix/#Name).
+                              type: object
+                              properties:
+                                countries:
+                                  description: Countries to be used on the Certificate.
+                                  type: array
+                                  items:
+                                    type: string
+                                localities:
+                                  description: Cities to be used on the Certificate.
+                                  type: array
+                                  items:
+                                    type: string
+                                organizationalUnits:
+                                  description: Organizational Units to be used on the Certificate.
+                                  type: array
+                                  items:
+                                    type: string
+                                organizations:
+                                  description: Organizations to be used on the Certificate.
+                                  type: array
+                                  items:
+                                    type: string
+                                postalCodes:
+                                  description: Postal codes to be used on the Certificate.
+                                  type: array
+                                  items:
+                                    type: string
+                                provinces:
+                                  description: State/Provinces to be used on the Certificate.
+                                  type: array
+                                  items:
+                                    type: string
+                                serialNumber:
+                                  description: Serial number to be used on the Certificate.
+                                  type: string
+                                streetAddresses:
+                                  description: Street addresses to be used on the Certificate.
+                                  type: array
+                                  items:
+                                    type: string
+                    clusterScope:
+                      description: Whether a cluster-scoped resource should be created. In case of core cert-manager.io issuers setting this to true will result to a ClusterIssuer being created, setting this to false will result in an Issuer being created. (Default value is false).
+                      type: boolean
+                    labels:
+                      description: 'Labels to set on the created issuer. More info: http://kubernetes.io/docs/user-guide/labels'
+                      type: object
+                      additionalProperties:
+                        type: string
+                    name:
+                      description: Name is the name of the Issuer.
+                      type: string
+                    namespace:
+                      description: Namespace for an Issuer. Cannot be set if ClusterScope is set to true. Namespace needs to already exist. Defaults to default namespace.
+                      type: string
+                    policy:
+                      description: Policy is the configuration of the for this CertificateRequestPolicy for issuer. Currently a default 'allow-all' policy will be configured for each issuer that does not have a custom policy configured. https://github.com/cert-manager/approver-policy/tree/main
+                      type: object
+                      properties:
+                        allowAll:
+                          description: AllowAll configures whether an allow-all policy should be created for an issuer.
+                          type: boolean
+                        allowed:
+                          description: Allowed is the set of attributes that are "allowed" by this policy. A CertificateRequest will only be considered permissible for this policy if the CertificateRequest has the same or less as what is allowed.  Empty or `nil` allowed fields mean CertificateRequests are not allowed to have that field present to be permissible. This field corresponds to the Allowed block in CertificateRequestPolicy API https://github.com/cert-manager/approver-policy#allowed Only one of Allowed, AllowAll can be set.
+                          type: object
+                          properties:
+                            commonName:
+                              description: CommonName defines the X.509 Common Name that is permissible.
+                              type: object
+                              properties:
+                                required:
+                                  description: Required marks this field as being a required value on the request. May only be set to true if Value is also defined.
+                                  type: boolean
+                                value:
+                                  description: Value defines the value that is permissible to be present on the request. Accepts wildcards "*". An omitted field or value of `nil` forbids the value from being requested. An empty string is equivalent to `nil`, however an empty string pared with Required as `true` is an impossible condition that always denies. Value may not be `nil` if Required is `true`.
+                                  type: string
+                            dnsNames:
+                              description: DNSNames defines the X.509 DNS SANs that may be requested for. Accepts wildcards "*".
+                              type: object
+                              properties:
+                                required:
+                                  description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                  type: boolean
+                                values:
+                                  description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                  type: array
+                                  items:
+                                    type: string
+                            emailAddresses:
+                              description: EmailAddresses defines the X.509 Email SANs that may be requested for.
+                              type: object
+                              properties:
+                                required:
+                                  description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                  type: boolean
+                                values:
+                                  description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                  type: array
+                                  items:
+                                    type: string
+                            ipAddresses:
+                              description: IPAddresses defines the X.509 IP SANs that may be requested for.
+                              type: object
+                              properties:
+                                required:
+                                  description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                  type: boolean
+                                values:
+                                  description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                  type: array
+                                  items:
+                                    type: string
+                            isCA:
+                              description: IsCA defines whether it is permissible for a CertificateRequest to have the `spec.IsCA` field set to `true`. An omitted field, value of `nil` or `false`, forbids the `spec.IsCA` field from bring `true`. A value of `true` permits CertificateRequests setting the `spec.IsCA` field to `true`.
+                              type: boolean
+                            subject:
+                              description: Subject defines the X.509 subject that is permissible. An omitted field or value of `nil` forbids any Subject being requested.
+                              type: object
+                              properties:
+                                countries:
+                                  description: Countries define the X.509 Subject Countries that may be requested for.
+                                  type: object
+                                  properties:
+                                    required:
+                                      description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                      type: boolean
+                                    values:
+                                      description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                      type: array
+                                      items:
+                                        type: string
+                                localities:
+                                  description: Localities defines the X.509 Subject Localities that may be requested for.
+                                  type: object
+                                  properties:
+                                    required:
+                                      description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                      type: boolean
+                                    values:
+                                      description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                      type: array
+                                      items:
+                                        type: string
+                                organizationalUnits:
+                                  description: OrganizationalUnits defines the X.509 Subject Organizational Units that may be requested for.
+                                  type: object
+                                  properties:
+                                    required:
+                                      description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                      type: boolean
+                                    values:
+                                      description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                      type: array
+                                      items:
+                                        type: string
+                                organizations:
+                                  description: Organizations define the X.509 Subject Organizations that may be requested for.
+                                  type: object
+                                  properties:
+                                    required:
+                                      description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                      type: boolean
+                                    values:
+                                      description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                      type: array
+                                      items:
+                                        type: string
+                                postalCodes:
+                                  description: PostalCodes defines the X.509 Subject Postal Codes that may be requested for.
+                                  type: object
+                                  properties:
+                                    required:
+                                      description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                      type: boolean
+                                    values:
+                                      description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                      type: array
+                                      items:
+                                        type: string
+                                provinces:
+                                  description: Provinces defines the X.509 Subject Provinces that may be requested for.
+                                  type: object
+                                  properties:
+                                    required:
+                                      description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                      type: boolean
+                                    values:
+                                      description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                      type: array
+                                      items:
+                                        type: string
+                                serialNumber:
+                                  description: SerialNumber defines the X.509 Subject Serial Number that may be requested for.
+                                  type: object
+                                  properties:
+                                    required:
+                                      description: Required marks this field as being a required value on the request. May only be set to true if Value is also defined.
+                                      type: boolean
+                                    value:
+                                      description: Value defines the value that is permissible to be present on the request. Accepts wildcards "*". An omitted field or value of `nil` forbids the value from being requested. An empty string is equivalent to `nil`, however an empty string pared with Required as `true` is an impossible condition that always denies. Value may not be `nil` if Required is `true`.
+                                      type: string
+                                streetAddresses:
+                                  description: StreetAddresses defines the X.509 Subject Street Addresses that may be requested for.
+                                  type: object
+                                  properties:
+                                    required:
+                                      description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                      type: boolean
+                                    values:
+                                      description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                      type: array
+                                      items:
+                                        type: string
+                            uris:
+                              description: URIs defines the X.509 URI SANs that may be requested for.
+                              type: object
+                              properties:
+                                required:
+                                  description: Required marks this field as being a required value on the request. May only be set to true if Values is also defined. Default is nil which marks the field as not required.
+                                  type: boolean
+                                values:
+                                  description: Defines the values that are permissible to be present on request. Accepts wildcards "*". An omitted field or value of `nil` forbids any value on the related field in the request from being requested. An empty slice `[]` is equivalent to `nil`, however an empty slice pared with Required `true` is an impossible condition that always denies. Values may not be `nil` if Required is `true`.
+                                  type: array
+                                  items:
+                                    type: string
+                            usages:
+                              description: Usages defines the list of permissible key usages that may appear on the CertificateRequest `spec.keyUsages` field. An omitted field or value of `nil` forbids any Usages being requested. An empty slice `[]` is equivalent to `nil`.
+                              type: array
+                              items:
+                                description: 'KeyUsage specifies valid usage contexts for keys. See: https://tools.ietf.org/html/rfc5280#section-4.2.1.3      https://tools.ietf.org/html/rfc5280#section-4.2.1.12 Valid KeyUsage values are as follows: "signing", "digital signature", "content commitment", "key encipherment", "key agreement", "data encipherment", "cert sign", "crl sign", "encipher only", "decipher only", "any", "server auth", "client auth", "code signing", "email protection", "s/mime", "ipsec end system", "ipsec tunnel", "ipsec user", "timestamping", "ocsp signing", "microsoft sgc", "netscape sgc"'
+                                type: string
+                                enum:
+                                - signing
+                                - digital signature
+                                - content commitment
+                                - key encipherment
+                                - key agreement
+                                - data encipherment
+                                - cert sign
+                                - crl sign
+                                - encipher only
+                                - decipher only
+                                - any
+                                - server auth
+                                - client auth
+                                - code signing
+                                - email protection
+                                - s/mime
+                                - ipsec end system
+                                - ipsec tunnel
+                                - ipsec user
+                                - timestamping
+                                - ocsp signing
+                                - microsoft sgc
+                                - netscape sgc
+                        constraints:
+                          description: Constraints is the set of attributes that _must_ be satisfied by the CertificateRequest for the request to be permissible by the policy. Empty or `nil` constraint fields mean CertificateRequests satisfy that field with any value of their corresponding attribute. This field corresponds to the Constraints block in CertificateRequestPolicyAPI https://github.com/cert-manager/approver-policy#constraints Only one of Constraints, AllowAll can be set.
+                          type: object
+                          properties:
+                            maxDuration:
+                              description: MaxDuration defines the maximum duration a certificate may be requested for. Values are inclusive (i.e. a max value of `1h` will accept a duration of `1h`). MaxDuration and MinDuration may be the same value. An omitted field or value of `nil` permits any maximum duration. If MaxDuration is defined, a duration _must_ be requested on the CertificateRequest.
+                              type: string
+                            minDuration:
+                              description: MinDuration defines the minimum duration a certificate may be requested for. Values are inclusive (i.e. a min value of `1h` will accept a duration of `1h`). MinDuration and MaxDuration may be the same value. An omitted field or value of `nil` permits any minimum duration. If MinDuration is defined, a duration _must_ be requested on the CertificateRequest.
+                              type: string
+                            privateKey:
+                              description: PrivateKey defines the shape of permissible private keys that may be used for the request with this policy. An omitted field or value of `nil` permits the use of any private key by the requestor.
+                              type: object
+                              properties:
+                                algorithm:
+                                  description: Algorithm defines the allowed crypto algorithm that is used by the requestor for their private key in their request. An omitted field or value of `nil` permits any Algorithm.
+                                  type: string
+                                  enum:
+                                  - RSA
+                                  - ECDSA
+                                  - Ed25519
+                                maxSize:
+                                  description: MaxSize defines the maximum key size a requestor may use for their private key. Values are inclusive (i.e. a min value of `2048` will accept a size of `2048`). MaxSize and MinSize may be the same value. An omitted field or value of `nil` permits any maximum size.
+                                  type: integer
+                                minSize:
+                                  description: MinSize defines the minimum key size a requestor may use for their private key. Values are inclusive (i.e. a min value of `2048` will accept a size of `2048`). MinSize and MaxSize may be the same value. An omitted field or value of `nil` permits any minimum size.
+                                  type: integer
+                        subjects:
+                          description: Subjects is the configuration of which entities are allowed to use the CertificateRequestPolicy. At least one subject must be set if a policy is configured. AllowAll cannot be set at the same time as Allowed and Constraints.
+                          type: object
+                          properties:
+                            certManager:
+                              description: CertManager allows to configure whether the service account of cert-manager's controller is allowed to use this CertificateRequestPolicy. Must be true for any issuer that will be referenced in Certificate resources as the entity creating CertificateRequests for Certificates is always cert-manager's controller. Setting this field to true will result in a ClusterRole and ClusterRoleBinding being created that will bind CertificateRequestPolicy to the cert-manager controller's service account.
+                              type: boolean
+                            certManagerCSI:
+                              description: CertManagerCSI allows to configure whether the service account of cert-manager/csi-driver's(configured via Installation.spec.csiDrivers.certManager) Daemonset is allowed to use this CertificateRequestPolicy. Must be true if this issuer is going to be used to request certificates from cert-manager/csi-driver. Setting this field to true will result in a ClusterRole and ClusterRoleBinding being created that will bind CertificateRequestPolicy to the cert-manager csi-driver's service account.
+                              type: boolean
+                            istioCSR:
+                              description: IstioCSR allows to configure whether the service account of istio-csr is allowed to use this CertificateRequestPolicy. Must be true if this issuer is going to be used with istio-csr. Setting this field to true will result in a ClusterRole and ClusterRoleBinding being created that will bind CertificateRequestPolicy to the istio-csr's service account.
+                              type: boolean
+                    selfSigned:
+                      description: SelfSigned configures this issuer to 'self sign' certificates using the private key used to create the CertificateRequest object. https://cert-manager.io/docs/configuration/selfsigned/
+                      type: object
+                      properties:
+                        crlDistributionPoints:
+                          description: The CRL distribution points is an X.509 v3 certificate extension which identifies the location of the CRL from which the revocation of this certificate can be checked. If not set certificate will be issued without CDP. Values are strings.
+                          type: array
+                          items:
+                            type: string
+                    vault:
+                      description: Vault configures this issuer to sign certificates using a HashiCorp Vault PKI backend. https://cert-manager.io/docs/configuration/vault/
+                      type: object
+                      required:
+                      - auth
+                      - path
+                      - server
+                      properties:
+                        auth:
+                          description: Auth configures how cert-manager authenticates with the Vault server.
+                          type: object
+                          properties:
+                            appRole:
+                              description: AppRole authenticates with Vault using the App Role auth mechanism, with the role and secret stored in a Kubernetes Secret resource.
+                              type: object
+                              required:
+                              - path
+                              - roleId
+                              - secretRef
+                              properties:
+                                path:
+                                  description: 'Path where the App Role authentication backend is mounted in Vault, e.g: "approle"'
+                                  type: string
+                                roleId:
+                                  description: RoleID configured in the App Role authentication backend when setting up the authentication backend in Vault.
+                                  type: string
+                                secretRef:
+                                  description: Reference to a key in a Secret that contains the App Role secret used to authenticate with Vault. The `key` field must be specified and denotes which entry within the Secret resource is used as the app role secret.
+                                  type: object
+                                  required:
+                                  - name
+                                  properties:
+                                    key:
+                                      description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                      type: string
+                                    name:
+                                      description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                      type: string
+                            kubernetes:
+                              description: Kubernetes authenticates with Vault by passing the ServiceAccount token stored in the named Secret resource to the Vault server.
+                              type: object
+                              required:
+                              - role
+                              - secretRef
+                              properties:
+                                mountPath:
+                                  description: The Vault mountPath here is the mount path to use when authenticating with Vault. For example, setting a value to `/v1/auth/foo`, will use the path `/v1/auth/foo/login` to authenticate with Vault. If unspecified, the default value "/v1/auth/kubernetes" will be used.
+                                  type: string
+                                role:
+                                  description: A required field containing the Vault Role to assume. A Role binds a Kubernetes ServiceAccount with a set of Vault policies.
+                                  type: string
+                                secretRef:
+                                  description: The required Secret field containing a Kubernetes ServiceAccount JWT used for authenticating with Vault. Use of 'ambient credentials' is not supported.
+                                  type: object
+                                  required:
+                                  - name
+                                  properties:
+                                    key:
+                                      description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                      type: string
+                                    name:
+                                      description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                      type: string
+                            tokenSecretRef:
+                              description: TokenSecretRef authenticates with Vault by presenting a token.
+                              type: object
+                              required:
+                              - name
+                              properties:
+                                key:
+                                  description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                  type: string
+                                name:
+                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  type: string
+                        caBundle:
+                          description: PEM-encoded CA bundle (base64-encoded) used to validate Vault server certificate. Only used if the Server URL is using HTTPS protocol. This parameter is ignored for plain HTTP protocol connection. If not set the system root certificates are used to validate the TLS connection.
+                          type: string
+                          format: byte
+                        namespace:
+                          description: 'Name of the vault namespace. Namespaces is a set of features within Vault Enterprise that allows Vault environments to support Secure Multi-tenancy. e.g: "ns1" More about namespaces can be found here https://www.vaultproject.io/docs/enterprise/namespaces'
+                          type: string
+                        path:
+                          description: 'Path is the mount path of the Vault PKI backend''s `sign` endpoint, e.g: "my_pki_mount/sign/my-role-name".'
+                          type: string
+                        server:
+                          description: 'Server is the connection address for the Vault server, e.g: "https://vault.example.com:8200".'
+                          type: string
+                    venafi:
+                      description: Venafi configures this issuer to sign certificates using a Venafi TPP or Venafi Cloud policy zone. https://cert-manager.io/docs/configuration/venafi/
+                      type: object
+                      required:
+                      - zone
+                      properties:
+                        cloud:
+                          description: Cloud specifies the Venafi cloud configuration settings. Only one of TPP or Cloud may be specified.
+                          type: object
+                          required:
+                          - apiTokenSecretRef
+                          properties:
+                            apiTokenSecretRef:
+                              description: APITokenSecretRef is a secret key selector for the Venafi Cloud API token.
+                              type: object
+                              required:
+                              - name
+                              properties:
+                                key:
+                                  description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                  type: string
+                                name:
+                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  type: string
+                            url:
+                              description: URL is the base URL for Venafi Cloud. Defaults to "https://api.venafi.cloud/v1".
+                              type: string
+                        tpp:
+                          description: TPP specifies Trust Protection Platform configuration settings. Only one of TPP or Cloud may be specified.
+                          type: object
+                          required:
+                          - credentialsRef
+                          - url
+                          properties:
+                            caBundle:
+                              description: CABundle is a PEM encoded TLS certificate to use to verify connections to the TPP instance. If specified, system roots will not be used and the issuing CA for the TPP instance must be verifiable using the provided root. If not specified, the connection will be verified using the cert-manager system root certificates.
+                              type: string
+                              format: byte
+                            credentialsRef:
+                              description: CredentialsRef is a reference to a Secret containing the username and password for the TPP server. The secret must contain two keys, 'username' and 'password'.
+                              type: object
+                              required:
+                              - name
+                              properties:
+                                name:
+                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  type: string
+                            url:
+                              description: 'URL is the base URL for the vedsdk endpoint of the Venafi TPP instance, for example: "https://tpp.example.com/vedsdk".'
+                              type: string
+                        zone:
+                          description: Zone is the Venafi Policy Zone to use for this issuer. All requests made to the Venafi platform will be restricted by the named zone policy. This field is required.
+                          type: string
+              istioCSR:
+                description: IstioCSR contains configuration for istio-csr https://github.com/cert-manager/istio-csr
+                type: object
+                properties:
+                  issuerRef:
+                    description: IssuerRef is a reference to the issuer that will be used to issue certs for istiod and workloads. This must correspond to an issuer configured in Installation.spec.issuers and must be either a cluster-scoped issuer or be in IstioNamespace. Defaults to a cert-manager.io Issuer named istio-ca.
+                    type: object
+                    required:
+                    - name
+                    properties:
+                      group:
+                        description: Group of the resource being referred to.
+                        type: string
+                      kind:
+                        description: Kind of the resource being referred to.
+                        type: string
+                      name:
+                        description: Name of the resource being referred to.
+                        type: string
+                  istioNamespace:
+                    description: The namespace in which Istio will be deployed. The namespace is used to pre-create istiod's serving certificate, verify the Issuer configured for istio-csr and configure istio-csr itself. Defaults to istio-system.
+                    type: string
+                  replicas:
+                    description: ReplicaCount is the number of instances to run, default 2
+                    type: integer
+                  version:
+                    description: 'Version is the version of istio-csr to install https://github.com/cert-manager/istio-csr/releases Default: v0.4.0 Supported Versions: v0.4.0, v0.3.0, v0.2.1'
+                    type: string
+              registry:
+                description: Registry allows to configure a custom registry for all images for components managed by the operator. It is user's responsibility to ensure that the images exist in the registry.
+                type: string
+              venafiOauthHelper:
+                description: VenafiOauthHelper contains configuration options for the Installation's venafi-oauth-helper's installation if required. By default venafi-oauth-helper is not installed. Set field to an empty object to install with default options.
+                type: object
+                properties:
+                  imagePullSecrets:
+                    description: An optional list of image pull secrets to be passed to the venafi-oauth-helper Pod.
+                    type: array
+                    items:
+                      type: string
+                  replicas:
+                    description: ReplicaCount is the number of venafi-oauth-helper instances to run. Defaults to 2 instances.
+                    type: integer
+                    minimum: 1
+                  version:
+                    description: 'Version is the version of venafi-oauth-helper to install https://github.com/jetstack/venafi-oauth-helper/releases Default: v0.3.0 Supported Versions: v0.3.0'
+                    type: string
+          status:
+            description: InstallationStatus defines the observed state of Installation
+            type: object
+            properties:
+              conditions:
+                type: array
+                items:
+                  description: InstallationCondition represents the structure of a 'Condition' item in the InstallationStatus
+                  type: object
+                  required:
+                  - status
+                  - type
+                  properties:
+                    lastTransitionTime:
+                      description: LastTransitionTime is the last time this condition transitioned from one state to another.
+                      type: string
+                      format: date-time
+                    message:
+                      description: Message is a longer, human readable explanation for the condition's last transition.
+                      type: string
+                    observedGeneration:
+                      description: ObservedGeneration is the value of .metadata.generation at the time this condition was set. This provides a way to track whether the condition is up to date in regards to the current spec. https://github.com/kubernetes/kubernetes/blob/59fdc02b13ec1412d7f4ad078c91050516024a79/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresourcedefinition/strategy.go#L82-L89
+                      type: integer
+                      format: int64
+                    reason:
+                      description: Reason is a brief, machine readable explanation for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition (`True`, `False` or `Unknown`).
+                      type: string
+                    type:
+                      description: Type of condition. Known values are (`Ready`)
+                      type: string
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+---
+apiVersion: v1
+kind: ServiceAccount
+automountServiceAccountToken: true
+metadata:
+  name: cainjector
+  namespace: js-operator
+  labels:
+    app.kubernetes.io/name: cainjector
+    app.kubernetes.io/part-of: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+    app: cainjector
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cainjector
+  namespace: js-operator
+  labels:
+    app: cainjector
+    app.kubernetes.io/name: cainjector
+    app.kubernetes.io/part-of: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cainjector
+      app.kubernetes.io/part-of: js-operator
+  template:
+    metadata:
+      labels:
+        app: cainjector
+        app.kubernetes.io/name: cainjector
+        app.kubernetes.io/part-of: js-operator
+        app.kubernetes.io/version: v0.0.1-alpha.10
+    spec:
+      serviceAccountName: cainjector
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: cainjector
+        image: quay.io/jetstack/cert-manager-cainjector:v1.8.0
+        imagePullPolicy: IfNotPresent
+        args:
+        - --v=2
+        - --leader-election-namespace=js-operator
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+      nodeSelector:
+        kubernetes.io/os: linux
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: js-operator
+  namespace: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: js-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: js-operator
+        app.kubernetes.io/version: v0.0.1-alpha.10
+    spec:
+      serviceAccountName: js-operator
+      containers:
+      - name: operator
+        image: eu.gcr.io/jetstack-secure-enterprise/js-operator:v0.0.1-alpha.10
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: 100Mi
+        args:
+        - --leader-election-namespace=js-operator
+        - --log-level=2
+        - --operator-namespace=js-operator
+        - --webhook-cert-dir=/tmp
+        - --webhook-host=0.0.0.0
+        - --webhook-port=6443
+      imagePullSecrets:
+      - name: jse-gcr-creds
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: js-operator
+  namespace: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+  annotations:
+    cert-manager.io/inject-ca-from-secret: js-operator/js-operator-webhook-tls
+webhooks:
+- name: operator.jetstack.io
+  rules:
+  - apiGroups:
+    - operator.jetstack.io
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - installations/*
+  admissionReviewVersions:
+  - v1
+  failurePolicy: Fail
+  sideEffects: None
+  clientConfig:
+    service:
+      name: js-operator
+      namespace: js-operator
+      path: /validate
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+  annotations:
+    cert-manager.io/inject-ca-from-secret: js-operator/js-operator-webhook-tls
+webhooks:
+- name: operator.jetstack.io
+  rules:
+  - apiGroups:
+    - operator.jetstack.io
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - installations/*
+  admissionReviewVersions:
+  - v1
+  failurePolicy: Fail
+  sideEffects: None
+  clientConfig:
+    service:
+      name: js-operator
+      namespace: js-operator
+      path: /mutate
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: js-operator-webhook-tls
+  namespace: js-operator
+  annotations:
+    cert-manager.io/allow-direct-injection: "true"
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: js-operator
+  namespace: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+spec:
+  ports:
+  - port: 443
+    targetPort: 6443
+    protocol: TCP
+    name: webhook
+  selector:
+    app.kubernetes.io/name: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cainjector
+  labels:
+    app: cainjector
+    app.kubernetes.io/name: cainjector
+    app.kubernetes.io/part-of: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - create
+  - update
+  - patch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - apiregistration.k8s.io
+  resources:
+  - apiservices
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cainjector
+  labels:
+    app: cainjector
+    app.kubernetes.io/name: cainjector
+    app.kubernetes.io/part-of: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cainjector
+subjects:
+- name: cainjector
+  namespace: js-operator
+  kind: ServiceAccount
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cainjector:leaderelection
+  namespace: js-operator
+  labels:
+    app: cainjector
+    app.kubernetes.io/name: cainjector
+    app.kubernetes.io/part-of: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - cert-manager-cainjector-leader-election
+  - cert-manager-cainjector-leader-election-core
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cainjector:leaderelection
+  namespace: js-operator
+  labels:
+    app: cainjector
+    app.kubernetes.io/name: cainjector
+    app.kubernetes.io/part-of: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cainjector:leaderelection
+subjects:
+- kind: ServiceAccount
+  name: cainjector
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-component-approver-policy
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-approver-policy
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-component-approver-policy
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-approver-policy-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - policy.cert-manager.io
+  resources:
+  - certificaterequestpolicies
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - policy.cert-manager.io
+  resources:
+  - certificaterequestpolicies/status
+  verbs:
+  - update
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificaterequests
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificaterequests/status
+  verbs:
+  - update
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - signers
+  verbs:
+  - approve
+  resourceNames:
+  - issuers.cert-manager.io/*
+  - clusterissuers.cert-manager.io/*
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+  resourceNames:
+  - policy.cert-manager.io
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  resourceNames:
+  - cert-manager-approver-policy-tls
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-approver-policy-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-approver-policy-permissions
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-component-cm-issuers
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - policy.cert-manager.io
+  resources:
+  - certificaterequestpolicies
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-cm-issuers
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-component-cm-issuers
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-cert-manager-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - create
+  - update
+  - patch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - apiregistration.k8s.io
+  resources:
+  - apiservices
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  - issuers/status
+  verbs:
+  - update
+  - patch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - clusterissuers
+  - clusterissuers/status
+  verbs:
+  - update
+  - patch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - certificates/status
+  - certificaterequests
+  - certificaterequests/status
+  verbs:
+  - update
+  - patch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - certificaterequests
+  - clusterissuers
+  - issuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates/finalizers
+  - certificaterequests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - orders
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - orders
+  - orders/status
+  verbs:
+  - update
+  - patch
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - orders
+  - challenges
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - clusterissuers
+  - issuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - challenges
+  verbs:
+  - create
+  - delete
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - orders/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - challenges
+  - challenges/status
+  verbs:
+  - update
+  - patch
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - challenges
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - update
+- apiGroups:
+  - networking.x-k8s.io
+  resources:
+  - httproutes
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - update
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes/custom-host
+  verbs:
+  - create
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - challenges/finalizers
+  verbs:
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - certificaterequests
+  verbs:
+  - create
+  - update
+  - delete
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - certificaterequests
+  - issuers
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - networking.x-k8s.io
+  resources:
+  - gateways
+  - httproutes
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - networking.x-k8s.io
+  resources:
+  - gateways/finalizers
+  - httproutes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways
+  - httproutes
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways/finalizers
+  - httproutes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - certificaterequests
+  - issuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - challenges
+  - orders
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - certificaterequests
+  - issuers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - challenges
+  - orders
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - signers
+  verbs:
+  - approve
+  resourceNames:
+  - issuers.cert-manager.io/*
+  - clusterissuers.cert-manager.io/*
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests/status
+  verbs:
+  - update
+  - patch
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - signers
+  resourceNames:
+  - issuers.cert-manager.io/*
+  - clusterissuers.cert-manager.io/*
+  verbs:
+  - sign
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - cert-manager-cainjector-leader-election
+  - cert-manager-cainjector-leader-election-core
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - cert-manager-cainjector-leader-election
+  - cert-manager-cainjector-leader-election-core
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - cert-manager-controller
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - cert-manager-controller
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  resourceNames:
+  - cert-manager-webhook-ca
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-cert-manager-grants
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-cert-manager-permissions
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-component-cert-manager
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - serviceaccounts
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-cert-manager
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-component-cert-manager
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-component-csi-drivers
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - csidrivers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - csinodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-csi-drivers
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-component-csi-drivers
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-component-istio-csr
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-istio-csr
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-component-istio-csr
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-istio-csr-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificaterequests
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-istio-csr-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-istio-csr-permissions
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-component-venafi-oauth-helper
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-venafi-oauth-helper
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-component-venafi-oauth-helper
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-venafi-oauth-helper-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - clusterissuers/status
+  - issuers/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-venafi-oauth-helper-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-venafi-oauth-helper-permissions
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - serviceaccounts
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operator.jetstack.io
+  resources:
+  - installations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operator.jetstack.io
+  resources:
+  - installations/status
+  verbs:
+  - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+  namespace: js-operator
+  name: leader-election-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - operator.jetstack.io
+  verbs:
+  - create
+  - get
+  - list
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: leader-election-rolebinding
+  namespace: js-operator
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: js-operator
