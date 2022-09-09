@@ -305,15 +305,13 @@ jsctl operator installations status --json
 
 ## Attributions
 
-When this project was made public commit history was wiped. The original
-contributors to the project were:
-
-**Maintainers**
-
-* [David Bond](https://github.com/davidsbond)
-
-**Contributors**
+When this project was made public commit history was wiped. The current
+maintainers of the project are:
 
 * [Irbe Krumina](https://github.com/irbekrm)
 * [Charlie Egan](https://github.com/charlieegan3)
-* [Mathias Gees](https://github.com/MattiasGees)
+
+The original author of the project was
+[David Bond](https://github.com/davidsbond).
+[Mathias Gees](https://github.com/MattiasGees) has also contributed to the
+project.
