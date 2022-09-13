@@ -40,7 +40,7 @@ type (
 
 // CreateGoogleServiceAccount calls the subscription API to create a new Google
 // Service Account for GCR access
-func CreateGoogleServiceAccount(ctx context.Context, httpClient HTTPClient, organization, name string) (*[]GoogleServiceAccountWithKey, error) {
+func CreateGoogleServiceAccount(ctx context.Context, httpClient HTTPClient, organization, name string) ([]GoogleServiceAccountWithKey, error) {
 	request := []GoogleServiceAccount{
 		{DisplayName: name},
 	}
@@ -52,5 +52,5 @@ func CreateGoogleServiceAccount(ctx context.Context, httpClient HTTPClient, orga
 		return nil, err
 	}
 
-	return &serviceAccounts, nil
+	return serviceAccounts, nil
 }

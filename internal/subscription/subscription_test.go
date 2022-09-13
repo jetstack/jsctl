@@ -16,7 +16,7 @@ func TestCreateServiceAccount(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("create gcp service account", func(t *testing.T) {
-		expected := &[]subscription.GoogleServiceAccountWithKey{
+		expected := []subscription.GoogleServiceAccountWithKey{
 			{
 				GoogleServiceAccount: subscription.GoogleServiceAccount{
 					DisplayName: "things",

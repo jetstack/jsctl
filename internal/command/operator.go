@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,9 +12,12 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/jetstack/jsctl/internal/client"
+	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/kubernetes"
 	"github.com/jetstack/jsctl/internal/operator"
 	"github.com/jetstack/jsctl/internal/prompt"
+	"github.com/jetstack/jsctl/internal/subscription"
 	"github.com/jetstack/jsctl/internal/table"
 	"github.com/jetstack/jsctl/internal/venafi"
 )
@@ -39,9 +43,9 @@ func operatorDeploy() *cobra.Command {
 	const defaultRegistry = "eu.gcr.io/jetstack-secure-enterprise"
 
 	var (
-		version     string
-		registry    string
-		credentials string
+		version                 string
+		registry                string
+		registryCredentialsPath string
 	)
 
 	cmd := &cobra.Command{
@@ -60,17 +64,44 @@ func operatorDeploy() *cobra.Command {
 				}
 			}
 
+			var registryCredentials string
+			if registryCredentialsPath == "" {
+				cnf, ok := config.FromContext(ctx)
+				if !ok || cnf.Organization == "" {
+					return errNoOrganizationName
+				}
+
+				http := client.New(ctx, apiURL)
+
+				serviceAccounts, err := subscription.CreateGoogleServiceAccount(
+					ctx,
+					http,
+					cnf.Organization,
+					fmt.Sprintf("%s-jsctl-auto", cnf.Organization),
+				)
+				if err != nil || len(serviceAccounts) < 1 {
+					return fmt.Errorf("failed to create registry credentials: %w", err)
+				}
+
+				registryCredentialsBytes, err := base64.StdEncoding.DecodeString(serviceAccounts[0].Key.PrivateData)
+				if err != nil {
+					return fmt.Errorf("failed to decode registry credentials: %w", err)
+				}
+				registryCredentials = string(registryCredentialsBytes)
+			}
+
 			err = operator.ApplyOperatorYAML(ctx, applier, operator.ApplyOperatorYAMLOptions{
-				Version:             version,
-				ImageRegistry:       registry,
-				CredentialsLocation: credentials,
+				Version:                 version,
+				ImageRegistry:           registry,
+				RegistryCredentialsPath: registryCredentialsPath,
+				RegistryCredentials:     registryCredentials,
 			})
 
 			switch {
 			case errors.Is(err, operator.ErrNoManifest):
 				return fmt.Errorf("operator version %s does not exist", version)
 			case errors.Is(err, operator.ErrNoKeyFile):
-				return fmt.Errorf("no key file exists at %s", credentials)
+				return fmt.Errorf("no key file exists at %s", registryCredentialsPath)
 			case err != nil:
 				return fmt.Errorf("failed to apply operator manifests: %s", err)
 			}
@@ -82,7 +113,7 @@ func operatorDeploy() *cobra.Command {
 	flags := cmd.PersistentFlags()
 	flags.StringVar(&version, "version", "", "Specifies a specific version of the operator to install, defaults to latest")
 	flags.StringVar(&registry, "registry", defaultRegistry, "Specifies an alternative image registry to use for the operator image")
-	flags.StringVar(&credentials, "credentials", "", "Specifies the location of the credentials file to use for docker image pull secrets")
+	flags.StringVar(&registryCredentialsPath, "registry-credentials-path", "", "Specifies the location of the credentials file to use for docker image pull secrets")
 
 	return cmd
 }
@@ -158,8 +189,8 @@ func operatorInstallationsApply() *cobra.Command {
 			}
 
 			options := operator.ApplyInstallationYAMLOptions{
-				ImageRegistry: registry,
-				Credentials:   credentials,
+				ImageRegistry:           registry,
+				RegistryCredentialsPath: credentials,
 
 				// Cert Manager configuration
 				CertManagerReplicas: certManagerReplicas,
