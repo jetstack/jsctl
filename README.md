@@ -6,6 +6,10 @@ determined.**
 
 jsctl is the command-line tool for interacting with the [Jetstack Secure Control Plane](https://platform.jetstack.io).
 
+It can be used to configure a Kubernetes cluster with Jetstack Secure components and to create resources in Jetstack Secure control plane.
+
+See [jsctl reference documentation](/docs/reference/jsctl.md) for all available commands or keep reading for common usage scenarios.
+
 ## Getting Started
 
 Obtain a binary for your os and architecture from the [releases page](https://github.com/jetstack/jsctl/releases) and
@@ -43,7 +47,7 @@ set the location of the credentials as the `JSCTL_CREDENTIALS` environment varia
 jsctl auth login --credentials /path/to/credentials.json
 ```
 
-### Configuration
+### Configure organization
 
 Once authenticated, select your organization using the `jsctl config set` command. The organization you select will be
 used for subsequent commands
@@ -73,57 +77,104 @@ Otherwise, you can write the output to a file and use it in your GitOps workflow
 jsctl clusters connect --stdout my-cluster >> agent.yaml
 ```
 
-##### Custom image registry
+See [jsctl reference documentation](/docs/reference/jsctl_clusters.md) for additional cluster management options.
 
-If you want to use an alternative image registry for the agent image, you can specify the `--registry` flag that
-allows you to change it:
+### Operator
 
-```shell
-jsctl clusters connect --registry my.exampleregistry.com
-```
+Jetstack Secure Operator can be used to set up a cluster with Jetstack Secure
+components, see
+[documentation](https://platform.jetstack.io/documentation/reference/js-operator/about).
 
-This will produce image names like `my.exampleregistry.com/preflight`. Currently, it is assumed images will have the
-same name and tags.
+jsctl has a number of commands to make it easier to install and configure the
+operator, see [reference documentation](/docs/reference/jsctl_operator.md).
 
-#### List Clusters
+#### Install the Operator
 
-To see all the clusters currently connected to the control-plane for an organization, you can use the `jsctl clusters list`
-command:
-
-```shell
-jsctl clusters list
-```
-
-This produces a list of clusters and their last known update time. You can provide the `--json` flag to produce the list
-as a JSON array. This could then be piped into a tool like `jq` for further processing.
-
-#### Delete Clusters
-
-You can remove a cluster from the control-plane using the `jsctl clusters delete` command and providing the cluster
-name as the first argument:
+To install the Jetstack Operator, you can use the `jsctl operator deploy` command. It will apply the manifests required
+to run the operator directly to your current kubernetes context. You will need to have obtained your secret key file for
+authenticating with the Jetstack container registry and provide it to the command via the `--credentials` flag.
 
 ```shell
-jsctl clusters delete my-cluster
+jsctl operator deploy --credentials /path/to/secret.json
 ```
 
-You will be prompted for confirmation for cluster deletion if the given response is anything except `y` or `Y` the deletion
-is cancelled. If you do not want to confirm your choice, provide the `--force` flag:
+To just obtain the manifests, provide the `--stdout` flag:
 
 ```shell
-jsctl clusters delete --force my-cluster
+jsctl operator deploy --stdout --credentials /path/to/secret.json >> operator.yaml
 ```
 
-#### View Cluster
-
-You can use the `jsctl clusters view` command to open your browser and navigate to the certificate inventory view within
-Jetstack Secure for a chosen cluster:
+By default, it will install the latest version of the operator. You can specify a specific version using the `--version`
+flag:
 
 ```shell
-jsctl clusters view my-cluster
+jsctl operator deploy --credentials /path/to/secret.json --version v0.0.1-alpha.0
 ```
 
-In a non-interactive environment, or if the browser cannot be opened, the URL to visit will be written to the terminal
-output.
+To view all available versions of the operator to install, you can use the `jsctl operator versions` command, which outputs
+the versions in order from oldest to newest.
+
+See [jsctl reference documentation](/docs/reference/jsctl_operator_deploy.md) for additional operator deployment options.
+
+#### Create an installation
+
+`jsctl` can be used to generate and/or apply configuration for the operator to create Jetstack Secure components.
+
+This is an alternative to creating operator's configuration by hand.
+
+Jetstack Secure Operator can be configured to create Jetstack Secure components via `Installation` custom resource, see [documentation](https://platform.jetstack.io/documentation/reference/js-operator/about).
+
+To create an `Installation` resource with jsctl, you can use the `jsctl operator installations apply` command which will apply the generated config to cluster or output it as yaml if `--stdout` flag is passed.
+
+##### Generate base Installation resource
+
+jsctl can be used as a quickstart config generator for operator's `Installation`
+resource for specific scenarios as an alternative to writing your own
+`Installation` resource from scratch.
+
+```shell
+jsctl operator installations apply --stdout > installation.yaml
+```
+This command generates a base Installation resource that configures the operator to install cert-manager and [approver-policy](https://cert-manager.io/docs/projects/approver-policy/).
+
+Take a look at the generated config and see the [Jetstack Secure operator documentation](https://platform.jetstack.io/documentation/reference/js-operator/about) for how to configure additional resources like issuers.
+
+Apply the installation to cluster when ready:
+
+```shell
+kubectl apply -f installation.yaml
+```
+##### Generate and apply Installation that configures Jetstack Secure components for Venafi TPP user
+
+jsctl can be used to generate (and optionally apply) operator configuration to set up a cluster with components relevant for Venafi TPP user.
+
+Create a file with Venafi connection details and credentials `connection.yaml`:
+
+```yaml
+my-default-zone:
+  zone: <tpp-zone>
+  url: <tpp-server-url>
+  # access-token: <access-token could be used instead of username & password>
+  username: <your-username>
+  password: <your-password>
+```
+
+Run:
+
+```shell
+jsctl operator installations apply \
+  --venafi-oauth-helper \
+  --experimental-venafi-issuers="tpp:my-default-zone:foo" \
+  --experimental-venafi-connections-config ./connection.yaml
+```
+
+This command will create and apply to cluster:
+
+- An `Installation` custom resource that will configure the operator to install cert-manager, [approver-policy](), [venafi-oauth-helper], a Venafi TPP `ClusterIssuer` named `foo` configured with the provided TPP URL and zone as well as an 'allow all' `CertificateRequestPolicy` for the ClusterIssuer and RBAC that allows cert-manager to use the policy
+
+- a `foo-voh-bootstrap` `Secret` with the provided Venafi credentials that will be used as a bootstrap credentials by venafi-oauth-helper to create a token for `foo` issuer (see [venafi-oauth-helper docs]() for details)
+
+See [documenation](./docs/reference/jsctl_operator_installations_apply.md) for additional configuration options.
 
 ### Users
 
@@ -163,139 +214,6 @@ is cancelled. If you do not want to confirm your choice, provide the `--force` f
 jsctl users remove --force test@example.com
 ```
 
-### Operator
-
-#### Install the Operator
-
-To install the Jetstack Operator, you can use the `jsctl operator deploy` command. It will apply the manifests required
-to run the operator directly to your current kubernetes context. You will need to have obtained your secret key file for
-authenticating with the Jetstack container registry and provide it to the command via the `--credentials` flag.
-
-```shell
-jsctl operator deploy --credentials /path/to/secret.json
-```
-
-To just obtain the manifests, provide the `--stdout` flag:
-
-```shell
-jsctl operator deploy --stdout --credentials /path/to/secret.json >> operator.yaml
-```
-
-By default, it will install the latest version of the operator. You can specify a specific version using the `--version`
-flag:
-
-```shell
-jsctl operator deploy --credentials /path/to/secret.json --version v0.0.1-alpha.0
-```
-
-To view all available versions of the operator to install, you can use the `jsctl operator versions` command, which outputs
-the versions in order from oldest to newest.
-
-##### Custom image registry
-
-If you want to use an alternative image registry for the operator image, you can specify the `--registry` flag that
-allows you to change it:
-
-```shell
-jsctl operator deploy --registry my.exampleregistry.com
-```
-
-This will produce image names like `my.exampleregistry.com/js-operator`. Currently, it is assumed images will have the
-same name and tags.
-
-#### Create an installation
-
-To create an `Installation` resource that is consumed by the operator, you can use the `jsctl operator installations apply`
-command which will apply the resource directly to your current kubernetes context. On its own, this will install a
-high-availability cert-manager deployment within your cluster with 2 replicas.
-
-```shell
-jsctl operator installations apply
-```
-
-To modify the number of cert-manager replicas, use the `--cert-manager-replicas` flag:
-
-```shell
-jsctl operator installations apply --cert-manager-replicas 3
-```
-
-To just output the YAML of the `Installation` resource, provide the `--stdout` flag:
-
-```shell
-jsctl operator installations apply --stdout
-```
-
-##### Install the cert-manager CSI driver
-
-You can also provide the `--csi-driver` flag to include the installation of the [Cert Manager CSI Driver](https://github.com/cert-manager/csi-driver)
-in your cluster:
-
-```shell
-jsctl operator installations apply --csi-driver
-```
-
-##### Install the SPIFFE CSI Driver
-
-You can also provide the `--csi-driver-spiffe` flag to include the installation of the [SPIFFE CSI Driver](https://github.com/cert-manager/csi-driver-spiffe)
-in your cluster:
-
-```shell
-jsctl operator installations apply --csi-driver-spiffe
-```
-
-By default, this deploys the SPIFFE CSI driver in a high-availability configuration, using two replicas. To change the
-number of replicas you can use the `--csi-driver-spiffe-replicas` flag:
-
-```shell
-jsctl operator installations apply \
-  --csi-driver-spiffe \
-  --csi-driver-spiffe-replicas 3
-```
-
-##### Install Istio CSR
-
-You can also provide the `--istio-csr` flag to include the installation of the [Istio CSR](https://github.com/cert-manager/istio-csr)
-in your cluster:
-
-```shell
-jsctl operator installations apply --istio-csr
-```
-
-You must also configure the Istio CSR to use one of your issuers using the `--istio-csr-issuer` flag:
-
-```shell
-jsctl operator installations apply \
-  --istio-csr \
-  --istio-csr-issuer my-issuer
-```
-
-Once applied, you will need to modify/create the `IstioOperator` custom resource, configured to use istio-csr. This
-configuration differs based on the Istio version you're using. You can see configuration examples [here](https://github.com/cert-manager/istio-csr/tree/main/hack)
-
-By default, this deploys Istio CSR in a high-availability configuration, using two replicas. To change the number
-of replicas you can use the `--istio-csr-replicas` flag:
-
-```shell
-jsctl operator installations apply \
-  --istio-csr \
-  --istio-csr-issuer my-issuer \
-  --istio-csr-replicas 3
-```
-
-##### Checking component status
-
-You can use the `jsctl operator installations status` command to check the status of all components installed by
-the operator:
-
-```shell
-jsctl operator installations status
-```
-
-You can also provide the `--json` flag to get the output in JSON format:
-
-```shell
-jsctl operator installations status --json
-```
 
 ## Development
 
