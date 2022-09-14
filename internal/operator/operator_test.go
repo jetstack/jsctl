@@ -16,6 +16,7 @@ import (
 
 	"github.com/jetstack/jsctl/internal/docker"
 	"github.com/jetstack/jsctl/internal/operator"
+	"github.com/jetstack/jsctl/internal/venafi"
 )
 
 type (
