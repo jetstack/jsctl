@@ -158,6 +158,65 @@ func TestApplyInstallationYAML(t *testing.T) {
 		assert.Contains(t, actual.Spec.VenafiOauthHelper.ImagePullSecrets, "jse-gcr-creds")
 	})
 
+	t.Run("It should not add the cert-discovery-venafi to the installation manifest if it's not set ", func(t *testing.T) {
+		applier := &TestApplier{}
+		options := operator.ApplyInstallationYAMLOptions{}
+
+		err := operator.ApplyInstallationYAML(ctx, applier, options)
+		assert.NoError(t, err)
+
+		var installation operatorv1alpha1.Installation
+		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &installation))
+
+		assert.Nil(t, installation.Spec.CertDiscoveryVenafi)
+
+	})
+
+	t.Run("It should add the cert-discovery-venafi to the installation manifest ", func(t *testing.T) {
+		applier := &TestApplier{}
+		cdv := &venafi.VenafiConnection{
+			URL:         "foo",
+			Zone:        "foozone",
+			AccessToken: "footoken",
+		}
+		options := operator.ApplyInstallationYAMLOptions{
+			CertDiscoveryVenafi: cdv,
+		}
+
+		err := operator.ApplyInstallationYAML(ctx, applier, options)
+		assert.NoError(t, err)
+
+		var installation operatorv1alpha1.Installation
+		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &installation))
+
+		assert.NotNil(t, installation.Spec.CertDiscoveryVenafi)
+		assert.Equal(t, installation.Spec.CertDiscoveryVenafi.TPP.URL, "foo")
+		assert.Equal(t, installation.Spec.CertDiscoveryVenafi.TPP.Zone, "foozone")
+
+	})
+
+	t.Run("It should add the cert-discovery-venafi to the installation manifest and interpolate image pull secret", func(t *testing.T) {
+		applier := &TestApplier{}
+		cdv := &venafi.VenafiConnection{
+			URL:         "foo",
+			Zone:        "foozone",
+			AccessToken: "footoken",
+		}
+		options := operator.ApplyInstallationYAMLOptions{
+			CertDiscoveryVenafi: cdv,
+			Credentials:         "./testdata/key.json",
+		}
+
+		err := operator.ApplyInstallationYAML(ctx, applier, options)
+		assert.NoError(t, err)
+
+		var actual operatorv1alpha1.Installation
+		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
+
+		assert.NotNil(t, actual.Spec.CertDiscoveryVenafi)
+		assert.Contains(t, actual.Spec.CertDiscoveryVenafi.ImagePullSecrets, "jse-gcr-creds")
+	})
+
 	t.Run("It should have a blank Istio CSR block when no issuer is provided", func(t *testing.T) {
 		applier := &TestApplier{}
 		options := operator.ApplyInstallationYAMLOptions{
