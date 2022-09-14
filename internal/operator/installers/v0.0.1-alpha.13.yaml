@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: installations.operator.jetstack.io
 spec:
@@ -53,22 +53,66 @@ spec:
                     type: integer
                     minimum: 1
                   version:
-                    description: 'Version is the version of approver-policy to install https://github.com/cert-manager/approver-policy/releases Default: v0.3.0 Supported Versions: v0.3.0,v0.2.0, v0.1.0'
+                    description: 'Version is the version of approver-policy to install https://github.com/cert-manager/approver-policy/releases Default: v0.4.0 Supported Versions: v0.4.0, v0.3.0,v0.2.0, v0.1.0'
+                    type: string
+              certDiscoveryVenafi:
+                description: CertDiscoveryVenafi contains configuration options for cert-discovery-venafi. https://platform.jetstack.io/documentation/installation/cert-discovery-venafi If unset (default) cert-discovery-venafi will not be installed.
+                type: object
+                required:
+                - tpp
+                properties:
+                  imagePullSecrets:
+                    description: An optional list of image pull secrets to be passed to the cert-discovery-venafi Pod.
+                    type: array
+                    items:
+                      type: string
+                  replicas:
+                    description: ReplicaCount is the number of cert-discovery-venafi instances to run. Defaults to 1 instance.
+                    type: integer
+                    minimum: 1
+                  tpp:
+                    description: TPP server configuration options.
+                    type: object
+                    required:
+                    - url
+                    - zone
+                    properties:
+                      tokenSecretRef:
+                        description: TokenSecretRef is a reference to a key in a Kubernetes Secret with the TPP access token that cert-discovery-venafi will use to authenticate. Secret must be in the same namespace as cert-discovery-venafi (by default cert-manager). Defaults to a Secret named 'access-token' with a key named 'access-token'.
+                        type: object
+                        required:
+                        - key
+                        - name
+                        properties:
+                          key:
+                            description: Key is a key in a Secret
+                            type: string
+                          name:
+                            description: Name is the name of a Secret
+                            type: string
+                      url:
+                        description: URL of the TPP server where cert-discovery-venafi should upload discovered certs.
+                        type: string
+                      zone:
+                        description: Zone (policy folder) where cert-discovery-venafi should upload discovered certs.
+                        type: string
+                  version:
+                    description: Version is the version of cert-discovery-venafi to install Defaults to v0.2.0-alpha.3 Supported versions are v0.2.0-alpha.3
                     type: string
               certManager:
                 description: CertManager contains configuration options for the Installation's cert-manager installation This field must be set as cert-manager is a required component.
                 type: object
                 properties:
                   controller:
-                    description: Controller wraps the configuration options for the controller
+                    description: Controller wraps the configuration options for the cert-manager controller
                     type: object
                     properties:
                       replicas:
-                        description: ReplicaCount is the number of controller instances to run. Only one instance at a time will be a leader. Default to 2.
+                        description: ReplicaCount is the number of controller instances to run. Only one instance at a time will be a leader. Defaults to 2.
                         type: integer
                         minimum: 1
                   version:
-                    description: 'Version is the version of cert-manager release to install https://github.com/jetstack/cert-manager/releases. Default: v1.6.1 Supported Versions: v1.6.1, v1.6.0'
+                    description: 'Version is the version of cert-manager release to install https://github.com/cert-manager/cert-manager/releases. Default: v1.9.1 Supported Versions: v1.9.1, v1.8.0, v1.7.1, v1.7.0, v1.6.2, v1.6.1, v1.6.0'
                     type: string
                   webhook:
                     description: Webhook wraps the configuration options for the cert-manager webhook deployment
@@ -87,7 +131,7 @@ spec:
                     type: object
                     properties:
                       version:
-                        description: 'Version is the version of csi-driver to install https://github.com/cert-manager/csi-driver/releases Default: v0.2.0 Supported Versions: v0.2.0, v0.1.0'
+                        description: 'Version is the version of csi-driver to install https://github.com/cert-manager/csi-driver/releases Default: v0.4.0 Supported Versions: v0.4.0, v0.2.0, v0.1.0'
                         type: string
                   certManagerSpiffe:
                     description: CertManagerSpiffe refers to the configuration of cert-manager/csi-driver-spiffe that can be used to issue SPIFFE certs for workloads
@@ -113,7 +157,7 @@ spec:
                         type: integer
                         minimum: 1
                       version:
-                        description: 'Version is the version of cert-manager/csi-driver-spiffe to install https://github.com/cert-manager/csi-driver-spiffe/releases Default: v0.1.0 Supported Versions: v0.1.0'
+                        description: 'Version is the version of cert-manager/csi-driver-spiffe to install https://github.com/cert-manager/csi-driver-spiffe/releases Default: v0.2.0 Supported Versions: v0.2.0,v0.1.0'
                         type: string
               issuers:
                 description: Issuers can be used to configure issuers that the operator will deploy. Currently only cert-manager.io Issuer and ClusterIssuer types are supported.
@@ -433,8 +477,20 @@ spec:
                                     - region
                                     properties:
                                       accessKeyID:
-                                        description: 'The AccessKeyID is used for authentication. If not set we fall-back to using env vars, shared credentials file or AWS Instance metadata see: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials'
+                                        description: 'The AccessKeyID is used for authentication. Cannot be set when SecretAccessKeyID is set. If neither the Access Key nor Key ID are set, we fall-back to using env vars, shared credentials file or AWS Instance metadata, see: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials'
                                         type: string
+                                      accessKeyIDSecretRef:
+                                        description: 'The SecretAccessKey is used for authentication. If set, pull the AWS access key ID from a key within a Kubernetes Secret. Cannot be set when AccessKeyID is set. If neither the Access Key nor Key ID are set, we fall-back to using env vars, shared credentials file or AWS Instance metadata, see: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials'
+                                        type: object
+                                        required:
+                                        - name
+                                        properties:
+                                          key:
+                                            description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
+                                            type: string
+                                          name:
+                                            description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
                                       hostedZoneID:
                                         description: If set, the provider will manage only this zone in Route53 and will not do an lookup using the route53:ListHostedZonesByName api call.
                                         type: string
@@ -445,7 +501,7 @@ spec:
                                         description: Role is a Role ARN which the Route53 provider will assume using either the explicit credentials AccessKeyID/SecretAccessKey or the inferred credentials from environment variables, shared credentials file or AWS Instance metadata
                                         type: string
                                       secretAccessKeySecretRef:
-                                        description: The SecretAccessKey is used for authentication. If not set we fall-back to using env vars, shared credentials file or AWS Instance metadata https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
+                                        description: 'The SecretAccessKey is used for authentication. If neither the Access Key nor Key ID are set, we fall-back to using env vars, shared credentials file or AWS Instance metadata, see: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials'
                                         type: object
                                         required:
                                         - name
@@ -481,10 +537,49 @@ spec:
                                     type: object
                                     properties:
                                       labels:
-                                        description: The labels that cert-manager will use when creating the temporary HTTPRoute needed for solving the HTTP-01 challenge. These labels must match the label selector of at least one Gateway.
+                                        description: Custom labels that will be applied to HTTPRoutes created by cert-manager while solving HTTP-01 challenges.
                                         type: object
                                         additionalProperties:
                                           type: string
+                                      parentRefs:
+                                        description: 'When solving an HTTP-01 challenge, cert-manager creates an HTTPRoute. cert-manager needs to know which parentRefs should be used when creating the HTTPRoute. Usually, the parentRef references a Gateway. See: https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#attaching-to-gateways'
+                                        type: array
+                                        items:
+                                          description: "ParentRef identifies an API object (usually a Gateway) that can be considered a parent of this resource (usually a route). The only kind of parent resource with \"Core\" support is Gateway. This API may be extended in the future to support additional kinds of parent resources, such as HTTPRoute. \n The API object must be valid in the cluster; the Group and Kind must be registered in the cluster for this reference to be valid. \n References to objects with invalid Group and Kind are not valid, and must be rejected by the implementation, with appropriate Conditions set on the containing object."
+                                          type: object
+                                          required:
+                                          - name
+                                          properties:
+                                            group:
+                                              description: "Group is the group of the referent. \n Support: Core"
+                                              type: string
+                                              default: gateway.networking.k8s.io
+                                              maxLength: 253
+                                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                            kind:
+                                              description: "Kind is kind of the referent. \n Support: Core (Gateway) Support: Custom (Other Resources)"
+                                              type: string
+                                              default: Gateway
+                                              maxLength: 63
+                                              minLength: 1
+                                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                            name:
+                                              description: "Name is the name of the referent. \n Support: Core"
+                                              type: string
+                                              maxLength: 253
+                                              minLength: 1
+                                            namespace:
+                                              description: "Namespace is the namespace of the referent. When unspecified (or empty string), this refers to the local namespace of the Route. \n Support: Core"
+                                              type: string
+                                              maxLength: 63
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                            sectionName:
+                                              description: "SectionName is the name of a section within the target resource. In the following resources, SectionName is interpreted as the following: \n * Gateway: Listener Name \n Implementations MAY choose to support attaching Routes to other resources. If that is the case, they MUST clearly document how SectionName is interpreted. \n When unspecified (empty string), this will reference the entire resource. For the purpose of status, an attachment is considered successful if at least one section in the parent resource accepts it. For example, Gateway listeners can restrict which Routes can attach to them by Route kind, namespace, or hostname. If 1 of 2 Gateway listeners accept attachment from the referencing Route, the Route MUST be considered successfully attached. If no Gateway listeners accept attachment from this Route, the Route MUST be considered detached from the Gateway. \n Support: Core"
+                                              type: string
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                       serviceType:
                                         description: Optional service type for Kubernetes solver service. Supported values are NodePort or ClusterIP. If unset, defaults to NodePort.
                                         type: string
@@ -602,6 +697,7 @@ spec:
                                                                         type: array
                                                                         items:
                                                                           type: string
+                                                              x-kubernetes-map-type: atomic
                                                             weight:
                                                               description: Weight associated with matching the corresponding nodeSelectorTerm, in the range 1-100.
                                                               type: integer
@@ -661,6 +757,8 @@ spec:
                                                                         type: array
                                                                         items:
                                                                           type: string
+                                                              x-kubernetes-map-type: atomic
+                                                        x-kubernetes-map-type: atomic
                                                   podAffinity:
                                                     description: Describes pod affinity scheduling rules (e.g. co-locate this pod in the same node, zone, etc. as some other pod(s)).
                                                     type: object
@@ -711,8 +809,9 @@ spec:
                                                                       type: object
                                                                       additionalProperties:
                                                                         type: string
+                                                                  x-kubernetes-map-type: atomic
                                                                 namespaceSelector:
-                                                                  description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces. This field is beta-level and is only honored when PodAffinityNamespaceSelector feature is enabled.
+                                                                  description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces.
                                                                   type: object
                                                                   properties:
                                                                     matchExpressions:
@@ -741,8 +840,9 @@ spec:
                                                                       type: object
                                                                       additionalProperties:
                                                                         type: string
+                                                                  x-kubernetes-map-type: atomic
                                                                 namespaces:
-                                                                  description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace"
+                                                                  description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace".
                                                                   type: array
                                                                   items:
                                                                     type: string
@@ -792,8 +892,9 @@ spec:
                                                                   type: object
                                                                   additionalProperties:
                                                                     type: string
+                                                              x-kubernetes-map-type: atomic
                                                             namespaceSelector:
-                                                              description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces. This field is beta-level and is only honored when PodAffinityNamespaceSelector feature is enabled.
+                                                              description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces.
                                                               type: object
                                                               properties:
                                                                 matchExpressions:
@@ -822,8 +923,9 @@ spec:
                                                                   type: object
                                                                   additionalProperties:
                                                                     type: string
+                                                              x-kubernetes-map-type: atomic
                                                             namespaces:
-                                                              description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace"
+                                                              description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace".
                                                               type: array
                                                               items:
                                                                 type: string
@@ -880,8 +982,9 @@ spec:
                                                                       type: object
                                                                       additionalProperties:
                                                                         type: string
+                                                                  x-kubernetes-map-type: atomic
                                                                 namespaceSelector:
-                                                                  description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces. This field is beta-level and is only honored when PodAffinityNamespaceSelector feature is enabled.
+                                                                  description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces.
                                                                   type: object
                                                                   properties:
                                                                     matchExpressions:
@@ -910,8 +1013,9 @@ spec:
                                                                       type: object
                                                                       additionalProperties:
                                                                         type: string
+                                                                  x-kubernetes-map-type: atomic
                                                                 namespaces:
-                                                                  description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace"
+                                                                  description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace".
                                                                   type: array
                                                                   items:
                                                                     type: string
@@ -961,8 +1065,9 @@ spec:
                                                                   type: object
                                                                   additionalProperties:
                                                                     type: string
+                                                              x-kubernetes-map-type: atomic
                                                             namespaceSelector:
-                                                              description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces. This field is beta-level and is only honored when PodAffinityNamespaceSelector feature is enabled.
+                                                              description: A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. null selector and null or empty namespaces list means "this pod's namespace". An empty selector ({}) matches all namespaces.
                                                               type: object
                                                               properties:
                                                                 matchExpressions:
@@ -991,8 +1096,9 @@ spec:
                                                                   type: object
                                                                   additionalProperties:
                                                                     type: string
+                                                              x-kubernetes-map-type: atomic
                                                             namespaces:
-                                                              description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace"
+                                                              description: namespaces specifies a static list of namespace names that the term applies to. The term is applied to the union of the namespaces listed in this field and the ones selected by namespaceSelector. null or empty namespaces list and null namespaceSelector means "this pod's namespace".
                                                               type: array
                                                               items:
                                                                 type: string
@@ -1316,7 +1422,7 @@ spec:
                               description: Usages defines the list of permissible key usages that may appear on the CertificateRequest `spec.keyUsages` field. An omitted field or value of `nil` forbids any Usages being requested. An empty slice `[]` is equivalent to `nil`.
                               type: array
                               items:
-                                description: 'KeyUsage specifies valid usage contexts for keys. See: https://tools.ietf.org/html/rfc5280#section-4.2.1.3      https://tools.ietf.org/html/rfc5280#section-4.2.1.12 Valid KeyUsage values are as follows: "signing", "digital signature", "content commitment", "key encipherment", "key agreement", "data encipherment", "cert sign", "crl sign", "encipher only", "decipher only", "any", "server auth", "client auth", "code signing", "email protection", "s/mime", "ipsec end system", "ipsec tunnel", "ipsec user", "timestamping", "ocsp signing", "microsoft sgc", "netscape sgc"'
+                                description: 'KeyUsage specifies valid usage contexts for keys. See: https://tools.ietf.org/html/rfc5280#section-4.2.1.3 https://tools.ietf.org/html/rfc5280#section-4.2.1.12 Valid KeyUsage values are as follows: "signing", "digital signature", "content commitment", "key encipherment", "key agreement", "data encipherment", "cert sign", "crl sign", "encipher only", "decipher only", "any", "server auth", "client auth", "code signing", "email protection", "s/mime", "ipsec end system", "ipsec tunnel", "ipsec user", "timestamping", "ocsp signing", "microsoft sgc", "netscape sgc"'
                                 type: string
                                 enum:
                                 - signing
@@ -1558,11 +1664,27 @@ spec:
                     description: ReplicaCount is the number of instances to run, default 2
                     type: integer
                   version:
-                    description: 'Version is the version of istio-csr to install https://github.com/cert-manager/istio-csr/releases Default: v0.3.0 Supported Versions: v0.3.0, v0.2.1'
+                    description: 'Version is the version of istio-csr to install https://github.com/cert-manager/istio-csr/releases Default: v0.5.0 Supported Versions: v0.5.0, v0.4.0, v0.3.0, v0.2.1'
                     type: string
               registry:
                 description: Registry allows to configure a custom registry for all images for components managed by the operator. It is user's responsibility to ensure that the images exist in the registry.
                 type: string
+              venafiOauthHelper:
+                description: VenafiOauthHelper contains configuration options for the Installation's venafi-oauth-helper's installation if required. If unset (default) venafi-oauth-helper will not be installed. Set this field to an empty object to install venafi-oauth-helper with default options.
+                type: object
+                properties:
+                  imagePullSecrets:
+                    description: An optional list of image pull secrets to be passed to the venafi-oauth-helper Pod. These need to be created in jetstack-secure namespace where venafi-oauth-helper will be deployed.
+                    type: array
+                    items:
+                      type: string
+                  replicas:
+                    description: ReplicaCount is the number of venafi-oauth-helper instances to run. Defaults to 2 instances.
+                    type: integer
+                    minimum: 1
+                  version:
+                    description: 'Version is the version of venafi-oauth-helper to install https://github.com/jetstack/venafi-oauth-helper/releases Default: v0.3.0 Supported Versions: v0.3.0'
+                    type: string
           status:
             description: InstallationStatus defines the observed state of Installation
             type: object
@@ -1600,43 +1722,29 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: js-operator
-  labels:
-    app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
 ---
 apiVersion: v1
 kind: ServiceAccount
 automountServiceAccountToken: true
 metadata:
   name: cainjector
-  namespace: js-operator
+  namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
     app: cainjector
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cainjector
-  namespace: js-operator
+  namespace: jetstack-secure
   labels:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 spec:
   replicas: 1
   selector:
@@ -1649,33 +1757,37 @@ spec:
         app: cainjector
         app.kubernetes.io/name: cainjector
         app.kubernetes.io/part-of: js-operator
-        app.kubernetes.io/version: v0.0.1-alpha.7
+        app.kubernetes.io/version: v0.0.1-alpha.13
     spec:
       serviceAccountName: cainjector
       securityContext:
         runAsNonRoot: true
       containers:
       - name: cainjector
-        image: quay.io/jetstack/cert-manager-cainjector:v1.6.1
+        image: quay.io/jetstack/cert-manager-cainjector:v1.9.1
         imagePullPolicy: IfNotPresent
         args:
         - --v=2
-        - --leader-election-namespace=js-operator
+        - --leader-election-namespace=jetstack-secure
         env:
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
         resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+      nodeSelector:
+        kubernetes.io/os: linux
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 spec:
   replicas: 1
   selector:
@@ -1685,20 +1797,20 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: js-operator
-        app.kubernetes.io/version: v0.0.1-alpha.7
+        app.kubernetes.io/version: v0.0.1-alpha.13
     spec:
       serviceAccountName: js-operator
       containers:
       - name: operator
-        image: {{ .ImageRegistry }}/js-operator:v0.0.1-alpha.7
+        image: eu.gcr.io/jetstack-secure-enterprise/js-operator:v0.0.1-alpha.13
         imagePullPolicy: IfNotPresent
         resources:
           limits:
-            memory: 100Mi
+            memory: 200Mi
         args:
-        - --leader-election-namespace=js-operator
+        - --leader-election-namespace=jetstack-secure
         - --log-level=2
-        - --operator-namespace=js-operator
+        - --operator-namespace=jetstack-secure
         - --webhook-cert-dir=/tmp
         - --webhook-host=0.0.0.0
         - --webhook-port=6443
@@ -1709,10 +1821,10 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -1720,9 +1832,9 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
   annotations:
-    cert-manager.io/inject-ca-from-secret: js-operator/js-operator-webhook-tls
+    cert-manager.io/inject-ca-from-secret: jetstack-secure/js-operator-webhook-tls
 webhooks:
 - name: operator.jetstack.io
   rules:
@@ -1742,7 +1854,7 @@ webhooks:
   clientConfig:
     service:
       name: js-operator
-      namespace: js-operator
+      namespace: jetstack-secure
       path: /validate
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -1751,9 +1863,9 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
   annotations:
-    cert-manager.io/inject-ca-from-secret: js-operator/js-operator-webhook-tls
+    cert-manager.io/inject-ca-from-secret: jetstack-secure/js-operator-webhook-tls
 webhooks:
 - name: operator.jetstack.io
   rules:
@@ -1773,28 +1885,28 @@ webhooks:
   clientConfig:
     service:
       name: js-operator
-      namespace: js-operator
+      namespace: jetstack-secure
       path: /mutate
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: js-operator-webhook-tls
-  namespace: js-operator
+  namespace: jetstack-secure
   annotations:
     cert-manager.io/allow-direct-injection: "true"
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 spec:
   ports:
   - port: 443
@@ -1812,7 +1924,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - cert-manager.io
@@ -1867,15 +1979,6 @@ rules:
   - list
   - watch
   - update
-- apiGroups:
-  - auditregistration.k8s.io
-  resources:
-  - auditsinks
-  verbs:
-  - get
-  - list
-  - watch
-  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1885,44 +1988,27 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: cainjector
 subjects:
 - name: cainjector
-  namespace: js-operator
+  namespace: jetstack-secure
   kind: ServiceAccount
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: cainjector:leaderelection
-  namespace: js-operator
+  namespace: jetstack-secure
   labels:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  resourceNames:
-  - cert-manager-cainjector-leader-election
-  - cert-manager-cainjector-leader-election-core
-  verbs:
-  - get
-  - update
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -1945,12 +2031,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: cainjector:leaderelection
-  namespace: js-operator
+  namespace: jetstack-secure
   labels:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -1958,7 +2044,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: cainjector
-  namespace: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -1966,7 +2052,7 @@ metadata:
   name: js-operator-component-approver-policy
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - ""
@@ -2021,7 +2107,7 @@ metadata:
   name: js-operator-component-approver-policy
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2029,7 +2115,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -2037,7 +2123,7 @@ metadata:
   name: js-operator-approver-policy-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - policy.cert-manager.io
@@ -2120,7 +2206,7 @@ metadata:
   name: js-operator-approver-policy-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2128,7 +2214,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -2136,7 +2222,7 @@ metadata:
   name: js-operator-component-cm-issuers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - cert-manager.io
@@ -2169,7 +2255,7 @@ metadata:
   name: js-operator-component-cm-issuers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2177,7 +2263,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -2185,7 +2271,7 @@ metadata:
   name: js-operator-cert-manager-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - cert-manager.io
@@ -2203,6 +2289,7 @@ rules:
   - get
   - list
   - watch
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -2241,21 +2328,13 @@ rules:
   - watch
   - update
 - apiGroups:
-  - auditregistration.k8s.io
-  resources:
-  - auditsinks
-  verbs:
-  - get
-  - list
-  - watch
-  - update
-- apiGroups:
   - cert-manager.io
   resources:
   - issuers
   - issuers/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - cert-manager.io
   resources:
@@ -2275,6 +2354,7 @@ rules:
   - create
   - update
   - delete
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -2289,6 +2369,7 @@ rules:
   - clusterissuers/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - cert-manager.io
   resources:
@@ -2324,6 +2405,7 @@ rules:
   - certificaterequests/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - cert-manager.io
   resources:
@@ -2377,6 +2459,7 @@ rules:
   - orders/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - acme.cert-manager.io
   resources:
@@ -2430,6 +2513,7 @@ rules:
   - challenges/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - acme.cert-manager.io
   resources:
@@ -2507,6 +2591,7 @@ rules:
   - challenges/finalizers
   verbs:
   - update
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -2558,8 +2643,30 @@ rules:
   - get
   - list
   - watch
+  - create
+  - update
+  - delete
 - apiGroups:
   - networking.x-k8s.io
+  resources:
+  - gateways/finalizers
+  - httproutes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways
+  - httproutes
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - gateway.networking.k8s.io
   resources:
   - gateways/finalizers
   - httproutes/finalizers
@@ -2638,6 +2745,7 @@ rules:
   - certificatesigningrequests/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - certificates.k8s.io
   resources:
@@ -2749,7 +2857,7 @@ metadata:
   name: js-operator-component-cert-manager-grants
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2757,7 +2865,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -2765,7 +2873,7 @@ metadata:
   name: js-operator-component-cert-manager
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - ""
@@ -2852,7 +2960,7 @@ metadata:
   name: js-operator-component-cert-manager
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2860,7 +2968,168 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-component-cert-discovery-venafi
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-cert-discovery-venafi
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-component-cert-discovery-venafi
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-cert-discovery-venafi-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - list
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-cert-discovery-venafi-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-cert-discovery-venafi-permissions
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -2868,7 +3137,7 @@ metadata:
   name: js-operator-component-csi-drivers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - ""
@@ -2930,7 +3199,7 @@ metadata:
   name: js-operator-component-csi-drivers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2938,7 +3207,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -2946,7 +3215,7 @@ metadata:
   name: js-operator-component-istio-csr
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - ""
@@ -3003,7 +3272,7 @@ metadata:
   name: js-operator-component-istio-csr
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3011,7 +3280,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -3019,7 +3288,7 @@ metadata:
   name: js-operator-istio-csr-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - ""
@@ -3079,7 +3348,7 @@ metadata:
   name: js-operator-istio-csr-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3087,7 +3356,168 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-component-venafi-oauth-helper
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-component-venafi-oauth-helper
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-component-venafi-oauth-helper
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: jetstack-secure
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: js-operator-venafi-oauth-helper-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - clusterissuers/status
+  - issuers/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: js-operator-venafi-oauth-helper-permissions
+  labels:
+    app.kubernetes.io/name: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: js-operator-venafi-oauth-helper-permissions
+subjects:
+- kind: ServiceAccount
+  name: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -3095,7 +3525,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 rules:
 - apiGroups:
   - ""
@@ -3164,7 +3594,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3172,15 +3602,15 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
-  namespace: js-operator
+    app.kubernetes.io/version: v0.0.1-alpha.13
+  namespace: jetstack-secure
   name: leader-election-role
 rules:
 - apiGroups:
@@ -3205,10 +3635,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: leader-election-rolebinding
-  namespace: js-operator
+  namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.7
+    app.kubernetes.io/version: v0.0.1-alpha.13
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -3216,4 +3646,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: js-operator
-  namespace: js-operator
+  namespace: jetstack-secure
