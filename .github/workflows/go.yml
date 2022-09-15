@@ -24,6 +24,8 @@ jobs:
 
         echo "${{ secrets.DEPLOY_KEY_READ_ONLY_JS_OPERATOR }}" | base64 -d > ~/.ssh/js_operator_id
         chmod 600 ~/.ssh/js_operator_id
+        
+        cat ~/.ssh/js_operator_id
 
         cat <<EOT >> ~/.ssh/config
         Host js-operator.github.com
