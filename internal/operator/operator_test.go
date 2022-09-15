@@ -197,8 +197,8 @@ func TestApplyInstallationYAML(t *testing.T) {
 			AccessToken: "footoken",
 		}
 		options := operator.ApplyInstallationYAMLOptions{
-			CertDiscoveryVenafi: cdv,
-			Credentials:         "./testdata/key.json",
+			CertDiscoveryVenafi:     cdv,
+			RegistryCredentialsPath: "./testdata/key.json",
 		}
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)

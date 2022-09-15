@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -82,7 +81,7 @@ func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperat
 
 	registryCredentials := options.RegistryCredentials
 	if registryCredentials == "" {
-		registryCredentialsBytes, err := ioutil.ReadFile(options.RegistryCredentialsPath)
+		registryCredentialsBytes, err := os.ReadFile(options.RegistryCredentialsPath)
 		if err != nil {
 			return err
 		}
@@ -257,10 +256,12 @@ type (
 		IstioCSRIssuer           string // The issuer name to use for the Istio CSR installation.
 		ImageRegistry            string // A custom image registry to use for operator components.
 		RegistryCredentialsPath  string // Path to a credentials file containing registry credentials for image pull secrets
-		CertManagerReplicas      int    // The replica count for cert-manager and its components.
-		CertManagerVersion       string // The version of cert-manager to deploy
-		IstioCSRReplicas         int    // The replica count for the istio-csr component.
-		SpiffeCSIDriverReplicas  int    // The replica count for the csi-driver-spiffe component.
+		// RegistryCredentials is a string containing a GCP service account key to access the Jetstack Secure image registry.
+		RegistryCredentials     string
+		CertManagerReplicas     int    // The replica count for cert-manager and its components.
+		CertManagerVersion      string // The version of cert-manager to deploy
+		IstioCSRReplicas        int    // The replica count for the istio-csr component.
+		SpiffeCSIDriverReplicas int    // The replica count for the csi-driver-spiffe component.
 
 	}
 )
@@ -309,10 +310,10 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 	applyCertDiscoveryVenafiManifests(manifestTemplates, options)
 
 	registryCredentials := options.RegistryCredentials
-	if registryCredentials == "" {
+	if registryCredentials == "" && options.RegistryCredentialsPath != "" {
 		registryCredentialsBytes, err := os.ReadFile(options.RegistryCredentialsPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read registry credentials file: %w", err)
 		}
 		registryCredentials = string(registryCredentialsBytes)
 	}
@@ -354,7 +355,7 @@ func applyCertDiscoveryVenafiManifests(mf *manifests, options ApplyInstallationY
 	}
 	cdv, secret := venafi.GenerateManifestsForCertDiscoveryVenafi(options.CertDiscoveryVenafi)
 	var imagePullSecrets []string
-	if options.Credentials != "" {
+	if options.RegistryCredentialsPath != "" || options.RegistryCredentials != "" {
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
 	// Eventually we probably want to have a single field for image pull
