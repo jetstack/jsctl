@@ -335,3 +335,87 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 		})
 	}
 }
+
+func TestParseCertDiscoveryVenafiConfig(t *testing.T) {
+	baseConn := &VenafiConnection{
+		URL:         "foo",
+		Zone:        "foozone",
+		AccessToken: "footoken",
+	}
+	tests := map[string]struct {
+		connName     string
+		conns        map[string]*VenafiConnection
+		expectedConn *VenafiConnection
+		cdvEnabled   bool
+		expectedErr  string
+	}{
+		"do nothing if cert-discovery-venafi not enabled": {
+			connName:     "fooConn",
+			conns:        map[string]*VenafiConnection{"fooConn": baseConn},
+			cdvEnabled:   false,
+			expectedConn: nil,
+		},
+		"error if connection is missing": {
+			connName: "fooConn",
+			conns: map[string]*VenafiConnection{"barConn": &VenafiConnection{
+				URL:         "foo",
+				Zone:        "foozone",
+				AccessToken: "footoken",
+			}},
+			cdvEnabled:   true,
+			expectedConn: nil,
+			expectedErr:  fmt.Sprintf(errMsgMissingVenafiConnection, "fooConn"),
+		},
+		"error if connection does not contain credentials": {
+			connName: "fooConn",
+			conns: map[string]*VenafiConnection{"fooConn": &VenafiConnection{
+				URL:  "foo",
+				Zone: "foozone",
+			}},
+			cdvEnabled:   true,
+			expectedConn: nil,
+			expectedErr:  "missing access token for cert-discovery-venafi",
+		},
+		"error if connection contains username & password, not access token": {
+			connName: "fooConn",
+			conns: map[string]*VenafiConnection{"fooConn": &VenafiConnection{
+				URL:      "foo",
+				Zone:     "foozone",
+				Username: "foo",
+				Password: "foo",
+			}},
+			cdvEnabled:   true,
+			expectedConn: nil,
+			expectedErr:  "incorrect connection credentials for cert-discovery-venafi, expected access token got username and password",
+		},
+		"return the right connection": {
+			connName:     "fooConn",
+			conns:        map[string]*VenafiConnection{"fooConn": baseConn},
+			cdvEnabled:   true,
+			expectedConn: baseConn,
+		},
+		"return the right connection from multiple": {
+			connName: "fooConn",
+			conns: map[string]*VenafiConnection{"barConn": &VenafiConnection{
+				URL:         "bar",
+				Zone:        "barzone",
+				AccessToken: "bar",
+			}, "fooConn": baseConn},
+			cdvEnabled:   true,
+			expectedConn: baseConn,
+		},
+	}
+	for name, scenario := range tests {
+		t.Run(name, func(t *testing.T) {
+			gotConn, err := ParseCertDiscoveryVenafiConfig(scenario.connName, scenario.conns, scenario.cdvEnabled)
+
+			if scenario.expectedErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, scenario.expectedErr)
+			}
+
+			assert.Equal(t, gotConn, scenario.expectedConn)
+		})
+	}
+}

@@ -123,26 +123,39 @@ func operatorInstallations() *cobra.Command {
 
 func operatorInstallationsApply() *cobra.Command {
 	var (
-		csiDriver               bool
-		csiDriverSpiffe         bool
-		istioCSR                bool
-		istioCSRIssuer          string
-		venafiOauthHelper       bool
-		venafiIssuers           []string
-		venafiConnections       string
-		registry                string
-		credentials             string
-		certManagerReplicas     int
-		certManagerVersion      string
-		istioCSRReplicas        int
-		csiDriverSpiffeReplicas int
+		csiDriver                     bool
+		csiDriverSpiffe               bool
+		istioCSR                      bool
+		istioCSRIssuer                string
+		venafiOauthHelper             bool
+		certDiscoveryVenafi           bool
+		certDiscoveryVenafiConnection string
+		venafiIssuers                 []string
+		venafiConnections             string
+		registry                      string
+		credentials                   string
+		certManagerReplicas           int
+		certManagerVersion            string
+		istioCSRReplicas              int
+		csiDriverSpiffeReplicas       int
 	)
+
+	validator := func() error {
+		if certDiscoveryVenafi && certDiscoveryVenafiConnection == "" {
+			return errors.New("--cert-discovery-venafi set to true, but Venafi connection not provided, please provide via --experimental-cert-discovery-venafi-connection flag")
+		}
+		return nil
+	}
 
 	cmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Applies an Installation manifest to the current cluster, configured via flags",
 		Run: run(func(ctx context.Context, args []string) error {
 			var err error
+
+			if err := validator(); err != nil {
+				return fmt.Errorf("error validating provided flags: %w", err)
+			}
 
 			options := operator.ApplyInstallationYAMLOptions{
 				ImageRegistry: registry,
@@ -179,6 +192,12 @@ func operatorInstallationsApply() *cobra.Command {
 			}
 			options.VenafiIssuers = vis
 
+			cdv, err := venafi.ParseCertDiscoveryVenafiConfig(certDiscoveryVenafiConnection, vcs, certDiscoveryVenafi)
+			if err != nil {
+				return fmt.Errorf("error parsing cert-discovery-venafi config")
+			}
+			options.CertDiscoveryVenafi = cdv
+
 			var applier operator.Applier
 			if stdout {
 				applier = kubernetes.NewStdOutApplier()
@@ -208,6 +227,8 @@ func operatorInstallationsApply() *cobra.Command {
 	flags.BoolVar(&csiDriverSpiffe, "csi-driver-spiffe", false, "Include the cert-manager spiffe CSI driver (https://github.com/cert-manager/csi-driver-spiffe)")
 	flags.BoolVar(&istioCSR, "istio-csr", false, "Include the cert-manager Istio CSR agent (https://github.com/cert-manager/istio-csr)")
 	flags.BoolVar(&venafiOauthHelper, "venafi-oauth-helper", false, "Include venafi-oauth-helper (https://platform.jetstack.io/documentation/installation/venafi-oauth-helper)")
+	flags.BoolVar(&certDiscoveryVenafi, "cert-discovery-venafi", false, "Include cert-discovery-venafi (https://platform.jetstack.io/documentation/index#cert-discovery-venafi)")
+	flags.StringVar(&certDiscoveryVenafiConnection, "experimental-cert-discovery-venafi-connection", "", "The name of the Venafi connection provided via --experimental-venafi-connections-config flag, to be used to configure cert-discovery-venafi")
 	flags.StringVar(&istioCSRIssuer, "istio-csr-issuer", "", "Specifies the cert-manager issuer that the Istio CSR should use")
 	flags.StringSliceVar(&venafiIssuers, "experimental-venafi-issuers", []string{}, "Specifies a list of Venafi issuers to configure. Issuer names should be in form 'type:connection:name:[namespace]'. Type can be 'tpp', connection refers to a Venafi connection (see --experimental-venafi-connection flag), name is the name of the issuer and namespace is the namespace in which to create the issuer. Leave out namepsace to create a cluster scoped issuer. This flag is experimental and is likely to change.")
 	flags.StringVar(&venafiConnections, "experimental-venafi-connections-config", "", "Specifies a path to a file with yaml formatted Venafi connection details")

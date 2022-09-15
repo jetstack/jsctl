@@ -251,10 +251,11 @@ type (
 	// The ApplyInstallationYAMLOptions type describes additional configuration options for the operator's Installation
 	// custom resource.
 	ApplyInstallationYAMLOptions struct {
-		InstallCSIDriver         bool // If true, the Installation manifest will have the cert-manager CSI driver.
-		InstallSpiffeCSIDriver   bool // If true, the Installation manifest will have the cert-manager spiffe CSI driver.
-		InstallIstioCSR          bool // If true, the Installation manifest will have the Istio CSR.
-		InstallVenafiOauthHelper bool // If true, the Installation manifest will have the venafi-oauth-helper.
+		InstallCSIDriver         bool                     // If true, the Installation manifest will have the cert-manager CSI driver.
+		InstallSpiffeCSIDriver   bool                     // If true, the Installation manifest will have the cert-manager spiffe CSI driver.
+		InstallIstioCSR          bool                     // If true, the Installation manifest will have the Istio CSR.
+		CertDiscoveryVenafi      *venafi.VenafiConnection // If not nil, cert-discovery-venafi resources will be added to manifests
+		InstallVenafiOauthHelper bool                     // If true, the Installation manifest will have the venafi-oauth-helper.
 		VenafiIssuers            []*venafi.VenafiIssuer
 		IstioCSRIssuer           string // The issuer name to use for the Istio CSR installation.
 		ImageRegistry            string // A custom image registry to use for operator components.
@@ -308,6 +309,8 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 
 	applyVenafiOauthHelperToInstallation(manifestTemplates, options)
 
+	applyCertDiscoveryVenafiManifests(manifestTemplates, options)
+
 	if options.Credentials != "" {
 		secret, err := ImagePullSecret(options.Credentials)
 		if err != nil {
@@ -339,6 +342,25 @@ func generateVenafiIssuerManifests(mf *manifests, options ApplyInstallationYAMLO
 
 	}
 	return nil
+}
+
+func applyCertDiscoveryVenafiManifests(mf *manifests, options ApplyInstallationYAMLOptions) {
+	if options.CertDiscoveryVenafi == nil {
+		return
+	}
+	cdv, secret := venafi.GenerateManifestsForCertDiscoveryVenafi(options.CertDiscoveryVenafi)
+	var imagePullSecrets []string
+	if options.Credentials != "" {
+		imagePullSecrets = []string{"jse-gcr-creds"}
+	}
+	// Eventually we probably want to have a single field for image pull
+	// secrets on Installation resource, but this change will happen in the
+	// operator.
+	if cdv != nil {
+		cdv.ImagePullSecrets = imagePullSecrets
+	}
+	mf.installation.Spec.CertDiscoveryVenafi = cdv
+	mf.secrets = append(mf.secrets, secret)
 }
 
 type manifests struct {

@@ -1,6 +1,7 @@
 package venafi
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -92,6 +93,26 @@ func ParseIssuerConfig(issuers []string, vcs map[string]*VenafiConnection, vohEn
 	return vi, nil
 }
 
+// ParseCertDiscoveryVenafiConfig parses provided Venafi connection details and validates that they are suitable.
+func ParseCertDiscoveryVenafiConfig(vcName string, vcs map[string]*VenafiConnection, cdvEnabled bool) (*VenafiConnection, error) {
+	if !cdvEnabled {
+		return nil, nil
+	}
+	var vc *VenafiConnection
+	var ok bool
+	if vc, ok = vcs[vcName]; !ok {
+		return nil, fmt.Errorf(errMsgMissingVenafiConnection, vcName)
+	}
+
+	if len(vc.AccessToken) > 0 {
+		return vc, nil
+	} else if len(vc.Username) > 0 && len(vc.Password) > 0 {
+		return nil, errors.New("incorrect connection credentials for cert-discovery-venafi, expected access token got username and password")
+	} else {
+		return nil, errors.New("missing access token for cert-discovery-venafi")
+	}
+}
+
 func GenerateOperatorManifestsForIssuer(issuer *VenafiIssuer) (*operatorv1alpha1.Issuer, *corev1.Secret, error) {
 	// Generate Issuer spec
 	if issuer == nil || issuer.Conn == nil || issuer.Conn.VC == nil {
@@ -145,4 +166,26 @@ func GenerateOperatorManifestsForIssuer(issuer *VenafiIssuer) (*operatorv1alpha1
 	secret.Data = data
 	return iss, secret, nil
 
+}
+
+func GenerateManifestsForCertDiscoveryVenafi(vc *VenafiConnection) (*operatorv1alpha1.CertDiscoveryVenafi, *corev1.Secret) {
+	cdv := &operatorv1alpha1.CertDiscoveryVenafi{
+		TPP: &operatorv1alpha1.TPP{
+			URL:  vc.URL,
+			Zone: vc.Zone,
+		},
+	}
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+	}
+	secret.Namespace = clusterNamespace
+	secret.Name = "access-token"
+	data := make(map[string][]byte)
+	data[accessTokenKey] = []byte(vc.AccessToken)
+	secret.Data = data
+
+	return cdv, secret
 }
