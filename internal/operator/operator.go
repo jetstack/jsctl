@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -51,9 +50,10 @@ type Applier interface {
 // The ApplyOperatorYAMLOptions type contains fields used to configure the installation of the Jetstack Secure
 // operator.
 type ApplyOperatorYAMLOptions struct {
-	Version             string // The version of the operator to use
-	ImageRegistry       string // A custom image registry for the operator image
-	CredentialsLocation string // The location of the service account key to access the Jetstack Secure image registry.
+	Version       string // The version of the operator to use
+	ImageRegistry string // A custom image registry for the operator image
+	// RegistryCredentials is a string containing a GCP service account key to access the Jetstack Secure image registry.
+	RegistryCredentials string
 }
 
 // ApplyOperatorYAML generates a YAML bundle that contains all Kubernetes resources required to run the Jetstack
@@ -78,21 +78,26 @@ func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperat
 		return err
 	}
 
-	secret, err := ImagePullSecret(options.CredentialsLocation)
-	if err != nil {
-		return err
-	}
+	// if there is no registry credentials, we assume that the images can be
+	// pulled from a public registry or that the image pull secrets are already
+	// in place
+	if options.RegistryCredentials != "" {
+		secret, err := ImagePullSecret(options.RegistryCredentials)
+		if err != nil {
+			return err
+		}
 
-	secretData, err := yaml.Marshal(secret)
-	if err != nil {
-		return fmt.Errorf("error marshalling secret data: %w", err)
-	}
-	secretReader := bytes.NewBuffer(secretData)
+		secretData, err := yaml.Marshal(secret)
+		if err != nil {
+			return fmt.Errorf("error marshalling secret data: %w", err)
+		}
+		secretReader := bytes.NewBuffer(secretData)
 
-	buf.WriteString("---\n")
+		buf.WriteString("---\n")
 
-	if _, err = io.Copy(buf, secretReader); err != nil {
-		return err
+		if _, err = io.Copy(buf, secretReader); err != nil {
+			return err
+		}
 	}
 
 	tpl, err := template.New("install").Parse(buf.String())
@@ -180,23 +185,9 @@ func Versions() ([]string, error) {
 var ErrNoKeyFile = errors.New("no key file")
 
 // ImagePullSecret returns an io.Reader implementation that contains the byte representation of the Kubernetes secret
-// YAML that can be used as an image pull secret for the jetstack operator. The keyFileLocation parameter should describe
-// the location of the authentication key file to use.
-func ImagePullSecret(keyFileLocation string) (*corev1.Secret, error) {
-	file, err := os.Open(keyFileLocation)
-	switch {
-	case errors.Is(err, os.ErrNotExist):
-		return nil, ErrNoKeyFile
-	case err != nil:
-		return nil, err
-	}
-	defer file.Close()
-
-	keyData, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read key file: %w", err)
-	}
-
+// YAML that can be used as an image pull secret for the jetstack operator. The keyData parameter should contain the JSON
+// Google Service account to use in the secret.
+func ImagePullSecret(keyData string) (*corev1.Secret, error) {
 	// When constructing a docker config for GCR, you must use the _json_key username and provide
 	// any valid looking email address. Methodology for building this secret was taken from the kubectl
 	// create secret command:
@@ -206,7 +197,7 @@ func ImagePullSecret(keyFileLocation string) (*corev1.Secret, error) {
 		email    = "auth@jetstack.io"
 	)
 
-	auth := username + ":" + string(keyData)
+	auth := username + ":" + keyData
 	config := docker.ConfigJSON{
 		Auths: map[string]docker.ConfigEntry{
 			"eu.gcr.io": {
@@ -259,11 +250,13 @@ type (
 		VenafiIssuers            []*venafi.VenafiIssuer
 		IstioCSRIssuer           string // The issuer name to use for the Istio CSR installation.
 		ImageRegistry            string // A custom image registry to use for operator components.
-		Credentials              string // Path to a credentials file containing registry credentials for image pull secrets
-		CertManagerReplicas      int    // The replica count for cert-manager and its components.
-		CertManagerVersion       string // The version of cert-manager to deploy
-		IstioCSRReplicas         int    // The replica count for the istio-csr component.
-		SpiffeCSIDriverReplicas  int    // The replica count for the csi-driver-spiffe component.
+		RegistryCredentialsPath  string // Path to a credentials file containing registry credentials for image pull secrets
+		// RegistryCredentials is a string containing a GCP service account key to access the Jetstack Secure image registry.
+		RegistryCredentials     string
+		CertManagerReplicas     int    // The replica count for cert-manager and its components.
+		CertManagerVersion      string // The version of cert-manager to deploy
+		IstioCSRReplicas        int    // The replica count for the istio-csr component.
+		SpiffeCSIDriverReplicas int    // The replica count for the csi-driver-spiffe component.
 
 	}
 )
@@ -311,13 +304,20 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 
 	applyCertDiscoveryVenafiManifests(manifestTemplates, options)
 
-	if options.Credentials != "" {
-		secret, err := ImagePullSecret(options.Credentials)
+	registryCredentials := options.RegistryCredentials
+	if registryCredentials == "" && options.RegistryCredentialsPath != "" {
+		registryCredentialsBytes, err := os.ReadFile(options.RegistryCredentialsPath)
 		if err != nil {
-			return fmt.Errorf("failed to parse image pull secret: %w", err)
+			return fmt.Errorf("failed to read registry credentials file: %w", err)
 		}
-		manifestTemplates.secrets = append(manifestTemplates.secrets, secret)
+		registryCredentials = string(registryCredentialsBytes)
 	}
+
+	secret, err := ImagePullSecret(registryCredentials)
+	if err != nil {
+		return fmt.Errorf("failed to parse image pull secret: %w", err)
+	}
+	manifestTemplates.secrets = append(manifestTemplates.secrets, secret)
 
 	if err := generateVenafiIssuerManifests(manifestTemplates, options); err != nil {
 		return fmt.Errorf("error building manifests for Venafi issuers: %w", err)
@@ -350,7 +350,7 @@ func applyCertDiscoveryVenafiManifests(mf *manifests, options ApplyInstallationY
 	}
 	cdv, secret := venafi.GenerateManifestsForCertDiscoveryVenafi(options.CertDiscoveryVenafi)
 	var imagePullSecrets []string
-	if options.Credentials != "" {
+	if options.RegistryCredentialsPath != "" || options.RegistryCredentials != "" {
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
 	// Eventually we probably want to have a single field for image pull
@@ -454,7 +454,7 @@ func applyVenafiOauthHelperToInstallation(manifests *manifests, options ApplyIns
 	}
 
 	var imagePullSecrets []string
-	if options.Credentials != "" {
+	if options.RegistryCredentialsPath != "" {
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
 	manifests.installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{

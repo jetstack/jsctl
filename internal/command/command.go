@@ -40,6 +40,7 @@ func Command() *cobra.Command {
 		Operator(),
 		Organizations(),
 		Users(),
+		Registry(),
 	)
 
 	return cmd

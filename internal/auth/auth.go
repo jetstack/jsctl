@@ -164,12 +164,11 @@ var ErrNoToken = errors.New("no oauth token")
 // based on the host operating system. See the documentation for os.UserConfigDir for specifics on where the token file will
 // be loaded from. Returns ErrNoToken if a token file cannot be found.
 func LoadOAuthToken() (*oauth2.Token, error) {
-	configDir, err := os.UserConfigDir()
+	tokenFile, err := DetermineTokenFilePath()
 	if err != nil {
-		return nil, err
+		return &oauth2.Token{}, fmt.Errorf("failed to determine token file path: %w", err)
 	}
 
-	tokenFile := filepath.Join(configDir, "jsctl", tokenFileName)
 	file, err := os.Open(tokenFile)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
@@ -191,12 +190,11 @@ func LoadOAuthToken() (*oauth2.Token, error) {
 // based on the host operating system. See the documentation for os.UserConfigDir for specifics on where the token file will
 // be located. Returns ErrNoToken if a token file cannot be found.
 func DeleteOAuthToken() error {
-	configDir, err := os.UserConfigDir()
+	tokenFile, err := DetermineTokenFilePath()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to determine token file path: %w", err)
 	}
 
-	tokenFile := filepath.Join(configDir, "jsctl", tokenFileName)
 	err = os.Remove(tokenFile)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
@@ -206,6 +204,18 @@ func DeleteOAuthToken() error {
 	default:
 		return nil
 	}
+}
+
+// DetermineTokenFilePath attempts to determine the path to the oauth token file.
+func DetermineTokenFilePath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine user config directory: %w", err)
+	}
+
+	tokenFile := filepath.Join(configDir, "jsctl", tokenFileName)
+
+	return tokenFile, nil
 }
 
 type ctxKey struct{}
@@ -232,7 +242,7 @@ type (
 	// rather than using the oauth flow.
 	Credentials struct {
 		UserID string `json:"user_id"`
-		Secret string `json:"secret"`
+		Secret string `json:"user_secret"`
 	}
 
 	serviceAccountToken struct {

@@ -78,12 +78,6 @@ func TestImagePullSecret(t *testing.T) {
 		assert.NotEmpty(t, actualGCR.Auth)
 		assert.NotEmpty(t, actualGCR.Username)
 	})
-
-	t.Run("It should return an error if the key file does not exist", func(t *testing.T) {
-		data, err := operator.ImagePullSecret("./testdata/nope.json")
-		assert.Equal(t, operator.ErrNoKeyFile, err)
-		assert.Nil(t, data)
-	})
 }
 
 func TestApplyInstallationYAML(t *testing.T) {
@@ -145,7 +139,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		applier := &TestApplier{}
 		options := operator.ApplyInstallationYAMLOptions{
 			InstallVenafiOauthHelper: true,
-			Credentials:              "./testdata/key.json",
+			RegistryCredentialsPath:  "./testdata/key.json",
 		}
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
@@ -203,8 +197,8 @@ func TestApplyInstallationYAML(t *testing.T) {
 			AccessToken: "footoken",
 		}
 		options := operator.ApplyInstallationYAMLOptions{
-			CertDiscoveryVenafi: cdv,
-			Credentials:         "./testdata/key.json",
+			CertDiscoveryVenafi:     cdv,
+			RegistryCredentialsPath: "./testdata/key.json",
 		}
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
