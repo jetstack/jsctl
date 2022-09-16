@@ -58,6 +58,9 @@ func operatorDeploy() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploys the operator and its components in the current Kubernetes context",
+		Long: `Deploys the operator and its components in the current Kubernetes context
+
+Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the operator will be deployed without an image pull secret. The images must be availble for the operator pods to start.`,
 		Run: run(func(ctx context.Context, args []string) error {
 			var applier operator.Applier
 			var err error
@@ -200,6 +203,9 @@ func operatorInstallationsApply() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Applies an Installation manifest to the current cluster, configured via flags",
+		Long: `Applies an Installation manifest to the current cluster, configured via flags
+
+Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the installation components will be deployed without an image pull secret. The images must be availble for the component pods to start.`,
 		Run: run(func(ctx context.Context, args []string) error {
 			var err error
 
