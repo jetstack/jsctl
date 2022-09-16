@@ -42,7 +42,7 @@ func TestRegistryAuthInit(t *testing.T) {
 	assert.Equal(t, "1\n", string(bytes))
 
 	// check that the contents on disk is also correct
-	bytes, err = os.ReadFile(tempConfigDir + "/eu.gcr.io--jetstack-secure-enterprise.json")
+	bytes, err = os.ReadFile(tempConfigDir + "/jsctl/eu.gcr.io--jetstack-secure-enterprise.json")
 	require.NoError(t, err)
 	assert.Equal(t, "1\n", string(bytes))
 

@@ -50,9 +50,8 @@ type Applier interface {
 // The ApplyOperatorYAMLOptions type contains fields used to configure the installation of the Jetstack Secure
 // operator.
 type ApplyOperatorYAMLOptions struct {
-	Version                 string // The version of the operator to use
-	ImageRegistry           string // A custom image registry for the operator image
-	RegistryCredentialsPath string // The location of the service account key to access the Jetstack Secure image registry.
+	Version       string // The version of the operator to use
+	ImageRegistry string // A custom image registry for the operator image
 	// RegistryCredentials is a string containing a GCP service account key to access the Jetstack Secure image registry.
 	RegistryCredentials string
 }
@@ -79,30 +78,26 @@ func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperat
 		return err
 	}
 
-	registryCredentials := options.RegistryCredentials
-	if registryCredentials == "" {
-		registryCredentialsBytes, err := os.ReadFile(options.RegistryCredentialsPath)
+	// if there is no registry credentials, we assume that the images can be
+	// pulled from a public registry or that the image pull secrets are already
+	// in place
+	if options.RegistryCredentials != "" {
+		secret, err := ImagePullSecret(options.RegistryCredentials)
 		if err != nil {
 			return err
 		}
-		registryCredentials = string(registryCredentialsBytes)
-	}
 
-	secret, err := ImagePullSecret(registryCredentials)
-	if err != nil {
-		return err
-	}
+		secretData, err := yaml.Marshal(secret)
+		if err != nil {
+			return fmt.Errorf("error marshalling secret data: %w", err)
+		}
+		secretReader := bytes.NewBuffer(secretData)
 
-	secretData, err := yaml.Marshal(secret)
-	if err != nil {
-		return fmt.Errorf("error marshalling secret data: %w", err)
-	}
-	secretReader := bytes.NewBuffer(secretData)
+		buf.WriteString("---\n")
 
-	buf.WriteString("---\n")
-
-	if _, err = io.Copy(buf, secretReader); err != nil {
-		return err
+		if _, err = io.Copy(buf, secretReader); err != nil {
+			return err
+		}
 	}
 
 	tpl, err := template.New("install").Parse(buf.String())

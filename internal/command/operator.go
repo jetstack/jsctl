@@ -42,10 +42,18 @@ func operatorDeploy() *cobra.Command {
 	const defaultRegistry = "eu.gcr.io/jetstack-secure-enterprise"
 
 	var (
-		version                 string
-		operatorImageRegistry   string
-		registryCredentialsPath string
+		operatorImageRegistry        string
+		registryCredentialsPath      string
+		autoFetchRegistryCredentials bool
+		version                      string
 	)
+
+	validator := func() error {
+		if registryCredentialsPath != "" && autoFetchRegistryCredentials {
+			return errors.New("cannot specify both --registry-credentials and --auto-fetch-registry-credentials")
+		}
+		return nil
+	}
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -53,6 +61,10 @@ func operatorDeploy() *cobra.Command {
 		Run: run(func(ctx context.Context, args []string) error {
 			var applier operator.Applier
 			var err error
+
+			if err := validator(); err != nil {
+				return fmt.Errorf("error validating provided flags: %w", err)
+			}
 
 			if stdout {
 				applier = kubernetes.NewStdOutApplier()
@@ -64,7 +76,7 @@ func operatorDeploy() *cobra.Command {
 			}
 
 			var registryCredentials string
-			if registryCredentialsPath == "" {
+			if registryCredentialsPath == "" && autoFetchRegistryCredentials {
 				cnf, ok := config.FromContext(ctx)
 				if !ok || cnf.Organization == "" {
 					return errNoOrganizationName
@@ -85,12 +97,18 @@ func operatorDeploy() *cobra.Command {
 
 				registryCredentials = string(registryCredentialsBytes)
 			}
+			if registryCredentials == "" && registryCredentialsPath != "" {
+				registryCredentialsBytes, err := os.ReadFile(registryCredentialsPath)
+				if err != nil {
+					return fmt.Errorf("failed to read registry credentials file: %s", err)
+				}
+				registryCredentials = string(registryCredentialsBytes)
+			}
 
 			err = operator.ApplyOperatorYAML(ctx, applier, operator.ApplyOperatorYAMLOptions{
-				Version:                 version,
-				ImageRegistry:           operatorImageRegistry,
-				RegistryCredentialsPath: registryCredentialsPath,
-				RegistryCredentials:     registryCredentials,
+				Version:             version,
+				ImageRegistry:       operatorImageRegistry,
+				RegistryCredentials: registryCredentials,
 			})
 
 			switch {
@@ -107,9 +125,10 @@ func operatorDeploy() *cobra.Command {
 	}
 
 	flags := cmd.PersistentFlags()
-	flags.StringVar(&version, "version", "", "Specifies a specific version of the operator to install, defaults to latest")
+	flags.BoolVar(&autoFetchRegistryCredentials, "auto-registry-credentials", false, "If set, then credentials to pull images from the Jetstack Secure Enterprise registry will be automatically fetched")
 	flags.StringVar(&operatorImageRegistry, "registry", defaultRegistry, "Specifies an alternative image registry to use for the operator image")
 	flags.StringVar(&registryCredentialsPath, "registry-credentials-path", "", "Specifies the location of the credentials file to use for docker image pull secrets")
+	flags.StringVar(&version, "version", "", "Specifies a specific version of the operator to install, defaults to latest")
 
 	return cmd
 }
@@ -150,6 +169,7 @@ func operatorInstallations() *cobra.Command {
 
 func operatorInstallationsApply() *cobra.Command {
 	var (
+		autoFetchRegistryCredentials  bool
 		certDiscoveryVenafi           bool
 		certDiscoveryVenafiConnection string
 		certManagerReplicas           int
@@ -160,16 +180,19 @@ func operatorInstallationsApply() *cobra.Command {
 		istioCSR                      bool
 		istioCSRIssuer                string
 		istioCSRReplicas              int
+		operatorImageRegistry         string
+		registryCredentialsPath       string
 		venafiConnections             string
 		venafiIssuers                 []string
 		venafiOauthHelper             bool
-		operatorImageRegistry         string
-		registryCredentialsPath       string
 	)
 
 	validator := func() error {
 		if certDiscoveryVenafi && certDiscoveryVenafiConnection == "" {
 			return errors.New("--cert-discovery-venafi set to true, but Venafi connection not provided, please provide via --experimental-cert-discovery-venafi-connection flag")
+		}
+		if registryCredentialsPath != "" && autoFetchRegistryCredentials {
+			return errors.New("cannot specify both --registry-credentials and --auto-fetch-registry-credentials")
 		}
 		return nil
 	}
@@ -181,7 +204,7 @@ func operatorInstallationsApply() *cobra.Command {
 			var err error
 
 			var registryCredentials string
-			if registryCredentialsPath == "" {
+			if registryCredentialsPath == "" && autoFetchRegistryCredentials {
 				cnf, ok := config.FromContext(ctx)
 				if !ok || cnf.Organization == "" {
 					return errNoOrganizationName
@@ -274,21 +297,22 @@ func operatorInstallationsApply() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
+	flags.BoolVar(&autoFetchRegistryCredentials, "auto-registry-credentials", false, "If set, then credentials to pull images from the Jetstack Secure Enterprise registry will be automatically fetched")
+	flags.BoolVar(&certDiscoveryVenafi, "cert-discovery-venafi", false, "Include cert-discovery-venafi (https://platform.jetstack.io/documentation/index#cert-discovery-venafi)")
 	flags.BoolVar(&csiDriver, "csi-driver", false, "Include the cert-manager CSI driver (https://github.com/cert-manager/csi-driver)")
 	flags.BoolVar(&csiDriverSpiffe, "csi-driver-spiffe", false, "Include the cert-manager spiffe CSI driver (https://github.com/cert-manager/csi-driver-spiffe)")
 	flags.BoolVar(&istioCSR, "istio-csr", false, "Include the cert-manager Istio CSR agent (https://github.com/cert-manager/istio-csr)")
 	flags.BoolVar(&venafiOauthHelper, "venafi-oauth-helper", false, "Include venafi-oauth-helper (https://platform.jetstack.io/documentation/installation/venafi-oauth-helper)")
-	flags.BoolVar(&certDiscoveryVenafi, "cert-discovery-venafi", false, "Include cert-discovery-venafi (https://platform.jetstack.io/documentation/index#cert-discovery-venafi)")
-	flags.StringVar(&certDiscoveryVenafiConnection, "experimental-cert-discovery-venafi-connection", "", "The name of the Venafi connection provided via --experimental-venafi-connections-config flag, to be used to configure cert-discovery-venafi")
-	flags.StringVar(&istioCSRIssuer, "istio-csr-issuer", "", "Specifies the cert-manager issuer that the Istio CSR should use")
-	flags.StringSliceVar(&venafiIssuers, "experimental-venafi-issuers", []string{}, "Specifies a list of Venafi issuers to configure. Issuer names should be in form 'type:connection:name:[namespace]'. Type can be 'tpp', connection refers to a Venafi connection (see --experimental-venafi-connection flag), name is the name of the issuer and namespace is the namespace in which to create the issuer. Leave out namepsace to create a cluster scoped issuer. This flag is experimental and is likely to change.")
-	flags.StringVar(&venafiConnections, "experimental-venafi-connections-config", "", "Specifies a path to a file with yaml formatted Venafi connection details")
-	flags.StringVar(&operatorImageRegistry, "registry", "", "Specifies the image registry to use for the operator's components")
 	flags.IntVar(&certManagerReplicas, "cert-manager-replicas", 2, "Specifies the number of replicas for the cert-manager deployment")
-	flags.StringVar(&certManagerVersion, "cert-manager-version", "", "Specifies the version of cert-manager deployment. Defaults to latest")
-	flags.IntVar(&istioCSRReplicas, "istio-csr-replicas", 2, "Specifies the number of replicas for the istio-csr deployment")
 	flags.IntVar(&csiDriverSpiffeReplicas, "csi-driver-spiffe-replicas", 2, "Specifies the number of replicas for the csi-driver-spiffe deployment")
-	flags.StringVar(&registryCredentialsPath, "credentials", "", "Specifies the location of the credentials file to use for image pull secrets")
+	flags.IntVar(&istioCSRReplicas, "istio-csr-replicas", 2, "Specifies the number of replicas for the istio-csr deployment")
+	flags.StringSliceVar(&venafiIssuers, "experimental-venafi-issuers", []string{}, "Specifies a list of Venafi issuers to configure. Issuer names should be in form 'type:connection:name:[namespace]'. Type can be 'tpp', connection refers to a Venafi connection (see --experimental-venafi-connection flag), name is the name of the issuer and namespace is the namespace in which to create the issuer. Leave out namepsace to create a cluster scoped issuer. This flag is experimental and is likely to change.")
+	flags.StringVar(&certDiscoveryVenafiConnection, "experimental-cert-discovery-venafi-connection", "", "The name of the Venafi connection provided via --experimental-venafi-connections-config flag, to be used to configure cert-discovery-venafi")
+	flags.StringVar(&certManagerVersion, "cert-manager-version", "", "Specifies the version of cert-manager deployment. Defaults to latest")
+	flags.StringVar(&istioCSRIssuer, "istio-csr-issuer", "", "Specifies the cert-manager issuer that the Istio CSR should use")
+	flags.StringVar(&operatorImageRegistry, "registry", "", "Specifies the image registry to use for the operator's components")
+	flags.StringVar(&registryCredentialsPath, "registry-credentials-path", "", "Specifies the location of the credentials file to use for image pull secrets")
+	flags.StringVar(&venafiConnections, "experimental-venafi-connections-config", "", "Specifies a path to a file with yaml formatted Venafi connection details")
 
 	return cmd
 }
