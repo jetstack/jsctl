@@ -1,6 +1,3 @@
-# These manifests have been pulled from https://github.com/jetstack/js-operator/releases/tag/v0.0.1-alpha.13
-# The following changes have been made:
-# - operator image has been parameterized
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -29,7 +26,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Installation represents an installation of cert-manager and related components.
+        description: Installation represents an installation of Jetstack Secure components and resources.
         type: object
         properties:
           apiVersion:
@@ -44,11 +41,10 @@ spec:
             description: InstallationSpec defines the desired state of Installation
             type: object
             required:
-            - approverPolicy
             - certManager
             properties:
               approverPolicy:
-                description: ApproverPolicy contains configuration options for the Installation's approver-policy installation. This field must be set as approver-policy is a required component. https://github.com/cert-manager/approver-policy
+                description: ApproverPolicy contains configuration options for the Installation's approver-policy installation. This field or approverPolicyEnterprise must be set as approver-policy is a required component. https://platform.jetstack.io/documentation/installation/approver-policy
                 type: object
                 properties:
                   replicas:
@@ -56,10 +52,21 @@ spec:
                     type: integer
                     minimum: 1
                   version:
-                    description: 'Version is the version of approver-policy to install https://github.com/cert-manager/approver-policy/releases Default: v0.4.0 Supported Versions: v0.4.0, v0.3.0,v0.2.0, v0.1.0'
+                    description: 'Version is the version of approver-policy to install https://github.com/cert-manager/approver-policy/releases. Default version: v0.4.0. Supported Versions: v0.4.0, v0.3.0,v0.2.0, v0.1.0.'
+                    type: string
+              approverPolicyEnterprise:
+                description: ApproverPolicyEnterprise contains configuration options for the Installation's approver-policy-enterprise installation. This is mutually exclusive with the approverPolicy field. https://platform.jetstack.io/documentation/installation/approver-policy
+                type: object
+                properties:
+                  replicas:
+                    description: ReplicaCount is the number of approver-policy instances to run. Defaults to 2 instances.
+                    type: integer
+                    minimum: 1
+                  version:
+                    description: 'Version is the version of approver-policy to install https://github.com/cert-manager/approver-policy/releases Default: v0.4.0-0 Supported Versions: v0.4.0-0'
                     type: string
               certDiscoveryVenafi:
-                description: CertDiscoveryVenafi contains configuration options for cert-discovery-venafi. https://platform.jetstack.io/documentation/installation/cert-discovery-venafi If unset (default) cert-discovery-venafi will not be installed.
+                description: CertDiscoveryVenafi contains configuration options for cert-discovery-venafi. See https://platform.jetstack.io/documentation/installation/cert-discovery-venafi to learn more about cert-discovery-venafi. If unset (default) cert-discovery-venafi will not be installed.
                 type: object
                 required:
                 - tpp
@@ -74,7 +81,7 @@ spec:
                     type: integer
                     minimum: 1
                   tpp:
-                    description: TPP server configuration options.
+                    description: Venafi TPP server configuration options.
                     type: object
                     required:
                     - url
@@ -130,14 +137,14 @@ spec:
                 type: object
                 properties:
                   certManager:
-                    description: certManager refers to the configuration of a cert-manager.io/csi-driver as per https://github.com/cert-manager/csi-driver
+                    description: certManager refers to the configuration of a cert-manager.io/csi-driver https://cert-manager.io/docs/projects/csi-driver/
                     type: object
                     properties:
                       version:
                         description: 'Version is the version of csi-driver to install https://github.com/cert-manager/csi-driver/releases Default: v0.4.0 Supported Versions: v0.4.0, v0.2.0, v0.1.0'
                         type: string
                   certManagerSpiffe:
-                    description: CertManagerSpiffe refers to the configuration of cert-manager/csi-driver-spiffe that can be used to issue SPIFFE certs for workloads
+                    description: CertManagerSpiffe refers to the configuration of cert-manager/csi-driver-spiffe that can be used to issue SPIFFE certs for workloads https://cert-manager.io/docs/projects/csi-driver-spiffe/
                     type: object
                     properties:
                       issuerRef:
@@ -163,7 +170,7 @@ spec:
                         description: 'Version is the version of cert-manager/csi-driver-spiffe to install https://github.com/cert-manager/csi-driver-spiffe/releases Default: v0.2.0 Supported Versions: v0.2.0,v0.1.0'
                         type: string
               issuers:
-                description: Issuers can be used to configure issuers that the operator will deploy. Currently only cert-manager.io Issuer and ClusterIssuer types are supported.
+                description: Issuers can be used to configure cert-manager issuers that the operator will deploy. Currently only cert-manager.io Issuer and ClusterIssuer types are supported.
                 type: array
                 items:
                   type: object
@@ -1478,6 +1485,50 @@ spec:
                                 minSize:
                                   description: MinSize defines the minimum key size a requestor may use for their private key. Values are inclusive (i.e. a min value of `2048` will accept a size of `2048`). MinSize and MaxSize may be the same value. An omitted field or value of `nil` permits any minimum size.
                                   type: integer
+                        plugins:
+                          description: Plugins defines additional, optional plugins to use with this policy.
+                          type: object
+                          properties:
+                            tpp:
+                              description: TPP plugin is used to pull a policy defined in a zone in TPP server and use that to evaluate a CertificateRequest. This plugin is bundled with the approver-policy-enterprise only, so you must make sure that you have set approverPolicyEnterprise field on Installation spec.
+                              type: object
+                              required:
+                              - credentialsSecretRef
+                              - url
+                              - zone
+                              properties:
+                                caConfigMapRef:
+                                  description: CAConfigMapRef is a reference to a key in a ConfigMap that holds the CA bundle to be used to when connecting to the TPP instance. If unset, system's CA pool will be used. The ConfigMap must be in jetstack-secure namespace.
+                                  type: object
+                                  required:
+                                  - key
+                                  - name
+                                  properties:
+                                    key:
+                                      description: Key is a key in a configmap
+                                      type: string
+                                    name:
+                                      description: Name is the name of a configmap
+                                      type: string
+                                credentialsSecretRef:
+                                  description: CredentialsSecretRef is a reference to a key in a Secret that contains access-token to authenticate to the TPP server. The Secret must be in jetstack-secure namespace.
+                                  type: object
+                                  required:
+                                  - key
+                                  - name
+                                  properties:
+                                    key:
+                                      description: Key is a key in a Secret
+                                      type: string
+                                    name:
+                                      description: Name is the name of a Secret
+                                      type: string
+                                url:
+                                  description: URL is the URL of the TPP server.
+                                  type: string
+                                zone:
+                                  description: Zone is the zone (or policy folder) from which the policy should be retrieved.
+                                  type: string
                         subjects:
                           description: Subjects is the configuration of which entities are allowed to use the CertificateRequestPolicy. At least one subject must be set if a policy is configured. AllowAll cannot be set at the same time as Allowed and Constraints.
                           type: object
@@ -1642,7 +1693,7 @@ spec:
                           description: Zone is the Venafi Policy Zone to use for this issuer. All requests made to the Venafi platform will be restricted by the named zone policy. This field is required.
                           type: string
               istioCSR:
-                description: IstioCSR contains configuration for istio-csr https://github.com/cert-manager/istio-csr
+                description: IstioCSR contains configuration for istio-csr https://platform.jetstack.io/documentation/installation/istio-csr
                 type: object
                 properties:
                   issuerRef:
@@ -1673,7 +1724,7 @@ spec:
                 description: Registry allows to configure a custom registry for all images for components managed by the operator. It is user's responsibility to ensure that the images exist in the registry.
                 type: string
               venafiOauthHelper:
-                description: VenafiOauthHelper contains configuration options for the Installation's venafi-oauth-helper's installation if required. If unset (default) venafi-oauth-helper will not be installed. Set this field to an empty object to install venafi-oauth-helper with default options.
+                description: VenafiOauthHelper contains configuration options for the Installation's venafi-oauth-helper's installation if required. If unset (default) venafi-oauth-helper will not be installed. Set this field to an empty object to install venafi-oauth-helper with default options. See https://platform.jetstack.io/documentation/reference/venafi-oauth-helper/configuration to learn more about venafi-oauth-helper.
                 type: object
                 properties:
                   imagePullSecrets:
@@ -1735,7 +1786,7 @@ metadata:
   labels:
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
     app: cainjector
 ---
 apiVersion: apps/v1
@@ -1747,7 +1798,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 spec:
   replicas: 1
   selector:
@@ -1760,7 +1811,7 @@ spec:
         app: cainjector
         app.kubernetes.io/name: cainjector
         app.kubernetes.io/part-of: js-operator
-        app.kubernetes.io/version: v0.0.1-alpha.13
+        app.kubernetes.io/version: v0.0.1-alpha.16
     spec:
       serviceAccountName: cainjector
       securityContext:
@@ -1790,7 +1841,7 @@ metadata:
   namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 spec:
   replicas: 1
   selector:
@@ -1800,12 +1851,12 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: js-operator
-        app.kubernetes.io/version: v0.0.1-alpha.13
+        app.kubernetes.io/version: v0.0.1-alpha.16
     spec:
       serviceAccountName: js-operator
       containers:
       - name: operator
-        image: {{ .ImageRegistry }}/js-operator:v0.0.1-alpha.13
+        image: {{ .ImageRegistry }}/js-operator:v0.0.1-alpha.16
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -1827,7 +1878,7 @@ metadata:
   namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -1835,7 +1886,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
   annotations:
     cert-manager.io/inject-ca-from-secret: jetstack-secure/js-operator-webhook-tls
 webhooks:
@@ -1866,7 +1917,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
   annotations:
     cert-manager.io/inject-ca-from-secret: jetstack-secure/js-operator-webhook-tls
 webhooks:
@@ -1900,7 +1951,7 @@ metadata:
     cert-manager.io/allow-direct-injection: "true"
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 ---
 apiVersion: v1
 kind: Service
@@ -1909,7 +1960,7 @@ metadata:
   namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 spec:
   ports:
   - port: 443
@@ -1927,7 +1978,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - cert-manager.io
@@ -1991,7 +2042,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2010,7 +2061,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - coordination.k8s.io
@@ -2039,7 +2090,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -2055,7 +2106,7 @@ metadata:
   name: js-operator-component-approver-policy
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - ""
@@ -2110,7 +2161,7 @@ metadata:
   name: js-operator-component-approver-policy
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2126,7 +2177,7 @@ metadata:
   name: js-operator-approver-policy-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - policy.cert-manager.io
@@ -2209,7 +2260,7 @@ metadata:
   name: js-operator-approver-policy-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2225,7 +2276,7 @@ metadata:
   name: js-operator-component-cm-issuers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - cert-manager.io
@@ -2258,7 +2309,7 @@ metadata:
   name: js-operator-component-cm-issuers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2274,7 +2325,7 @@ metadata:
   name: js-operator-cert-manager-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - cert-manager.io
@@ -2860,7 +2911,7 @@ metadata:
   name: js-operator-component-cert-manager-grants
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2876,7 +2927,7 @@ metadata:
   name: js-operator-component-cert-manager
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - ""
@@ -2963,7 +3014,7 @@ metadata:
   name: js-operator-component-cert-manager
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2979,7 +3030,7 @@ metadata:
   name: js-operator-component-cert-discovery-venafi
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - ""
@@ -3025,7 +3076,7 @@ metadata:
   name: js-operator-component-cert-discovery-venafi
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3041,7 +3092,7 @@ metadata:
   name: js-operator-cert-discovery-venafi-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - nonResourceURLs:
   - /metrics
@@ -3124,7 +3175,7 @@ metadata:
   name: js-operator-cert-discovery-venafi-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3140,7 +3191,7 @@ metadata:
   name: js-operator-component-csi-drivers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - ""
@@ -3202,7 +3253,7 @@ metadata:
   name: js-operator-component-csi-drivers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3218,7 +3269,7 @@ metadata:
   name: js-operator-component-istio-csr
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - ""
@@ -3275,7 +3326,7 @@ metadata:
   name: js-operator-component-istio-csr
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3291,7 +3342,7 @@ metadata:
   name: js-operator-istio-csr-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - ""
@@ -3351,7 +3402,7 @@ metadata:
   name: js-operator-istio-csr-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3367,7 +3418,7 @@ metadata:
   name: js-operator-component-venafi-oauth-helper
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - ""
@@ -3413,7 +3464,7 @@ metadata:
   name: js-operator-component-venafi-oauth-helper
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3429,7 +3480,7 @@ metadata:
   name: js-operator-venafi-oauth-helper-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - cert-manager.io
@@ -3512,7 +3563,7 @@ metadata:
   name: js-operator-venafi-oauth-helper-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3528,7 +3579,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 rules:
 - apiGroups:
   - ""
@@ -3597,7 +3648,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3612,7 +3663,7 @@ kind: Role
 metadata:
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
   namespace: jetstack-secure
   name: leader-election-role
 rules:
@@ -3641,7 +3692,7 @@ metadata:
   namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.13
+    app.kubernetes.io/version: v0.0.1-alpha.16
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
