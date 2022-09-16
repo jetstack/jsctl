@@ -1856,7 +1856,7 @@ spec:
       serviceAccountName: js-operator
       containers:
       - name: operator
-        image: eu.gcr.io/jetstack-secure-enterprise/js-operator:v0.0.1-alpha.16
+        image: {{ .ImageRegistry }}/js-operator:v0.0.1-alpha.16
         imagePullPolicy: IfNotPresent
         resources:
           limits:
