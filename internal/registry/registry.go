@@ -5,9 +5,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
+	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/subscription"
 )
@@ -71,6 +73,11 @@ func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context,
 		cnf.Organization,
 		fmt.Sprintf("%s-jsctl-auto", cnf.Organization),
 	)
+	if apiErr, ok := err.(client.APIError); ok {
+		if apiErr.Status == http.StatusUnauthorized {
+			return nil, fmt.Errorf("failed to create registry credentials, current organization %q does not have permissions to access the Jetstack Secure Enterprise registry. Please contact support if this is unexpected.", cnf.Organization)
+		}
+	}
 	if err != nil || len(serviceAccounts) < 1 {
 		return nil, fmt.Errorf("failed to create registry credentials: %w", err)
 	}
