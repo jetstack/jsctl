@@ -171,6 +171,8 @@ func authLogout() *cobra.Command {
 func loginWithOAuth(ctx context.Context, oAuthConfig *oauth2.Config) (*oauth2.Token, error) {
 	url, state := auth.GetOAuthURLAndState(oAuthConfig)
 
+	fmt.Println("Opening browser to:", url)
+
 	if err := webbrowser.Open(url); err != nil {
 		fmt.Printf("Navigate to the URL below to login:\n%s\n", url)
 	} else {
