@@ -32,4 +32,5 @@ checksum:
   algorithm: sha256
 release:
 changelog:
-  skip: true
+  use: github
+  skip: false
