@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/cert-manager/cert-manager v1.9.1
 	github.com/gofrs/uuid v4.2.0+incompatible
-	github.com/jetstack/js-operator v0.0.1-alpha.13
+	github.com/jetstack/js-operator v0.0.1-alpha.16
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5

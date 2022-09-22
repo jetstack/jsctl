@@ -21,6 +21,9 @@ import (
 	"github.com/jetstack/jsctl/internal/venafi"
 )
 
+var tierEnterprisePlus = "enterprise-plus"
+var tierEnterprise = "enterprise"
+
 // Operator returns a cobra.Command instance that is the root for all "jsctl operator" subcommands.
 func Operator() *cobra.Command {
 	cmd := &cobra.Command{
@@ -185,6 +188,7 @@ func operatorInstallationsApply() *cobra.Command {
 		istioCSRReplicas              int
 		operatorImageRegistry         string
 		registryCredentialsPath       string
+		tier                          string
 		venafiConnections             string
 		venafiIssuers                 []string
 		venafiOauthHelper             bool
@@ -197,6 +201,15 @@ func operatorInstallationsApply() *cobra.Command {
 		if registryCredentialsPath != "" && autoFetchRegistryCredentials {
 			return errors.New("cannot specify both --registry-credentials and --auto-fetch-registry-credentials")
 		}
+
+		if istioCSR && istioCSRIssuer == "" {
+			return errors.New("you must specify an issuer for istio-csr to use via the --istio-csr-issuer flag")
+		}
+
+		if tier != "" && tier != tierEnterprise && tier != tierEnterprisePlus {
+			return fmt.Errorf("invalid tier %q, must be either %q, %q or blank", tier, tierEnterprise, tierEnterprisePlus)
+		}
+
 		return nil
 	}
 
@@ -255,10 +268,13 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				InstallIstioCSR:  istioCSR,
 				IstioCSRIssuer:   istioCSRIssuer,
 				IstioCSRReplicas: istioCSRReplicas,
+
+				// Approver Policy configuration
+				InstallApproverPolicyEnterprise: false,
 			}
 
-			if options.InstallIstioCSR && options.IstioCSRIssuer == "" {
-				return errors.New("you must specify an issuer for istio-csr to use via the --istio-csr-issuer flag")
+			if tier == tierEnterprisePlus {
+				options.InstallApproverPolicyEnterprise = true
 			}
 
 			vcs, err := parseVenafiConnections(venafiConnections)
@@ -319,6 +335,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 	flags.StringVar(&operatorImageRegistry, "registry", "", "Specifies the image registry to use for the operator's components")
 	flags.StringVar(&registryCredentialsPath, "registry-credentials-path", "", "Specifies the location of the credentials file to use for image pull secrets")
 	flags.StringVar(&venafiConnections, "experimental-venafi-connections-config", "", "Specifies a path to a file with yaml formatted Venafi connection details")
+	flags.StringVar(&tier, "tier", "", "For users with access to enterprise tier functionality, setting this flag will enable enterprise defaults instead. Valid values are 'enterprise', 'enterprise-plus' or blank")
 
 	return cmd
 }
