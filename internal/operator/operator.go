@@ -242,22 +242,24 @@ type (
 	// The ApplyInstallationYAMLOptions type describes additional configuration options for the operator's Installation
 	// custom resource.
 	ApplyInstallationYAMLOptions struct {
-		InstallCSIDriver         bool                     // If true, the Installation manifest will have the cert-manager CSI driver.
-		InstallSpiffeCSIDriver   bool                     // If true, the Installation manifest will have the cert-manager spiffe CSI driver.
-		InstallIstioCSR          bool                     // If true, the Installation manifest will have the Istio CSR.
-		CertDiscoveryVenafi      *venafi.VenafiConnection // If not nil, cert-discovery-venafi resources will be added to manifests
-		InstallVenafiOauthHelper bool                     // If true, the Installation manifest will have the venafi-oauth-helper.
-		VenafiIssuers            []*venafi.VenafiIssuer
-		IstioCSRIssuer           string // The issuer name to use for the Istio CSR installation.
-		ImageRegistry            string // A custom image registry to use for operator components.
-		RegistryCredentialsPath  string // Path to a credentials file containing registry credentials for image pull secrets
+		InstallCSIDriver       bool // If true, the Installation manifest will have the cert-manager CSI driver.
+		InstallSpiffeCSIDriver bool // If true, the Installation manifest will have the cert-manager spiffe CSI driver.
+		InstallIstioCSR        bool // If true, the Installation manifest will have the Istio CSR.
+		// InstallApproverPolicyEnterprise, if true, will swap the default open
+		// source policy approver for the enterprise one
+		InstallApproverPolicyEnterprise bool
+		CertDiscoveryVenafi             *venafi.VenafiConnection // If not nil, cert-discovery-venafi resources will be added to manifests
+		InstallVenafiOauthHelper        bool                     // If true, the Installation manifest will have the venafi-oauth-helper.
+		VenafiIssuers                   []*venafi.VenafiIssuer
+		IstioCSRIssuer                  string // The issuer name to use for the Istio CSR installation.
+		ImageRegistry                   string // A custom image registry to use for operator components.
+		RegistryCredentialsPath         string // Path to a credentials file containing registry credentials for image pull secrets
 		// RegistryCredentials is a string containing a GCP service account key to access the Jetstack Secure image registry.
 		RegistryCredentials     string
 		CertManagerReplicas     int    // The replica count for cert-manager and its components.
 		CertManagerVersion      string // The version of cert-manager to deploy
 		IstioCSRReplicas        int    // The replica count for the istio-csr component.
 		SpiffeCSIDriverReplicas int    // The replica count for the csi-driver-spiffe component.
-
 	}
 )
 
@@ -294,6 +296,12 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 
 	if err := applyIstioCSRToInstallation(manifestTemplates, options); err != nil {
 		return fmt.Errorf("failed to configure istio csr: %w", err)
+	}
+
+	if options.InstallApproverPolicyEnterprise {
+		// ApproverPolicy must be unset when using ApproverPolicyEnterprise
+		installation.Spec.ApproverPolicy = nil
+		installation.Spec.ApproverPolicyEnterprise = &operatorv1alpha1.ApproverPolicyEnterprise{}
 	}
 
 	applyCertManagerVersion(manifestTemplates, options)

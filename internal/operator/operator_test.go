@@ -335,6 +335,22 @@ func TestApplyInstallationYAML(t *testing.T) {
 			assert.EqualValues(t, &options.IstioCSRReplicas, actual.Spec.IstioCSR.ReplicaCount)
 		}
 	})
+
+	t.Run("It should generate an installation manifest with approver policy enterprise", func(t *testing.T) {
+		options := operator.ApplyInstallationYAMLOptions{
+			InstallApproverPolicyEnterprise: true,
+		}
+		applier := &TestApplier{}
+
+		err := operator.ApplyInstallationYAML(ctx, applier, options)
+		assert.NoError(t, err)
+
+		var actual operatorv1alpha1.Installation
+		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
+
+		assert.Nil(t, actual.Spec.ApproverPolicy)
+		assert.NotNil(t, actual.Spec.ApproverPolicyEnterprise)
+	})
 }
 
 func findIssuer(t *testing.T, name, namespace string, issuers []*operatorv1alpha1.Issuer) *operatorv1alpha1.Issuer {
