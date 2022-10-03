@@ -321,11 +321,13 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 		registryCredentials = string(registryCredentialsBytes)
 	}
 
-	secret, err := ImagePullSecret(registryCredentials)
-	if err != nil {
-		return fmt.Errorf("failed to parse image pull secret: %w", err)
+	if registryCredentials != "" {
+		secret, err := ImagePullSecret(registryCredentials)
+		if err != nil {
+			return fmt.Errorf("failed to parse image pull secret: %w", err)
+		}
+		manifestTemplates.secrets = append(manifestTemplates.secrets, secret)
 	}
-	manifestTemplates.secrets = append(manifestTemplates.secrets, secret)
 
 	if err := generateVenafiIssuerManifests(manifestTemplates, options); err != nil {
 		return fmt.Errorf("error building manifests for Venafi issuers: %w", err)
