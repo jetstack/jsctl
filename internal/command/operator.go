@@ -290,7 +290,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 
 			cdv, err := venafi.ParseCertDiscoveryVenafiConfig(certDiscoveryVenafiConnection, vcs, certDiscoveryVenafi)
 			if err != nil {
-				return fmt.Errorf("error parsing cert-discovery-venafi config")
+				return fmt.Errorf("error parsing cert-discovery-venafi config: %w", err)
 			}
 			options.CertDiscoveryVenafi = cdv
 
