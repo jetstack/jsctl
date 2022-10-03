@@ -60,6 +60,32 @@ type ApplyOperatorYAMLOptions struct {
 // Secure operator which is then applied via the Applier implementation. It can be customised via the provided
 // ApplyOperatorYAMLOptions type.
 func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperatorYAMLOptions) error {
+
+	buf := bytes.NewBuffer([]byte{})
+
+	// Write any secrets to the buffer first, so they get applied to cluster
+	// before any Deployments that use them.
+	// If there is no registry credentials, we assume that the images can be
+	// pulled from a public registry or that the image pull secrets are already
+	// in place.
+	if options.RegistryCredentials != "" {
+		secret, err := ImagePullSecret(options.RegistryCredentials)
+		if err != nil {
+			return err
+		}
+
+		secretData, err := yaml.Marshal(secret)
+		if err != nil {
+			return fmt.Errorf("error marshalling secret data: %w", err)
+		}
+		secretReader := bytes.NewBuffer(secretData)
+
+		if _, err = io.Copy(buf, secretReader); err != nil {
+			return err
+		}
+		buf.WriteString("---\n")
+	}
+
 	var file io.Reader
 	var err error
 
@@ -73,31 +99,8 @@ func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperat
 		return err
 	}
 
-	buf := bytes.NewBuffer([]byte{})
 	if _, err = io.Copy(buf, file); err != nil {
 		return err
-	}
-
-	// if there is no registry credentials, we assume that the images can be
-	// pulled from a public registry or that the image pull secrets are already
-	// in place
-	if options.RegistryCredentials != "" {
-		secret, err := ImagePullSecret(options.RegistryCredentials)
-		if err != nil {
-			return err
-		}
-
-		secretData, err := yaml.Marshal(secret)
-		if err != nil {
-			return fmt.Errorf("error marshalling secret data: %w", err)
-		}
-		secretReader := bytes.NewBuffer(secretData)
-
-		buf.WriteString("---\n")
-
-		if _, err = io.Copy(buf, secretReader); err != nil {
-			return err
-		}
 	}
 
 	tpl, err := template.New("install").Parse(buf.String())
@@ -379,16 +382,11 @@ type manifests struct {
 }
 
 func marshalManifests(mf *manifests) (io.Reader, error) {
-	// Add Installation to the buffer
-	data, err := yaml.Marshal(mf.installation)
-	if err != nil {
-		return nil, fmt.Errorf("error marshalling Installation resource: %w", err)
-	}
-	buf := bytes.NewBuffer(data)
+	buf := bytes.NewBuffer([]byte{})
 
-	// Add all Secrets to the buffer
+	// Add all Secrets to the buffer first to ensure that they get applied
+	// to the cluster before any Deployments that might want to use them.
 	for _, secret := range mf.secrets {
-		buf.WriteString("---\n")
 		secretJson, err := yaml.Marshal(secret)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Secret data: %w", err)
@@ -397,6 +395,20 @@ func marshalManifests(mf *manifests) (io.Reader, error) {
 		if _, err = io.Copy(buf, secretReader); err != nil {
 			return nil, fmt.Errorf("error writing secret data to buffer: %w", err)
 		}
+		buf.WriteString("---\n")
+	}
+	if mf.installation.Spec.CertManager == nil {
+		panic("cert manager is nil")
+	}
+	installationData, err := yaml.Marshal(mf.installation)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling Installation resource: %w", err)
+	}
+
+	installationBuffer := bytes.NewReader(installationData)
+
+	if _, err = io.Copy(buf, installationBuffer); err != nil {
+		return nil, fmt.Errorf("Error writing installation data to buffer: %w", err)
 	}
 
 	return buf, nil

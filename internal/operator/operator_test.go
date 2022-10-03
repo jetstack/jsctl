@@ -5,10 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/cert-manager/cert-manager/pkg/apis/certmanager"
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -145,8 +146,12 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
+		var secret corev1.Secret
 		var actual operatorv1alpha1.Installation
-		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
+		s := strings.Split(string(applier.data.Bytes()), "---")
+		assert.Len(t, s, 2)
+		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
+		assert.NoError(t, yaml.Unmarshal([]byte(s[1]), &actual))
 
 		assert.NotNil(t, actual.Spec.VenafiOauthHelper)
 		assert.Contains(t, actual.Spec.VenafiOauthHelper.ImagePullSecrets, "jse-gcr-creds")
@@ -180,8 +185,12 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
+		var secret corev1.Secret
 		var installation operatorv1alpha1.Installation
-		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &installation))
+		s := strings.Split(string(applier.data.Bytes()), "---")
+		assert.Len(t, s, 2)
+		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
+		assert.NoError(t, yaml.Unmarshal([]byte(s[1]), &installation))
 
 		assert.NotNil(t, installation.Spec.CertDiscoveryVenafi)
 		assert.Equal(t, installation.Spec.CertDiscoveryVenafi.TPP.URL, "foo")
@@ -203,12 +212,13 @@ func TestApplyInstallationYAML(t *testing.T) {
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
+		var installation operatorv1alpha1.Installation
+		s := strings.Split(string(applier.data.Bytes()), "---")
+		assert.Len(t, s, 3)
+		assert.NoError(t, yaml.Unmarshal([]byte(s[2]), &installation))
 
-		var actual operatorv1alpha1.Installation
-		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
-
-		assert.NotNil(t, actual.Spec.CertDiscoveryVenafi)
-		assert.Contains(t, actual.Spec.CertDiscoveryVenafi.ImagePullSecrets, "jse-gcr-creds")
+		assert.NotNil(t, installation.Spec.CertDiscoveryVenafi)
+		assert.Contains(t, installation.Spec.CertDiscoveryVenafi.ImagePullSecrets, "jse-gcr-creds")
 	})
 
 	t.Run("It should have a blank Istio CSR block when no issuer is provided", func(t *testing.T) {
@@ -244,7 +254,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 			issuer := actual.Spec.IstioCSR.IssuerRef
 
 			assert.EqualValues(t, certmanager.GroupName, issuer.Group)
-			assert.EqualValues(t, certmanagerv1.IssuerKind, issuer.Kind)
+			assert.EqualValues(t, cmapi.IssuerKind, issuer.Kind)
 			assert.EqualValues(t, options.IstioCSRIssuer, issuer.Name)
 		}
 	})
