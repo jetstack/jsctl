@@ -53,6 +53,7 @@ func operatorDeploy() *cobra.Command {
 		registryCredentialsPath      string
 		autoFetchRegistryCredentials bool
 		version                      string
+		skipCreateNamespace          bool
 	)
 
 	validator := func() error {
@@ -116,6 +117,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 			}
 
 			err = operator.ApplyOperatorYAML(ctx, applier, operator.ApplyOperatorYAMLOptions{
+				SkipCreateNamespace: skipCreateNamespace,
 				Version:             version,
 				ImageRegistry:       operatorImageRegistry,
 				RegistryCredentials: registryCredentials,
@@ -139,6 +141,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 	flags.StringVar(&operatorImageRegistry, "registry", defaultRegistry, "Specifies an alternative image registry to use for the operator image")
 	flags.StringVar(&registryCredentialsPath, "registry-credentials-path", "", "Specifies the location of the credentials file to use for docker image pull secrets")
 	flags.StringVar(&version, "version", "", "Specifies a specific version of the operator to install, defaults to latest")
+	flags.BoolVar(&skipCreateNamespace, "skip-create-namespace", false, "If set, then the 'jetstack-secure' namespace will not be created")
 
 	return cmd
 }

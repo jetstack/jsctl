@@ -50,8 +50,9 @@ type Applier interface {
 // The ApplyOperatorYAMLOptions type contains fields used to configure the installation of the Jetstack Secure
 // operator.
 type ApplyOperatorYAMLOptions struct {
-	Version       string // The version of the operator to use
-	ImageRegistry string // A custom image registry for the operator image
+	SkipCreateNamespace bool
+	Version             string // The version of the operator to use
+	ImageRegistry       string // A custom image registry for the operator image
 	// RegistryCredentials is a string containing a GCP service account key to access the Jetstack Secure image registry.
 	RegistryCredentials string
 }
@@ -62,6 +63,25 @@ type ApplyOperatorYAMLOptions struct {
 func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperatorYAMLOptions) error {
 
 	buf := bytes.NewBuffer([]byte{})
+
+	// jetstack-secure namespace will be created by default, but can be disabled with a flag
+	if !options.SkipCreateNamespace {
+		ns := &corev1.Namespace{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Namespace",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "jetstack-secure",
+			},
+		}
+		nsData, err := yaml.Marshal(ns)
+		if err != nil {
+			return fmt.Errorf("error marshalling namespace data: %w", err)
+		}
+		buf.Write(nsData)
+		buf.WriteString("---\n")
+	}
 
 	// Write any secrets to the buffer first, so they get applied to cluster
 	// before any Deployments that use them.
@@ -78,11 +98,7 @@ func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperat
 		if err != nil {
 			return fmt.Errorf("error marshalling secret data: %w", err)
 		}
-		secretReader := bytes.NewBuffer(secretData)
-
-		if _, err = io.Copy(buf, secretReader); err != nil {
-			return err
-		}
+		buf.Write(secretData)
 		buf.WriteString("---\n")
 	}
 
