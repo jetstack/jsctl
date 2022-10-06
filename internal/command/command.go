@@ -39,8 +39,9 @@ func Command() *cobra.Command {
 		Config(),
 		Operator(),
 		Organizations(),
-		Users(),
 		Registry(),
+		Users(),
+		Version(&cmd.Version),
 	)
 
 	return cmd
