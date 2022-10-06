@@ -476,7 +476,7 @@ func applyVenafiOauthHelperToInstallation(manifests *manifests, options ApplyIns
 	}
 
 	var imagePullSecrets []string
-	if options.RegistryCredentialsPath != "" {
+	if options.RegistryCredentials != "" || options.RegistryCredentialsPath != "" {
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
 	manifests.installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{
