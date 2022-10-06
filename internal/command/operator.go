@@ -30,6 +30,10 @@ func Operator() *cobra.Command {
 		Use:     "operator",
 		Aliases: []string{"operators", "op"},
 		Short:   "Subcommands for managing the jetstack operator",
+		Long: `
+These commands cover the deployment of the operator and the
+management of 'Installation' resources. Get started by deploying
+the operator with "jsctl operator deploy --help"`,
 	}
 
 	cmd.AddCommand(
@@ -298,6 +302,26 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 			if stdout {
 				applier = kubernetes.NewStdOutApplier()
 			} else {
+				// before starting the application of the installation instance,
+				// we can check if the installation CRD is present
+				kubeCfg, err := kubernetes.NewConfig(kubeConfig)
+				if err != nil {
+					return err
+				}
+
+				installationClient, err := operator.NewInstallationClient(kubeCfg)
+				if err != nil {
+					return err
+				}
+
+				_, err = installationClient.Status(ctx)
+				switch {
+				case errors.Is(err, operator.ErrNoInstallationCRD):
+					return fmt.Errorf("no installation CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
+				case err != nil && !errors.Is(err, operator.ErrNoInstallation):
+					return fmt.Errorf("failed to check cluster status before deploying new installation: %w", err)
+				}
+
 				applier, err = kubernetes.NewKubeConfigApplier(kubeConfig)
 				if err != nil {
 					return err
@@ -362,20 +386,26 @@ func operatorInstallationStatus() *cobra.Command {
 		Use:   "status",
 		Short: "Output the status of all operator components",
 		Run: run(func(ctx context.Context, args []string) error {
-			config, err := kubernetes.NewConfig(kubeConfig)
+			if stdout {
+				return fmt.Errorf("cannot use --stdout flag with status command. When using --stdout, jsctl does not connect to kubernetes")
+			}
+
+			kubeCfg, err := kubernetes.NewConfig(kubeConfig)
 			if err != nil {
 				return err
 			}
 
-			client, err := operator.NewInstallationClient(config)
+			installationClient, err := operator.NewInstallationClient(kubeCfg)
 			if err != nil {
 				return err
 			}
 
-			statuses, err := client.Status(ctx)
+			statuses, err := installationClient.Status(ctx)
 			switch {
+			case errors.Is(err, operator.ErrNoInstallationCRD):
+				return fmt.Errorf("no installation CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
 			case errors.Is(err, operator.ErrNoInstallation):
-				return errors.New("no installation resource exists in the current cluster")
+				return fmt.Errorf("no installation found in cluster %q, have you run 'jsctl operator installations apply'?", kubeCfg.Host)
 			case err != nil:
 				return fmt.Errorf("failed to query installation: %w", err)
 			}
