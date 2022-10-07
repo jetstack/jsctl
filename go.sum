@@ -320,8 +320,6 @@ github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANyt
 github.com/inconshreveable/mousetrap v1.0.1 h1:U3uMjPSQEBMNp1lFxmllqCPM6P5u/Xq7Pgzkat/bFNc=
 github.com/inconshreveable/mousetrap v1.0.1/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
-github.com/jetstack/js-operator v0.0.1-alpha.13 h1:npSCqdvbwgBpYE9AVxRv4gT1dI8PZAsdYE8ZojQKElM=
-github.com/jetstack/js-operator v0.0.1-alpha.13/go.mod h1:AIMzZ2+jPvLvTGcm8X3GnGBWNc8OSjWF2lfXL/2uP2M=
 github.com/jetstack/js-operator v0.0.1-alpha.16 h1:dtmtDh1lwgDPqAHW26/cDyOe+Ulfua6bONUGeUdkV6s=
 github.com/jetstack/js-operator v0.0.1-alpha.16/go.mod h1:WAHhkbXyXaRMcAorHJDp5/wbt7YydM01I2+ejdHrdv8=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=

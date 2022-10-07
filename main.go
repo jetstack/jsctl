@@ -11,12 +11,14 @@ import (
 
 // Values injected at build-time
 var (
-	version string
+	version string = "dev"
+	commit  string = "unknown"
+	date    string = "unknown"
 )
 
 func main() {
 	cmd := command.Command()
-	cmd.Version = version
+	cmd.Version = fmt.Sprintf("%s, commit %s, built at %s", version, commit, date)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
