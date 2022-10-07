@@ -317,7 +317,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				_, err = installationClient.Status(ctx)
 				switch {
 				case errors.Is(err, operator.ErrNoInstallationCRD):
-					return fmt.Errorf("no installation CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
+					return fmt.Errorf("no installations.operator.jetstack.io CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
 				case err != nil && !errors.Is(err, operator.ErrNoInstallation):
 					return fmt.Errorf("failed to check cluster status before deploying new installation: %w", err)
 				}

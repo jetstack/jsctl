@@ -574,7 +574,7 @@ func (ic *InstallationClient) Status(ctx context.Context) ([]ComponentStatus, er
 	var installation operatorv1alpha1.Installation
 
 	const (
-		crdName  = "installations.operator.cert-manager.io"
+		crdName  = "installations.operator.jetstack.io"
 		resource = "installations"
 		name     = "installation"
 	)
