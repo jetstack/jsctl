@@ -1,4 +1,4 @@
-# This manifest is downloaded from https://github.com/jetstack/js-operator/releases/tag/v0.0.1-alpha.16
+# This manifest is downloaded from https://github.com/jetstack/js-operator/releases/tag/v0.0.1-alpha.17
 # The following changes were made:
 # - js-operator image is parameterized
 # - cainjector image is parameterized
@@ -63,6 +63,11 @@ spec:
                 description: ApproverPolicyEnterprise contains configuration options for the Installation's approver-policy-enterprise installation. This is mutually exclusive with the approverPolicy field. https://platform.jetstack.io/documentation/installation/approver-policy
                 type: object
                 properties:
+                  imagePullSecrets:
+                    description: An optional list of image pull secrets to be passed to the approver-policy-enterprise Pod. These need to be created in jetstack-secure namespace where approver-policy-enterprise will be deployed.
+                    type: array
+                    items:
+                      type: string
                   replicas:
                     description: ReplicaCount is the number of approver-policy instances to run. Defaults to 2 instances.
                     type: integer
@@ -1791,7 +1796,7 @@ metadata:
   labels:
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
     app: cainjector
 ---
 apiVersion: apps/v1
@@ -1803,7 +1808,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 spec:
   replicas: 1
   selector:
@@ -1816,7 +1821,7 @@ spec:
         app: cainjector
         app.kubernetes.io/name: cainjector
         app.kubernetes.io/part-of: js-operator
-        app.kubernetes.io/version: v0.0.1-alpha.16
+        app.kubernetes.io/version: v0.0.1-alpha.17
     spec:
       serviceAccountName: cainjector
       securityContext:
@@ -1848,7 +1853,7 @@ metadata:
   namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 spec:
   replicas: 1
   selector:
@@ -1858,12 +1863,12 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: js-operator
-        app.kubernetes.io/version: v0.0.1-alpha.16
+        app.kubernetes.io/version: v0.0.1-alpha.17
     spec:
       serviceAccountName: js-operator
       containers:
       - name: operator
-        image: {{ .ImageRegistry }}/js-operator:v0.0.1-alpha.16
+        image: {{ .ImageRegistry }}/js-operator:v0.0.1-alpha.17
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -1885,7 +1890,7 @@ metadata:
   namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -1893,7 +1898,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
   annotations:
     cert-manager.io/inject-ca-from-secret: jetstack-secure/js-operator-webhook-tls
 webhooks:
@@ -1924,7 +1929,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
   annotations:
     cert-manager.io/inject-ca-from-secret: jetstack-secure/js-operator-webhook-tls
 webhooks:
@@ -1958,7 +1963,7 @@ metadata:
     cert-manager.io/allow-direct-injection: "true"
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 ---
 apiVersion: v1
 kind: Service
@@ -1967,7 +1972,7 @@ metadata:
   namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 spec:
   ports:
   - port: 443
@@ -1985,7 +1990,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - cert-manager.io
@@ -2049,7 +2054,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2068,7 +2073,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - coordination.k8s.io
@@ -2097,7 +2102,7 @@ metadata:
     app: cainjector
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/part-of: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -2113,7 +2118,7 @@ metadata:
   name: js-operator-component-approver-policy
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - ""
@@ -2168,7 +2173,7 @@ metadata:
   name: js-operator-component-approver-policy
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2184,7 +2189,7 @@ metadata:
   name: js-operator-approver-policy-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - policy.cert-manager.io
@@ -2267,7 +2272,7 @@ metadata:
   name: js-operator-approver-policy-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2283,7 +2288,7 @@ metadata:
   name: js-operator-component-cm-issuers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - cert-manager.io
@@ -2316,7 +2321,7 @@ metadata:
   name: js-operator-component-cm-issuers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2332,7 +2337,7 @@ metadata:
   name: js-operator-cert-manager-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - cert-manager.io
@@ -2918,7 +2923,7 @@ metadata:
   name: js-operator-component-cert-manager-grants
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2934,7 +2939,7 @@ metadata:
   name: js-operator-component-cert-manager
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - ""
@@ -3021,7 +3026,7 @@ metadata:
   name: js-operator-component-cert-manager
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3037,7 +3042,7 @@ metadata:
   name: js-operator-component-cert-discovery-venafi
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - ""
@@ -3083,7 +3088,7 @@ metadata:
   name: js-operator-component-cert-discovery-venafi
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3099,7 +3104,7 @@ metadata:
   name: js-operator-cert-discovery-venafi-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - nonResourceURLs:
   - /metrics
@@ -3182,7 +3187,7 @@ metadata:
   name: js-operator-cert-discovery-venafi-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3198,7 +3203,7 @@ metadata:
   name: js-operator-component-csi-drivers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - ""
@@ -3260,7 +3265,7 @@ metadata:
   name: js-operator-component-csi-drivers
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3276,7 +3281,7 @@ metadata:
   name: js-operator-component-istio-csr
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - ""
@@ -3333,7 +3338,7 @@ metadata:
   name: js-operator-component-istio-csr
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3349,7 +3354,7 @@ metadata:
   name: js-operator-istio-csr-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - ""
@@ -3409,7 +3414,7 @@ metadata:
   name: js-operator-istio-csr-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3425,7 +3430,7 @@ metadata:
   name: js-operator-component-venafi-oauth-helper
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - ""
@@ -3471,7 +3476,7 @@ metadata:
   name: js-operator-component-venafi-oauth-helper
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3487,7 +3492,7 @@ metadata:
   name: js-operator-venafi-oauth-helper-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - cert-manager.io
@@ -3570,7 +3575,7 @@ metadata:
   name: js-operator-venafi-oauth-helper-permissions
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3586,7 +3591,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 rules:
 - apiGroups:
   - ""
@@ -3655,7 +3660,7 @@ metadata:
   name: js-operator
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -3670,7 +3675,7 @@ kind: Role
 metadata:
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
   namespace: jetstack-secure
   name: leader-election-role
 rules:
@@ -3699,7 +3704,7 @@ metadata:
   namespace: jetstack-secure
   labels:
     app.kubernetes.io/name: js-operator
-    app.kubernetes.io/version: v0.0.1-alpha.16
+    app.kubernetes.io/version: v0.0.1-alpha.17
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
