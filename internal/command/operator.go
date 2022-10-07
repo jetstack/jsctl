@@ -132,7 +132,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 
 	flags := cmd.PersistentFlags()
 	flags.BoolVar(&autoFetchRegistryCredentials, "auto-registry-credentials", false, "If set, then credentials to pull images from the Jetstack Secure Enterprise registry will be automatically fetched")
-	flags.StringVar(&operatorImageRegistry, "registry", defaultRegistry, "Specifies an alternative image registry to use for the operator image")
+	flags.StringVar(&operatorImageRegistry, "registry", defaultRegistry, "Specifies an alternative image registry to use for js-operator and cainjector images")
 	flags.StringVar(&registryCredentialsPath, "registry-credentials-path", "", "Specifies the location of the credentials file to use for docker image pull secrets")
 	flags.StringVar(&version, "version", "", "Specifies a specific version of the operator to install, defaults to latest")
 

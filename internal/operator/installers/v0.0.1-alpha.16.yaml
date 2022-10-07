@@ -1,3 +1,8 @@
+# This manifest is downloaded from https://github.com/jetstack/js-operator/releases/tag/v0.0.1-alpha.16
+# The following changes were made:
+# - js-operator image is parameterized
+# - cainjector image is parameterized
+# - image pull secrets have been added to cainjector
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1818,7 +1823,7 @@ spec:
         runAsNonRoot: true
       containers:
       - name: cainjector
-        image: quay.io/jetstack/cert-manager-cainjector:v1.9.1
+        image: {{ .ImageRegistry }}/cert-manager-cainjector:v1.9.1
         imagePullPolicy: IfNotPresent
         args:
         - --v=2
@@ -1833,6 +1838,8 @@ spec:
           allowPrivilegeEscalation: false
       nodeSelector:
         kubernetes.io/os: linux
+      imagePullSecrets:
+      - name: jse-gcr-creds
 ---
 apiVersion: apps/v1
 kind: Deployment
