@@ -301,11 +301,7 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 		return fmt.Errorf("failed to configure istio csr: %w", err)
 	}
 
-	if options.InstallApproverPolicyEnterprise {
-		// ApproverPolicy must be unset when using ApproverPolicyEnterprise
-		installation.Spec.ApproverPolicy = nil
-		installation.Spec.ApproverPolicyEnterprise = &operatorv1alpha1.ApproverPolicyEnterprise{}
-	}
+	applyApproverPolicyEnterpriseToInstallation(manifestTemplates, options)
 
 	applyCertManagerVersion(manifestTemplates, options)
 
@@ -480,6 +476,23 @@ func applyVenafiOauthHelperToInstallation(manifests *manifests, options ApplyIns
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
 	manifests.installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{
+		ImagePullSecrets: imagePullSecrets,
+	}
+
+	return nil
+}
+func applyApproverPolicyEnterpriseToInstallation(manifests *manifests, options ApplyInstallationYAMLOptions) error {
+	if !options.InstallApproverPolicyEnterprise {
+		return nil
+	}
+
+	manifests.installation.Spec.ApproverPolicy = nil
+
+	var imagePullSecrets []string
+	if options.RegistryCredentials != "" || options.RegistryCredentialsPath != "" {
+		imagePullSecrets = []string{"jse-gcr-creds"}
+	}
+	manifests.installation.Spec.ApproverPolicyEnterprise = &operatorv1alpha1.ApproverPolicyEnterprise{
 		ImagePullSecrets: imagePullSecrets,
 	}
 

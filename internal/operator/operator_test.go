@@ -120,6 +120,43 @@ func TestApplyInstallationYAML(t *testing.T) {
 			assert.NotNil(t, actual.Spec.CSIDrivers.CertManager)
 		}
 	})
+	t.Run("It should add approver-policy-enterprise to the installation manifest", func(t *testing.T) {
+		applier := &TestApplier{}
+		options := operator.ApplyInstallationYAMLOptions{
+			InstallApproverPolicyEnterprise: true,
+		}
+
+		err := operator.ApplyInstallationYAML(ctx, applier, options)
+		assert.NoError(t, err)
+
+		var actual operatorv1alpha1.Installation
+		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
+
+		assert.NotNil(t, actual.Spec.ApproverPolicyEnterprise)
+
+		assert.Nil(t, actual.Spec.ApproverPolicy)
+	})
+
+	t.Run("It should add approver-policy-enterprise to the installation manifest and interpolate image pull secret", func(t *testing.T) {
+		applier := &TestApplier{}
+		options := operator.ApplyInstallationYAMLOptions{
+			InstallApproverPolicyEnterprise: true,
+			RegistryCredentialsPath:         "./testdata/key.json",
+		}
+
+		err := operator.ApplyInstallationYAML(ctx, applier, options)
+		assert.NoError(t, err)
+
+		var secret corev1.Secret
+		var actual operatorv1alpha1.Installation
+		s := strings.Split(string(applier.data.Bytes()), "---")
+		assert.Len(t, s, 2)
+		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
+		assert.NoError(t, yaml.Unmarshal([]byte(s[1]), &actual))
+
+		assert.NotNil(t, actual.Spec.ApproverPolicyEnterprise)
+		assert.Contains(t, actual.Spec.ApproverPolicyEnterprise.ImagePullSecrets, "jse-gcr-creds")
+	})
 
 	t.Run("It should add the venafi-oauth-helper to the installation manifest", func(t *testing.T) {
 		applier := &TestApplier{}
