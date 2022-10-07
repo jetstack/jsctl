@@ -590,21 +590,10 @@ func (ic *InstallationClient) Status(ctx context.Context) ([]ComponentStatus, er
 	var installation operatorv1alpha1.Installation
 
 	const (
-		crdName  = "installations.operator.cert-manager.io"
 		resource = "installations"
 		name     = "installation"
 	)
 
-	// first check if the installation CRD exists in the cluster
-	_, err = ic.client.Get().Resource("crd").Name(crdName).Do(ctx).Get()
-	switch {
-	case kerrors.IsNotFound(err):
-		return nil, ErrNoInstallationCRD
-	case err != nil:
-		return nil, err
-	}
-
-	// next, check if there's an installation resource instance in the cluster
 	err = ic.client.Get().Resource(resource).Name(name).Do(ctx).Into(&installation)
 	switch {
 	case kerrors.IsNotFound(err):

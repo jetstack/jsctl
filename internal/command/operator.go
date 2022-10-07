@@ -320,7 +320,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				_, err = installationClient.Status(ctx)
 				switch {
 				case errors.Is(err, operator.ErrNoInstallationCRD):
-					return fmt.Errorf("no installation CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
+					return fmt.Errorf("no installations.operator.jetstack.io CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
 				case err != nil && !errors.Is(err, operator.ErrNoInstallation):
 					return fmt.Errorf("failed to check cluster status before deploying new installation: %w", err)
 				}
@@ -403,12 +403,24 @@ func operatorInstallationStatus() *cobra.Command {
 				return err
 			}
 
-			statuses, err := installationClient.Status(ctx)
+			// first check if the operator and CRD is installed, this allows a better error message to be shown
+			crdClient, err := operator.NewCRDClient(kubeCfg)
+			if err != nil {
+				return err
+			}
+			err = crdClient.Status(ctx)
 			switch {
 			case errors.Is(err, operator.ErrNoInstallationCRD):
-				return fmt.Errorf("no installation CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
+				return fmt.Errorf("no installations.operator.jetstack.io CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
+			case err != nil:
+				return fmt.Errorf("failed to query installation CRDs: %w", err)
+			}
+
+			// next, get the status of the installation components
+			statuses, err := installationClient.Status(ctx)
+			switch {
 			case errors.Is(err, operator.ErrNoInstallation):
-				return fmt.Errorf("no installation found in cluster %q, have you run 'jsctl operator installations apply'?", kubeCfg.Host)
+				return fmt.Errorf("no installations.operator.jetstack.io resources found in cluster %q, have you run 'jsctl operator installations apply'?", kubeCfg.Host)
 			case err != nil:
 				return fmt.Errorf("failed to query installation: %w", err)
 			}
