@@ -550,6 +550,9 @@ var (
 	// ErrNoInstallation is the error given when querying an Installation resource that does not exist.
 	ErrNoInstallation = errors.New("no installation")
 
+	// ErrNoInstallationCRD is the error given when the Installation CRD does not exist in the cluster.
+	ErrNoInstallationCRD = errors.New("no installation CRD")
+
 	componentNames = map[operatorv1alpha1.InstallationConditionType]string{
 		operatorv1alpha1.InstallationConditionCertManagerReady:        "cert-manager",
 		operatorv1alpha1.InstallationConditionCertManagerIssuersReady: "issuers",
@@ -567,6 +570,7 @@ var (
 // is chosen based on the content of the componentNames map. Add friendly names to that map to include additional
 // component statuses to return.
 func (ic *InstallationClient) Status(ctx context.Context) ([]ComponentStatus, error) {
+	var err error
 	var installation operatorv1alpha1.Installation
 
 	const (
@@ -574,7 +578,7 @@ func (ic *InstallationClient) Status(ctx context.Context) ([]ComponentStatus, er
 		name     = "installation"
 	)
 
-	err := ic.client.Get().Resource(resource).Name(name).Do(ctx).Into(&installation)
+	err = ic.client.Get().Resource(resource).Name(name).Do(ctx).Into(&installation)
 	switch {
 	case kerrors.IsNotFound(err):
 		return nil, ErrNoInstallation
