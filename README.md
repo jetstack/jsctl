@@ -146,7 +146,9 @@ kubectl apply -f installation.yaml
 ```
 ##### Generate and apply Installation that configures Jetstack Secure components for Venafi TPP user
 
-jsctl can be used to generate (and optionally apply) operator configuration to set up a cluster with components relevant for Venafi TPP user.
+jsctl can be used to generate and/or apply operator configuration to set up a cluster with components relevant for Venafi TPP user.
+
+###### TPP issuer with static credentials
 
 Create a file with Venafi connection details and credentials `connection.yaml`:
 
@@ -163,6 +165,33 @@ Run:
 
 ```shell
 jsctl operator installations apply \
+  --experimental-venafi-issuers="tpp:my-default-zone:foo" \
+  --experimental-venafi-connections-config ./connection.yaml
+```
+
+This command will create and apply to cluster:
+
+- An `Installation` custom resource that will configure the operator to install cert-manager, [approver-policy](https://cert-manager.io/docs/projects/approver-policy/), a Venafi TPP `ClusterIssuer` named `foo` configured with the provided TPP URL and zone as well as an 'allow all' `CertificateRequestPolicy` for the ClusterIssuer and RBAC that allows cert-manager to use the policy
+
+- a `Secret` named `foo-jsctl` in `jetstack-secure` namespace with static credentials for `foo` `ClusterIssuer`.
+
+###### TPP issuer with access token managed by venafi-oauth-helper
+Create a file with Venafi connection details and credentials `connection.yaml`:
+
+```yaml
+my-default-zone:
+  zone: <tpp-zone>
+  url: <tpp-server-url>
+  username: <your-username>
+  password: <your-password>
+```
+
+Note that only username and password (not access token) can be used with venafi-oauth-helper.
+
+Run:
+
+```shell
+jsctl operator installations apply \
   --venafi-oauth-helper \
   --experimental-venafi-issuers="tpp:my-default-zone:foo" \
   --experimental-venafi-connections-config ./connection.yaml
@@ -170,9 +199,47 @@ jsctl operator installations apply \
 
 This command will create and apply to cluster:
 
-- An `Installation` custom resource that will configure the operator to install cert-manager, [approver-policy](), [venafi-oauth-helper], a Venafi TPP `ClusterIssuer` named `foo` configured with the provided TPP URL and zone as well as an 'allow all' `CertificateRequestPolicy` for the ClusterIssuer and RBAC that allows cert-manager to use the policy
+- An `Installation` custom resource that will configure the operator to install cert-manager, [approver-policy](https://cert-manager.io/docs/projects/approver-policy/), [venafi-oauth-helper](https://platform.jetstack.io/documentation/reference/venafi-oauth-helper/configuration), a Venafi TPP `ClusterIssuer` named `foo` configured with the provided TPP URL and zone as well as an 'allow all' `CertificateRequestPolicy` for the ClusterIssuer and RBAC that allows cert-manager to use the policy
 
-- a `foo-voh-bootstrap` `Secret` with the provided Venafi credentials that will be used as a bootstrap credentials by venafi-oauth-helper to create a token for `foo` issuer (see [venafi-oauth-helper docs]() for details)
+- a `foo-voh-bootstrap` `Secret` with the provided Venafi credentials that will be used as a bootstrap credentials by venafi-oauth-helper to create a dynamically refreshed access token for the `foo` `ClusterIssuer` (see [venafi-oauth-helper docs](https://platform.jetstack.io/documentation/reference/venafi-oauth-helper/configuration) for details)
+
+###### cert sync with cert-discovery-venafi
+
+[cert-discovery-venafi](https://platform.jetstack.io/documentation/reference/cert-discovery-venafi/configuration) can be used to sync certs in clusters to Venafi TPP.
+
+Create a file with Venafi connection details and credentials `connections.yaml`:
+
+```yaml
+foo-issuer-zone: # TPP zone for certs issued via `foo` ClusterIssuer (see below)
+  zone: <tpp-zone>
+  url: <tpp-server-url>
+  username: <your-username>
+  password: <your-password>
+synced-certs-zone: # TPP zone where cert-discovery-venafi will sync other certs to
+  zone: <tpp-zone>
+  url: <tpp-server-url>
+  access-token: <access-token>
+```
+Note that only username and password (not access token) can be used with venafi-oauth-helper whilst cert-discovery-venafi only accepts access token, so even if the two zones are the same, different connections with different sets of credentials are required.
+
+Run:
+
+```shell
+jsctl operator installations apply \
+  --venafi-oauth-helper \
+  --experimental-venafi-issuers="tpp:foo-issuer-zone:foo" \
+  --experimental-cert-discovery-venafi-connection="synced-certs-zone" \
+  --cert-discovery-venafi \
+  --experimental-venafi-connections-config ./connections.yaml
+```
+
+This command will create and apply to cluster:
+
+- An `Installation` custom resource that will configure the operator to install cert-manager, [approver-policy](https://cert-manager.io/docs/projects/approver-policy/), [venafi-oauth-helper](https://platform.jetstack.io/documentation/reference/venafi-oauth-helper/configuration), [cert-discovery-venafi](https://platform.jetstack.io/documentation/reference/cert-discovery-venafi/configuration) configured with TPP URL and zone from `synced-certs-zone` Venafi connection, a Venafi TPP `ClusterIssuer` named `foo` configured with the provided TPP URL and zone  from 'foo-issuer-zone' as well as an 'allow all' `CertificateRequestPolicy` for the ClusterIssuer and RBAC that allows cert-manager to use the policy
+
+- a `foo-voh-bootstrap` `Secret` with the provided Venafi credentials that will be used as a bootstrap credentials by venafi-oauth-helper to create a dynamically refreshed access token for the `foo` `ClusterIssuer` (see [venafi-oauth-helper docs](https://platform.jetstack.io/documentation/reference/venafi-oauth-helper/configuration) for details)
+
+- a `Secret` named `access-token` in `jetstack-secure` namespace with the access token from `synced-certs-zone` Venafi connection that cert-discovery-venafi uses to authenticate
 
 See [documenation](./docs/reference/jsctl_operator_installations_apply.md) for additional configuration options.
 
