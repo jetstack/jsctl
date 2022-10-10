@@ -288,6 +288,16 @@ jsctl users remove --force test@example.com
   To pull this module via Go you might need to set `GOPRIVATE` env var i.e `GOPRIVATE="github.com/jetstack/*" go get -u`
 - `jsctl` writes configuration (current organization) to a local file, on UNIX the path will likely be `~/.config/jsctl/config.json`
 
+### Release process
+
+To release a new version of `jsctl`:
+
+1. Create a new tag and push to upstream `main` branch
+
+2. Observe that `Release` Github Actions workflow runs and publishes a new Github release
+
+3. (If command line flags have changed) regenerate docs with `make docs-gen` locally, commmit and make a PR
+
 ## Attributions
 
 When this project was made public commit history was wiped. The current
