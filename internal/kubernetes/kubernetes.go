@@ -36,6 +36,14 @@ func NewConfig(kubeConfig string) (*rest.Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to expand kubeconfig path: %w", err)
 		}
+
+		_, err = os.Stat(kubeConfigPath)
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("kubeconfig doesn't exist: %w", err)
+		} else if err != nil {
+			return nil, fmt.Errorf("failed to check kubeconfig path: %w", err)
+		}
+
 		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 	} else {
 		config, err = rest.InClusterConfig()
@@ -43,6 +51,10 @@ func NewConfig(kubeConfig string) (*rest.Config, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if config == nil {
+		return nil, fmt.Errorf("failed to create config, is your kubeconfig present and configured to connect to a cluster that's still running?")
 	}
 
 	return config, nil
