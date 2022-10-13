@@ -12,6 +12,7 @@ func Version(version *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "view the version, commit and build date of jsctl",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			fmt.Println(*version)
 			if strings.Contains(*version, "dev") {

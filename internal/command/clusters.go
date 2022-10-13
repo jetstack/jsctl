@@ -7,14 +7,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+	"github.com/toqueteos/webbrowser"
+
 	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/cluster"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/kubernetes"
 	"github.com/jetstack/jsctl/internal/prompt"
 	"github.com/jetstack/jsctl/internal/table"
-	"github.com/spf13/cobra"
-	"github.com/toqueteos/webbrowser"
 )
 
 // Clusters returns a cobra.Command instance that is the root for all "jsctl clusters" subcommands.
@@ -101,6 +102,7 @@ func clustersList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Lists all clusters connected to the control plane for the organization",
+		Args:  cobra.ExactValidArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			cnf, ok := config.FromContext(ctx)
 			if !ok || cnf.Organization == "" {
