@@ -53,6 +53,10 @@ func NewConfig(kubeConfig string) (*rest.Config, error) {
 		return nil, err
 	}
 
+	if config == nil {
+		return nil, fmt.Errorf("failed to create config, is your kubeconfig present and configured to connect to a cluster that's still running?")
+	}
+
 	return config, nil
 }
 
