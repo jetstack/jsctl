@@ -7,10 +7,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/organization"
 	"github.com/jetstack/jsctl/internal/table"
-	"github.com/spf13/cobra"
 )
 
 // Organizations returns a cobra.Command instance that is the root for all "jsctl organizations" subcommands.
@@ -34,6 +35,7 @@ func organizationsList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Lists all organizations the user has access to",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			http := client.New(ctx, apiURL)
 

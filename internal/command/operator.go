@@ -68,6 +68,7 @@ func operatorDeploy() *cobra.Command {
 		Long: `Deploys the operator and its components in the current Kubernetes context
 
 Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the operator will be deployed without an image pull secret. The images must be availble for the operator pods to start.`,
+		Args: cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			var applier operator.Applier
 			var err error
@@ -147,6 +148,7 @@ func operatorVersions() *cobra.Command {
 	return &cobra.Command{
 		Use:   "versions",
 		Short: "Outputs all available versions of the jetstack operator",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			versions, err := operator.Versions()
 			if err != nil {
@@ -223,6 +225,7 @@ func operatorInstallationsApply() *cobra.Command {
 		Long: `Applies an Installation manifest to the current cluster, configured via flags
 
 Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the installation components will be deployed without an image pull secret. The images must be availble for the component pods to start.`,
+		Args: cobra.ExactArgs(1),
 		Run: run(func(ctx context.Context, args []string) error {
 			var err error
 
@@ -385,6 +388,7 @@ func operatorInstallationStatus() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Output the status of all operator components",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			if stdout {
 				return fmt.Errorf("cannot use --stdout flag with status command. When using --stdout, jsctl does not connect to kubernetes")

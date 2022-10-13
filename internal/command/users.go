@@ -8,12 +8,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/prompt"
 	"github.com/jetstack/jsctl/internal/table"
 	"github.com/jetstack/jsctl/internal/user"
-	"github.com/spf13/cobra"
 )
 
 // Users returns a cobra.Command instance that is the root for all "jsctl users" subcommands.
@@ -39,6 +40,7 @@ func usersList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Lists all users the within the current organization",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			http := client.New(ctx, apiURL)
 			cnf, ok := config.FromContext(ctx)

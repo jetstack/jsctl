@@ -37,6 +37,7 @@ func authStatus() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Print the logged in account and token location",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			var token *oauth2.Token
 			var err error
@@ -100,6 +101,7 @@ func authLogin() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Performs the authentication flow to allow access to other commands",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			oAuthConfig := auth.GetOAuthConfig()
 
@@ -152,7 +154,8 @@ func authLogin() *cobra.Command {
 
 func authLogout() *cobra.Command {
 	return &cobra.Command{
-		Use: "logout",
+		Use:  "logout",
+		Args: cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			err := auth.DeleteOAuthToken()
 			switch {

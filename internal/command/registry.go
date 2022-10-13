@@ -38,6 +38,7 @@ func registryAuthInit() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init",
 		Short: "Fetch or check the local registry credentials for the Jetstack Secure Enterprise registry",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			configDir, err := os.UserConfigDir()
 			if err != nil {
@@ -69,6 +70,7 @@ func registryAuthStatus() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Print the status of the local registry credentials",
+		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			// TODO: it'd be nice to get this from the ctx config so that
 			//  operations can be performed relative to the loaded config
