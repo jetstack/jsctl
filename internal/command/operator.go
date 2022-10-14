@@ -115,6 +115,10 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				}
 				registryCredentials = string(registryCredentialsBytes)
 			}
+			// warn the user if no credentials are set by this point
+			if registryCredentials == "" {
+				fmt.Println("Note: no image pull credentials specified, the operator will be deployed without an image pull secret. If operator images are not present or accessible then the operator will be unable to start.")
+			}
 
 			err = operator.ApplyOperatorYAML(ctx, applier, operator.ApplyOperatorYAMLOptions{
 				Version:             version,
