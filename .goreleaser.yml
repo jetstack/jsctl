@@ -26,6 +26,9 @@ builds:
 archives:
   - format: tar.gz
     name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    replacements:
+      # we are trying to generate asset URLs from uname -m, this returns x86_64 on intel machines
+      amd64: x86_64
     wrap_in_directory: true
 checksum:
   name_template: "{{ .ProjectName }}-{{ .Version }}-SHA256SUMS"
