@@ -3,6 +3,7 @@ package auth
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -42,6 +43,12 @@ func GetOAuthConfig() *oauth2.Config {
 		RedirectURL: redirectURL,
 	}
 }
+
+//go:embed assets/index.html
+var indexHTML []byte
+
+//go:embed assets/logo.png
+var logoPNG []byte
 
 // GetOAuthURLAndState returns the URL the user should navigate to in order to perform the oauth2 authentication flow and
 // the expected state to validate when the token is provided. At this URL they will be prompted for their credentials.
@@ -113,7 +120,12 @@ func WaitForOAuthToken(ctx context.Context, conf *oauth2.Config, state string) (
 			return
 		}
 
-		fmt.Fprintln(w, "Login successful, you can close this browser tab")
+		w.Write(indexHTML)
+	})
+	mux.HandleFunc("/logo.png", func(w http.ResponseWriter, r *http.Request) {
+		// set the content type to png
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(logoPNG)
 	})
 
 	grp, ctx := errgroup.WithContext(ctx)
@@ -122,6 +134,10 @@ func WaitForOAuthToken(ctx context.Context, conf *oauth2.Config, state string) (
 	})
 	grp.Go(func() error {
 		<-ctx.Done()
+		// this is here to allow the browser to load the logo, if the browser
+		// doesn't do this within 1second then we don't wait and just shut down
+		// to complete the login
+		time.Sleep(1 * time.Second)
 		return svr.Shutdown(context.Background())
 	})
 

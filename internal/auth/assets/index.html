@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Jetstack Secure - Login Complete</title>
+  <style>
+    body {
+      font-family: "sofia-pro", sans-serif;
+      background-color: #eee;
+    }
+    .container {
+      margin: 0;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      -ms-transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%);
+
+      background-color: white;
+      padding: 3rem;
+      padding-top: 4rem;
+      border-radius: 0.5rem;
+    }
+    .logo {
+      max-width: 20rem;
+      margin: 0 auto;
+      display: block;
+    }
+    .text {
+      max-width: 30rem;
+      width: 100%;
+      margin-top: 4rem;
+    }
+    .text-secondary {
+      color: hsl(0, 0%, 40%);
+      font-size: 0.95rem;
+    }
+  </style>
+  <script>
+    (function (d) {
+      var config = {
+                kitId: "lck0ocu",
+                scriptTimeout: 3000,
+                async: true
+              },
+              h = d.documentElement,
+              t = setTimeout(function () {
+                h.className = h.className.replace(/\bwf-loading\b/g, "") + " wf-inactive";
+              }, config.scriptTimeout),
+              tk = d.createElement("script"),
+              f = false,
+              s = d.getElementsByTagName("script")[0],
+              a;
+      h.className += " wf-loading";
+      tk.src = "https://use.typekit.net/" + config.kitId + ".js";
+      tk.async = true;
+      tk.onload = tk.onreadystatechange = function () {
+        a = this.readyState;
+        if (f || (a && a !== "complete" && a !== "loaded")) return;
+        f = true;
+        clearTimeout(t);
+        try {
+          Typekit.load(config);
+        } catch (e) {}
+      };
+      s.parentNode.insertBefore(tk, s);
+    })(document);
+  </script>
+</head>
+<body>
+
+<div class="container">
+  <img class="logo" src="/logo.png" />
+
+  <div class=text>
+    <h1>You are now logged in</h1>
+
+    <p>
+      <code>jsctl</code> is now authenticated with the Jetstack Secure control plane
+    </p>
+
+    <p>Please return to your terminal to continue. This tab can be closed.</p>
+
+    <p class="text-secondary">
+      <strong>Hint: </strong> You might want to take a look at our <a href="https://platform.jetstack.io/documentation">documentation website</a>
+    </p>
+  </div>
+</div>
+</body>
+</html>
