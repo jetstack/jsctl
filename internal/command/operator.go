@@ -229,7 +229,7 @@ func operatorInstallationsApply() *cobra.Command {
 		Long: `Applies an Installation manifest to the current cluster, configured via flags
 
 Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the installation components will be deployed without an image pull secret. The images must be availble for the component pods to start.`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			var err error
 
