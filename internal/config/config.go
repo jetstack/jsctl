@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -36,18 +37,18 @@ func Load(ctx context.Context) (*Config, error) {
 	}
 	configFile := filepath.Join(configDir, configFileName)
 
-	file, err := os.Open(configFile)
+	data, err := ReadConfigFile(ctx, configFileName)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		return nil, ErrNoConfiguration
 	case err != nil:
 		return nil, err
 	}
-	defer file.Close()
 
 	var config Config
-	if err = json.NewDecoder(file).Decode(&config); err != nil {
-		return nil, err
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config file %q: %w", configFile, err)
 	}
 
 	return &config, nil
@@ -76,20 +77,58 @@ func Delete(ctx context.Context) error {
 
 // Save the provided configuration, updating an existing file if it already exists.
 func Save(ctx context.Context, cfg *Config) error {
-	configDir, ok := ctx.Value(ContextKey{}).(string)
-	if !ok {
-		return fmt.Errorf("no config path provided")
-	}
-	configFile := filepath.Join(configDir, configFileName)
-
 	jsonBytes, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %s", err)
 	}
 
-	err = os.WriteFile(configFile, jsonBytes, 0600)
+	err = WriteConfigFile(ctx, configFileName, jsonBytes)
 	if err != nil {
 		return fmt.Errorf("failed to write config: %s", err)
+	}
+
+	return nil
+}
+
+// ReadConfigFile reads a file from the config directory specified in the
+// provided context
+func ReadConfigFile(ctx context.Context, path string) ([]byte, error) {
+	var err error
+
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return []byte{}, fmt.Errorf("no config path provided")
+	}
+	configFile := filepath.Join(configDir, path)
+
+	file, err := os.Open(configFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to read config file %q: %w", configFile, err)
+	}
+
+	return data, nil
+}
+
+// WriteConfigFile writes a file with the correct permissions to the
+// config directory specified in the provided context
+func WriteConfigFile(ctx context.Context, path string, data []byte) error {
+	var err error
+
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return fmt.Errorf("no config path provided")
+	}
+	configFile := filepath.Join(configDir, path)
+
+	err = os.WriteFile(configFile, data, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to write config %q: %w", configFile, err)
 	}
 
 	return nil

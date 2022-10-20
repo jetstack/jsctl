@@ -155,19 +155,14 @@ func WaitForOAuthToken(ctx context.Context, conf *oauth2.Config, state string) (
 // on the host operating system. See the documentation for os.UserConfigDir for specifics on where the token file will
 // be placed.
 func SaveOAuthToken(ctx context.Context, token *oauth2.Token) error {
-	tokenFile, err := DetermineTokenFilePath(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to determine token file path: %w", err)
-	}
-
 	jsonBytes, err := json.Marshal(token)
 	if err != nil {
 		return fmt.Errorf("failed to marshal token to JSON: %w", err)
 	}
 
-	err = os.WriteFile(tokenFile, jsonBytes, 0600)
+	err = config.WriteConfigFile(ctx, tokenFileName, jsonBytes)
 	if err != nil {
-		return fmt.Errorf("failed to write tokens file: %w", err)
+		return fmt.Errorf("failed to write token file: %w", err)
 	}
 
 	return nil
@@ -180,23 +175,18 @@ var ErrNoToken = errors.New("no oauth token")
 // based on the host operating system. See the documentation for os.UserConfigDir for specifics on where the token file will
 // be loaded from. Returns ErrNoToken if a token file cannot be found.
 func LoadOAuthToken(ctx context.Context) (*oauth2.Token, error) {
-	tokenFile, err := DetermineTokenFilePath(ctx)
-	if err != nil {
-		return &oauth2.Token{}, fmt.Errorf("failed to determine token file path: %w", err)
-	}
-
-	file, err := os.Open(tokenFile)
+	data, err := config.ReadConfigFile(ctx, tokenFileName)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		return nil, ErrNoToken
 	case err != nil:
 		return nil, err
 	}
-	defer file.Close()
 
 	var token oauth2.Token
-	if err = json.NewDecoder(file).Decode(&token); err != nil {
-		return nil, err
+	err = json.Unmarshal(data, &token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal token from JSON: %w", err)
 	}
 
 	return &token, nil

@@ -21,21 +21,12 @@ const jetstackSecureRegistryFileKey = "eu.gcr.io--jetstack-secure-enterprise"
 // StatusJetstackSecureEnterpriseRegistry will return the status of the registry
 // credentials for the Jetstack Secure Enterprise registry stashed to disk
 func StatusJetstackSecureEnterpriseRegistry(ctx context.Context) (string, error) {
-	configDir, ok := ctx.Value(config.ContextKey{}).(string)
-	if !ok {
-		return "", fmt.Errorf("no config directory found in context")
-	}
-
-	registryCredentialsPath := filepath.Join(configDir, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
-
-	_, err := os.Stat(registryCredentialsPath)
-	if errors.Is(err, os.ErrNotExist) {
+	_, err := config.ReadConfigFile(ctx, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("error reading registry credentials: %s", err)
+	} else if errors.Is(err, os.ErrNotExist) {
 		return "not authenticated", nil
 	}
-	if err != nil {
-		return "", fmt.Errorf("error checking if registry credentials exist: %s", err)
-	}
-
 	return "authenticated", nil
 }
 
@@ -52,15 +43,12 @@ func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context,
 
 	registryCredentialsPath := filepath.Join(configDir, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
 
-	_, err = os.Stat(registryCredentialsPath)
-	if !errors.Is(err, os.ErrNotExist) {
-		// then we can just load and return the file
-		bytes, err := os.ReadFile(registryCredentialsPath)
-		if err != nil {
-			return nil, fmt.Errorf("error reading registry credentials file: %s", err)
-		}
-
-		return bytes, nil
+	data, err := config.ReadConfigFile(ctx, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("error reading registry credentials: %s", err)
+	}
+	if err == nil {
+		return data, nil
 	}
 
 	cnf, ok := config.FromContext(ctx)
@@ -94,8 +82,7 @@ func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context,
 		return nil, fmt.Errorf("failed to decode registry credentials: %w", err)
 	}
 
-	// stash the bytes in the config dir for use in future invocations
-	err = os.WriteFile(registryCredentialsPath, registryCredentialsBytes, 0600)
+	err = config.WriteConfigFile(ctx, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey), registryCredentialsBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write registry credentials to path %q: %w", registryCredentialsPath, err)
 	}
