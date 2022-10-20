@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -12,6 +13,9 @@ import (
 const (
 	configFileName = "config.json"
 )
+
+// ContextKey is a type used as a key for the config path in the context
+type ContextKey struct{}
 
 // The Config type describes the structure of the user's local configuration file. These values are used for performing
 // operations against the control-plane API.
@@ -23,19 +27,15 @@ type Config struct {
 // ErrNoConfiguration is the error given when a configuration file cannot be found in the config directory.
 var ErrNoConfiguration = errors.New("no configuration file")
 
-// ErrConfigExists is the error given when a configuration file is already present in the config directory.
-var ErrConfigExists = errors.New("config exists")
-
-// Load the configuration file from the config directory, decoding it into a Config type. The location of the configuration
-// file changes based on the host operating system. See the documentation for os.UserConfigDir for specifics on where
-// the config file is loaded from. Returns ErrNoConfiguration if the config file cannot be found.
-func Load() (*Config, error) {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return nil, err
+// Load the configuration file from the config directory specified in the provided context.Context.
+// Returns ErrNoConfiguration if the config file cannot be found.
+func Load(ctx context.Context) (*Config, error) {
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return nil, fmt.Errorf("no config path provided")
 	}
+	configFile := filepath.Join(configDir, configFileName)
 
-	configFile := filepath.Join(configDir, "jsctl", configFileName)
 	file, err := os.Open(configFile)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
@@ -53,53 +53,46 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
-// Create a new configuration file in the config directory containing the contents of the given Config type. The location
-// of the configuration file changes based on the host operating system. See the documentation for os.UserConfigDir for
-// specifics on where the config file is written to. Returns ErrConfigExists if a config file already exists.
-func Create(config *Config) error {
-	configDir, err := os.UserConfigDir()
+// Delete will remove the config file if one exists at the path set in the context
+func Delete(ctx context.Context) error {
+	var err error
+
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return fmt.Errorf("no config path provided")
+	}
+	configFile := filepath.Join(configDir, configFileName)
+
+	_, err = os.Stat(configFile)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
 
-	jsctlDir := filepath.Join(configDir, "jsctl")
-	if _, err = os.Stat(jsctlDir); errors.Is(err, os.ErrNotExist) {
-		if err = os.MkdirAll(jsctlDir, 0755); err != nil {
-			return err
-		}
-	}
-
-	configFile := filepath.Join(jsctlDir, configFileName)
-	if _, err = os.Stat(configFile); err == nil {
-		return ErrConfigExists
-	}
-
-	file, err := os.Create(configFile)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return json.NewEncoder(file).Encode(config)
+	return os.Remove(configFile)
 }
 
-// Save the provided configuration, updating an existing file if it already exists. The location of the configuration
-// file changes based on the host operating system. See the documentation for os.UserConfigDir for specifics on where
-// the config file is written to.
-func Save(config *Config) error {
-	configDir, err := os.UserConfigDir()
+// Save the provided configuration, updating an existing file if it already exists.
+func Save(ctx context.Context, cfg *Config) error {
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return fmt.Errorf("no config path provided")
+	}
+	configFile := filepath.Join(configDir, configFileName)
+
+	jsonBytes, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal config: %s", err)
 	}
 
-	configFile := filepath.Join(configDir, "jsctl", configFileName)
-	file, err := os.Create(configFile)
+	err = os.WriteFile(configFile, jsonBytes, 0600)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write config: %s", err)
 	}
-	defer file.Close()
 
-	return json.NewEncoder(file).Encode(config)
+	return nil
 }
 
 type ctxKey struct{}

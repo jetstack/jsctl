@@ -3,11 +3,12 @@ package command
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/jetstack/jsctl/internal/auth"
 	"github.com/jetstack/jsctl/internal/client"
+	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/registry"
 )
 
@@ -40,21 +41,24 @@ func registryAuthInit() *cobra.Command {
 		Short: "Fetch or check the local registry credentials for the Jetstack Secure Enterprise registry",
 		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
-			configDir, err := os.UserConfigDir()
-			if err != nil {
-				return err
+			var err error
+
+			// users must be logged in to run this command
+			_, ok := auth.TokenFromContext(ctx)
+			if !ok {
+				return fmt.Errorf("you must be logged in to run this command, run jsctl auth login")
 			}
 
 			fmt.Println("Checking for existing credentials in", configDir)
 
 			jscpClient := client.New(ctx, apiURL)
 
-			_, err = registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, jscpClient, configDir)
+			_, err = registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, jscpClient)
 			if err != nil {
 				return err
 			}
 
-			status, err := registry.StatusJetstackSecureEnterpriseRegistry(configDir)
+			status, err := registry.StatusJetstackSecureEnterpriseRegistry(ctx)
 			if err != nil {
 				return err
 			}
@@ -72,16 +76,14 @@ func registryAuthStatus() *cobra.Command {
 		Short: "Print the status of the local registry credentials",
 		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
-			// TODO: it'd be nice to get this from the ctx config so that
-			//  operations can be performed relative to the loaded config
-			configDir, err := os.UserConfigDir()
-			if err != nil {
-				return err
+			configDir, ok := ctx.Value(config.ContextKey{}).(string)
+			if !ok {
+				return fmt.Errorf("no config path provided")
 			}
 
-			fmt.Println("Checking for existing credentials in", configDir)
+			fmt.Printf("Checking for existing credentials at path: %s\n", configDir)
 
-			status, err := registry.StatusJetstackSecureEnterpriseRegistry(configDir)
+			status, err := registry.StatusJetstackSecureEnterpriseRegistry(ctx)
 			if err != nil {
 				return err
 			}

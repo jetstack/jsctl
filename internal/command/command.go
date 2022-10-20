@@ -17,21 +17,34 @@ var (
 	stdout     bool
 	kubeConfig string
 	apiURL     string
+	configDir  string
 
 	errNoOrganizationName = errors.New("You do not have an organization selected, select one using: \n\n\tjsctl config set organization [name]")
 )
 
 // Command returns the root cobra.Command instance for the entire command-line interface.
 func Command() *cobra.Command {
+	var err error
+
 	cmd := &cobra.Command{
 		Use:   "jsctl",
 		Short: "Command-line tool for the Jetstack Secure Control Plane",
 	}
 
+	// determine the default location of the jsctl config file
+	var defaultConfigDir string
+	defaultConfigDir, err = os.UserConfigDir()
+	if err != nil {
+		fmt.Println("failed to determine user config directory, using current directory")
+		defaultConfigDir = "."
+	}
+	defaultConfigDir += "/jsctl"
+
 	flags := cmd.PersistentFlags()
 	flags.BoolVar(&stdout, "stdout", false, "If provided, manifests are written to stdout rather than applied to the current cluster")
 	flags.StringVar(&kubeConfig, "kubeconfig", defaultKubeConfig(), "Location of the user's kubeconfig file for applying directly to the cluster")
 	flags.StringVar(&apiURL, "api-url", "https://platform.jetstack.io", "Base URL of the control-plane API")
+	flags.StringVar(&configDir, "config", defaultConfigDir, "Base URL of the control-plane API")
 
 	cmd.AddCommand(
 		Auth(),
@@ -51,7 +64,19 @@ func run(fn func(ctx context.Context, args []string) error) func(cmd *cobra.Comm
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
 
-		token, err := auth.LoadOAuthToken()
+		// write the configuration directory to the context so that it can be
+		// used in subcommands
+		ctx = context.WithValue(ctx, config.ContextKey{}, configDir)
+
+		// ensure that the config dir specified exists, this allows other
+		// commands to write to sub paths of this directory without concern
+		// for the config dir existing
+		err := os.MkdirAll(configDir, 0700)
+		if err != nil {
+			exitf("failed to create config directory: %s", err)
+		}
+
+		token, err := auth.LoadOAuthToken(ctx)
 		switch {
 		case errors.Is(err, auth.ErrNoToken):
 			break
@@ -61,7 +86,7 @@ func run(fn func(ctx context.Context, args []string) error) func(cmd *cobra.Comm
 			ctx = auth.TokenToContext(ctx, token)
 		}
 
-		cnf, err := config.Load()
+		cnf, err := config.Load(ctx)
 		switch {
 		case errors.Is(err, config.ErrNoConfiguration):
 			break

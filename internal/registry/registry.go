@@ -20,8 +20,13 @@ const jetstackSecureRegistryFileKey = "eu.gcr.io--jetstack-secure-enterprise"
 
 // StatusJetstackSecureEnterpriseRegistry will return the status of the registry
 // credentials for the Jetstack Secure Enterprise registry stashed to disk
-func StatusJetstackSecureEnterpriseRegistry(configDir string) (string, error) {
-	registryCredentialsPath := filepath.Join(configDir, "jsctl", fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
+func StatusJetstackSecureEnterpriseRegistry(ctx context.Context) (string, error) {
+	configDir, ok := ctx.Value(config.ContextKey{}).(string)
+	if !ok {
+		return "", fmt.Errorf("no config directory found in context")
+	}
+
+	registryCredentialsPath := filepath.Join(configDir, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
 
 	_, err := os.Stat(registryCredentialsPath)
 	if errors.Is(err, os.ErrNotExist) {
@@ -37,13 +42,15 @@ func StatusJetstackSecureEnterpriseRegistry(configDir string) (string, error) {
 // FetchOrLoadJetstackSecureEnterpriseRegistryCredentials will check of there are
 // a local copy of registry credentials. If there is, then these are returned,
 // if not, then a new set is fetched and stashed in the jsctl config dir specified
-func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context, httpClient subscription.HTTPClient, configDir string) ([]byte, error) {
-	err := os.MkdirAll(filepath.Join(configDir, "jsctl"), os.ModePerm)
-	if err != nil {
-		return nil, fmt.Errorf("error creating jsctl config dir: %s", err)
+func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context, httpClient subscription.HTTPClient) ([]byte, error) {
+	var err error
+
+	configDir, ok := ctx.Value(config.ContextKey{}).(string)
+	if !ok {
+		return nil, fmt.Errorf("no config directory found in context")
 	}
 
-	registryCredentialsPath := filepath.Join(configDir, "jsctl", fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
+	registryCredentialsPath := filepath.Join(configDir, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
 
 	_, err = os.Stat(registryCredentialsPath)
 	if !errors.Is(err, os.ErrNotExist) {
