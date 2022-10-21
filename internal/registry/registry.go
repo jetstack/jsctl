@@ -30,6 +30,16 @@ func StatusJetstackSecureEnterpriseRegistry(ctx context.Context) (string, error)
 	return "authenticated", nil
 }
 
+// PathJetstackSecureEnterpriseRegistry will return the path where the credentials for the registry are located
+func PathJetstackSecureEnterpriseRegistry(ctx context.Context) (string, error) {
+	configDir, ok := ctx.Value(config.ContextKey{}).(string)
+	if !ok {
+		return "", fmt.Errorf("no config directory found in context")
+	}
+
+	return filepath.Join(configDir, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey)), nil
+}
+
 // FetchOrLoadJetstackSecureEnterpriseRegistryCredentials will check of there are
 // a local copy of registry credentials. If there is, then these are returned,
 // if not, then a new set is fetched and stashed in the jsctl config dir specified

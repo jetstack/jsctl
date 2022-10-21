@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -89,6 +90,13 @@ func registryAuthStatus() *cobra.Command {
 			}
 
 			fmt.Println(status)
+
+			path, err := registry.PathJetstackSecureEnterpriseRegistry(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get path to registry credentials: %s", err)
+			}
+
+			fmt.Fprintf(os.Stderr, "Path to registry credentials: %s\n", path)
 
 			return nil
 		}),
