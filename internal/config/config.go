@@ -97,19 +97,40 @@ func ReadConfigFile(ctx context.Context, path string) ([]byte, error) {
 
 	configDir, ok := ctx.Value(ContextKey{}).(string)
 	if !ok {
-		return []byte{}, fmt.Errorf("no config path provided")
+		return nil, fmt.Errorf("no config path provided")
 	}
 	configFile := filepath.Join(configDir, path)
 
+	// check that the file is not a symlink
+	// https://github.com/jetstack/jsctl/issues/43
+	configFileInfo, err := os.Lstat(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat config file %q: %w", configFile, err)
+	}
+	if configFileInfo.Mode()&os.ModeSymlink != 0 {
+		return nil, fmt.Errorf("config file %q is a symlink, refusing to read", configFile)
+	}
+
+	// check the file permissions and update them if not 0600
+	if configFileInfo.Mode().Perm() != 0600 {
+		// TODO: we should error here in future. This is here to gracefully
+		// handle config files from older versions
+		fmt.Fprintf(os.Stderr, "warning: config file %q has insecure file permissions, correcting them\n", configFile)
+		err = os.Chmod(configFile, 0600)
+		if err != nil {
+			return nil, fmt.Errorf("failed to correct config file permissions for %q", configFile)
+		}
+	}
+
 	file, err := os.Open(configFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open config file %q: %w", configFile, err)
 	}
 	defer file.Close()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
-		return []byte{}, fmt.Errorf("failed to read config file %q: %w", configFile, err)
+		return nil, fmt.Errorf("failed to read config file %q: %w", configFile, err)
 	}
 
 	return data, nil
@@ -125,6 +146,28 @@ func WriteConfigFile(ctx context.Context, path string, data []byte) error {
 		return fmt.Errorf("no config path provided")
 	}
 	configFile := filepath.Join(configDir, path)
+
+	// check that the file is not a symlink
+	// https://github.com/jetstack/jsctl/issues/43
+	configFileInfo, err := os.Lstat(configFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to stat config file %q: %w", configFile, err)
+	}
+	if err == nil { // file exists
+		if configFileInfo.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("config file %q is a symlink, refusing to write", configFile)
+		}
+		// check the file permissions and update them if not 0600
+		if configFileInfo.Mode().Perm() != 0600 {
+			// TODO: we should error here in future. This is here to gracefully
+			// handle config files from older versions
+			fmt.Fprintf(os.Stderr, "warning: config file %q has insecure file permissions, correcting them\n", configFile)
+			err = os.Chmod(configFile, 0600)
+			if err != nil {
+				return fmt.Errorf("failed to correct config file permissions for %q", configFile)
+			}
+		}
+	}
 
 	err = os.WriteFile(configFile, data, 0600)
 	if err != nil {
