@@ -3,7 +3,6 @@ package operator_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"strings"
 	"testing"
@@ -15,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/jetstack/jsctl/internal/docker"
 	"github.com/jetstack/jsctl/internal/operator"
 	"github.com/jetstack/jsctl/internal/venafi"
 )
@@ -55,30 +53,6 @@ func TestVersions(t *testing.T) {
 	versions, err := operator.Versions()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, versions)
-}
-
-func TestImagePullSecret(t *testing.T) {
-	t.Parallel()
-
-	t.Run("It should load valid credentials and generate a secret", func(t *testing.T) {
-		secret, err := operator.ImagePullSecret("./testdata/key.json")
-		assert.NoError(t, err)
-
-		assert.EqualValues(t, "jetstack-secure", secret.Namespace)
-		assert.EqualValues(t, "jse-gcr-creds", secret.Name)
-		assert.EqualValues(t, corev1.SecretTypeDockerConfigJson, secret.Type)
-		assert.NotEmpty(t, secret.Data[corev1.DockerConfigJsonKey])
-
-		var actualConfig docker.ConfigJSON
-		assert.NoError(t, json.Unmarshal(secret.Data[corev1.DockerConfigJsonKey], &actualConfig))
-		assert.NotEmpty(t, actualConfig.Auths)
-
-		actualGCR := actualConfig.Auths["eu.gcr.io"]
-		assert.NotEmpty(t, actualGCR.Email)
-		assert.NotEmpty(t, actualGCR.Password)
-		assert.NotEmpty(t, actualGCR.Auth)
-		assert.NotEmpty(t, actualGCR.Username)
-	})
 }
 
 func TestApplyInstallationYAML(t *testing.T) {
@@ -141,7 +115,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		applier := &TestApplier{}
 		options := operator.ApplyInstallationYAMLOptions{
 			InstallApproverPolicyEnterprise: true,
-			RegistryCredentialsPath:         "./testdata/key.json",
+			RegistryCredentialsPath:         "../registry/testdata/key.json",
 		}
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
@@ -177,7 +151,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		applier := &TestApplier{}
 		options := operator.ApplyInstallationYAMLOptions{
 			InstallVenafiOauthHelper: true,
-			RegistryCredentialsPath:  "./testdata/key.json",
+			RegistryCredentialsPath:  "../registry/testdata/key.json",
 		}
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
@@ -244,7 +218,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		}
 		options := operator.ApplyInstallationYAMLOptions{
 			CertDiscoveryVenafi:     cdv,
-			RegistryCredentialsPath: "./testdata/key.json",
+			RegistryCredentialsPath: "../registry/testdata/key.json",
 		}
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)

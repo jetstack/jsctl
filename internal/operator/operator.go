@@ -5,8 +5,6 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -29,8 +27,8 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/yaml"
 
-	"github.com/jetstack/jsctl/internal/docker"
 	"github.com/jetstack/jsctl/internal/prompt"
+	"github.com/jetstack/jsctl/internal/registry"
 	"github.com/jetstack/jsctl/internal/venafi"
 )
 
@@ -69,7 +67,7 @@ func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperat
 	// pulled from a public registry or that the image pull secrets are already
 	// in place.
 	if options.RegistryCredentials != "" {
-		secret, err := ImagePullSecret(options.RegistryCredentials)
+		secret, err := registry.ImagePullSecret(options.RegistryCredentials)
 		if err != nil {
 			return err
 		}
@@ -187,60 +185,6 @@ func Versions() ([]string, error) {
 // ErrNoKeyFile is the error given when generating an image pull secret for a key that does not exist.
 var ErrNoKeyFile = errors.New("no key file")
 
-// ImagePullSecret returns an io.Reader implementation that contains the byte representation of the Kubernetes secret
-// YAML that can be used as an image pull secret for the jetstack operator. The keyData parameter should contain the JSON
-// Google Service account to use in the secret.
-func ImagePullSecret(keyData string) (*corev1.Secret, error) {
-	// When constructing a docker config for GCR, you must use the _json_key username and provide
-	// any valid looking email address. Methodology for building this secret was taken from the kubectl
-	// create secret command:
-	// https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/kubectl/pkg/cmd/create/create_secret_docker.go
-	const (
-		username = "_json_key"
-		email    = "auth@jetstack.io"
-	)
-
-	auth := username + ":" + keyData
-	config := docker.ConfigJSON{
-		Auths: map[string]docker.ConfigEntry{
-			"eu.gcr.io": {
-				Username: username,
-				Password: string(keyData),
-				Email:    email,
-				Auth:     base64.StdEncoding.EncodeToString([]byte(auth)),
-			},
-		},
-	}
-
-	configJSON, err := json.Marshal(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode docker config: %w", err)
-	}
-
-	const (
-		secretName = "jse-gcr-creds"
-		namespace  = "jetstack-secure"
-	)
-
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: namespace,
-		},
-		Type: corev1.SecretTypeDockerConfigJson,
-		Data: map[string][]byte{
-			corev1.DockerConfigJsonKey: configJSON,
-		},
-	}
-
-	return secret, nil
-
-}
-
 type (
 	// The ApplyInstallationYAMLOptions type describes additional configuration options for the operator's Installation
 	// custom resource.
@@ -321,7 +265,7 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 	}
 
 	if registryCredentials != "" {
-		secret, err := ImagePullSecret(registryCredentials)
+		secret, err := registry.ImagePullSecret(registryCredentials)
 		if err != nil {
 			return fmt.Errorf("failed to parse image pull secret: %w", err)
 		}
@@ -383,11 +327,11 @@ func marshalManifests(mf *manifests) (io.Reader, error) {
 	// Add all Secrets to the buffer first to ensure that they get applied
 	// to the cluster before any Deployments that might want to use them.
 	for _, secret := range mf.secrets {
-		secretJson, err := yaml.Marshal(secret)
+		secretYAML, err := yaml.Marshal(secret)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Secret data: %w", err)
 		}
-		secretReader := bytes.NewBuffer(secretJson)
+		secretReader := bytes.NewBuffer(secretYAML)
 		if _, err = io.Copy(buf, secretReader); err != nil {
 			return nil, fmt.Errorf("error writing secret data to buffer: %w", err)
 		}
