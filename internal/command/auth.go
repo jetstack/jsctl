@@ -97,6 +97,7 @@ func authStatus() *cobra.Command {
 
 func authLogin() *cobra.Command {
 	var credentials string
+	var disconnected bool
 
 	cmd := &cobra.Command{
 		Use:   "login",
@@ -110,7 +111,7 @@ func authLogin() *cobra.Command {
 			if credentials != "" {
 				token, err = loginWithCredentials(ctx, oAuthConfig, credentials)
 			} else {
-				token, err = loginWithOAuth(ctx, oAuthConfig)
+				token, err = loginWithOAuth(ctx, oAuthConfig, disconnected)
 			}
 
 			if err != nil {
@@ -146,7 +147,13 @@ func authLogin() *cobra.Command {
 		&credentials,
 		"credentials",
 		os.Getenv("JSCTL_CREDENTIALS"),
-		"The location of a credentials file to use instead of the normal oauth login flow",
+		"The location of service account credentials file to use instead of the normal oauth login flow",
+	)
+	flags.BoolVar(
+		&disconnected,
+		"disconnected",
+		false,
+		"Use a disconnected login flow where browser and terminal are not running on the same machine",
 	)
 
 	return cmd
@@ -171,8 +178,19 @@ func authLogout() *cobra.Command {
 	}
 }
 
-func loginWithOAuth(ctx context.Context, oAuthConfig *oauth2.Config) (*oauth2.Token, error) {
+func loginWithOAuth(ctx context.Context, oAuthConfig *oauth2.Config, disconnected bool) (*oauth2.Token, error) {
 	url, state := auth.GetOAuthURLAndState(oAuthConfig)
+
+	// disconnected can be set to true when the browser and terminal are not running
+	// on the same machine.
+	if disconnected {
+		fmt.Printf("Navigate to the URL below to login:\n%s\n", url)
+		token, err := auth.WaitForOAuthTokenCommandLine(ctx, oAuthConfig, state)
+		if err != nil {
+			return nil, fmt.Errorf("failed to obtain token: %w", err)
+		}
+		return token, nil
+	}
 
 	fmt.Println("Opening browser to:", url)
 
@@ -182,7 +200,7 @@ func loginWithOAuth(ctx context.Context, oAuthConfig *oauth2.Config) (*oauth2.To
 		fmt.Println("You will be taken to your browser for authentication")
 	}
 
-	token, err := auth.WaitForOAuthToken(ctx, oAuthConfig, state)
+	token, err := auth.WaitForOAuthTokenCallback(ctx, oAuthConfig, state)
 	if err != nil {
 		return nil, err
 	}
