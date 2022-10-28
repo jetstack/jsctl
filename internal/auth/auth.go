@@ -12,8 +12,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -154,11 +156,33 @@ func WaitForOAuthTokenCallback(ctx context.Context, conf *oauth2.Config, state s
 func WaitForOAuthTokenCommandLine(ctx context.Context, conf *oauth2.Config, state string) (*oauth2.Token, error) {
 	fmt.Fprintf(os.Stderr, "Enter the URL you were redirected to (http://localhost:9999...) and press enter\n")
 
-	// read in the raw URL the user pastes in
-	buf := bufio.NewReader(os.Stdin)
-	rawURL, err := buf.ReadBytes('\n')
-	if err != nil {
-		return nil, fmt.Errorf("failed to read URL from command line: %w", err)
+	signalChan := make(chan os.Signal, 1)
+	resultChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		select {
+		case <-signalChan:
+			errChan <- fmt.Errorf("interrupted")
+		}
+	}()
+	go func() {
+		// read in the raw URL the user pastes in
+		buf := bufio.NewReader(os.Stdin)
+		rawURL, err := buf.ReadBytes('\n')
+		if err != nil {
+			errChan <- err
+		}
+		resultChan <- string(rawURL)
+	}()
+
+	var rawURL string
+	select {
+	case res := <-resultChan:
+		rawURL = res
+	case err := <-errChan:
+		return nil, err
 	}
 
 	// parse the callback URL to extract the code and state
