@@ -1,35 +1,83 @@
+project_name: jsctl
 before:
   hooks:
-    - go mod tidy
+  - go mod tidy
 builds:
-  - env:
+  - id: "linux"
+    env:
       - CGO_ENABLED=0
     mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
       - -trimpath
     ldflags:
       - -s -w -X "main.version={{.Version}}" -X "main.commit={{.Commit}}" -X "main.date={{.Date}}"
-    goos:
-      - freebsd
-      - windows
-      - linux
-      - darwin
-    goarch:
-      - amd64
-      - "386"
-      - arm
-      - arm64
-    ignore:
-      - goos: darwin
-        goarch: "386"
     binary: "{{ .ProjectName }}"
+    goos:
+    - linux
+    goarch:
+    - amd64
+    - arm
+    - arm64
+  - id: "darwin"
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X "main.version={{.Version}}" -X "main.commit={{.Commit}}" -X "main.date={{.Date}}"
+    binary: "{{ .ProjectName }}"
+    goos:
+    - darwin
+    goarch:
+    - amd64
+    - arm64
+  - id: "windows"
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X "main.version={{.Version}}" -X "main.commit={{.Commit}}" -X "main.date={{.Date}}"
+    binary: "{{ .ProjectName }}"
+    goos:
+    - windows
+    goarch:
+    - amd64
+    - "386"
+    - arm64
 archives:
-  - format: tar.gz
+  - id: linux
+    format: tar.gz
     name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
-    replacements:
-      # we are trying to generate asset URLs from uname -m, this returns x86_64 on intel machines
-      amd64: x86_64
     wrap_in_directory: true
+    builds:
+    - "linux"
+    replacements:
+      arm: armv7l
+      arm64: aarch64
+      amd64: x86_64
+  - id: darwin
+    format: tar.gz
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    wrap_in_directory: true
+    builds:
+    - "darwin"
+    replacements:
+      arm: armv7l
+      amd64: x86_64
+  - id: windows
+    format: tar.gz
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    wrap_in_directory: true
+    builds:
+    - "windows"
+    replacements:
+      arm64: Arm64
+      amd64: 64bit
+      386: 32bit
+
 checksum:
   name_template: "{{ .ProjectName }}-{{ .Version }}-SHA256SUMS"
   algorithm: sha256
