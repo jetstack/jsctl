@@ -16,13 +16,13 @@ jobs:
       # js-operator is a private repo that this tool depends on to build,
       # the following configuration will grant this action permissions to pull
       # that contents of that repo during a go mod download step. The key in
-      # DEPLOY_KEY_READ_JS_OPERATOR is the private key of a deploy key on
+      # DEPLOY_KEY_READ_PRIVATE_JETSTACK_REPOS is the private key of a deploy key on
       # the js-operator repo granting read only access.
       run: |
         mkdir ~/.ssh
         chmod 700 ~/.ssh
 
-        echo "${{ secrets.DEPLOY_KEY_READ_JS_OPERATOR }}" > ~/.ssh/js_operator_id
+        echo "${{ secrets.DEPLOY_KEY_READ_PRIVATE_JETSTACK_REPOS }}" > ~/.ssh/js_operator_id
         chmod 600 ~/.ssh/js_operator_id
 
         cat <<EOT >> ~/.ssh/config
