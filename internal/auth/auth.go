@@ -18,6 +18,8 @@ import (
 	"github.com/gofrs/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/jetstack/jsctl/internal/config"
 )
 
 const (
@@ -152,25 +154,18 @@ func WaitForOAuthToken(ctx context.Context, conf *oauth2.Config, state string) (
 // SaveOAuthToken writes the provided token to a JSON file in the user's config directory. This location changes based
 // on the host operating system. See the documentation for os.UserConfigDir for specifics on where the token file will
 // be placed.
-func SaveOAuthToken(token *oauth2.Token) error {
-	configDir, err := os.UserConfigDir()
+func SaveOAuthToken(ctx context.Context, token *oauth2.Token) error {
+	jsonBytes, err := json.Marshal(token)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal token to JSON: %w", err)
 	}
 
-	tokenDir := filepath.Join(configDir, "jsctl")
-	if err = os.MkdirAll(tokenDir, 0755); err != nil {
-		return err
-	}
-
-	tokenFile := filepath.Join(tokenDir, tokenFileName)
-	file, err := os.Create(tokenFile)
+	err = config.WriteConfigFile(ctx, tokenFileName, jsonBytes)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write token file: %w", err)
 	}
-	defer file.Close()
 
-	return json.NewEncoder(file).Encode(token)
+	return nil
 }
 
 // ErrNoToken is the error given when attempting to load an oauth token from disk that cannot be found.
@@ -179,24 +174,19 @@ var ErrNoToken = errors.New("no oauth token")
 // LoadOAuthToken attempts to load an oauth token from the configuration directory. The location of the token file changes
 // based on the host operating system. See the documentation for os.UserConfigDir for specifics on where the token file will
 // be loaded from. Returns ErrNoToken if a token file cannot be found.
-func LoadOAuthToken() (*oauth2.Token, error) {
-	tokenFile, err := DetermineTokenFilePath()
-	if err != nil {
-		return &oauth2.Token{}, fmt.Errorf("failed to determine token file path: %w", err)
-	}
-
-	file, err := os.Open(tokenFile)
+func LoadOAuthToken(ctx context.Context) (*oauth2.Token, error) {
+	data, err := config.ReadConfigFile(ctx, tokenFileName)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		return nil, ErrNoToken
 	case err != nil:
 		return nil, err
 	}
-	defer file.Close()
 
 	var token oauth2.Token
-	if err = json.NewDecoder(file).Decode(&token); err != nil {
-		return nil, err
+	err = json.Unmarshal(data, &token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal token from JSON: %w", err)
 	}
 
 	return &token, nil
@@ -205,8 +195,8 @@ func LoadOAuthToken() (*oauth2.Token, error) {
 // DeleteOAuthToken attempts to remove an oauth token from the configuration directory. The location of the token file changes
 // based on the host operating system. See the documentation for os.UserConfigDir for specifics on where the token file will
 // be located. Returns ErrNoToken if a token file cannot be found.
-func DeleteOAuthToken() error {
-	tokenFile, err := DetermineTokenFilePath()
+func DeleteOAuthToken(ctx context.Context) error {
+	tokenFile, err := DetermineTokenFilePath(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to determine token file path: %w", err)
 	}
@@ -223,13 +213,13 @@ func DeleteOAuthToken() error {
 }
 
 // DetermineTokenFilePath attempts to determine the path to the oauth token file.
-func DetermineTokenFilePath() (string, error) {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to determine user config directory: %w", err)
+func DetermineTokenFilePath(ctx context.Context) (string, error) {
+	configDir, ok := ctx.Value(config.ContextKey{}).(string)
+	if !ok {
+		return "", fmt.Errorf("no config path provided")
 	}
 
-	tokenFile := filepath.Join(configDir, "jsctl", tokenFileName)
+	tokenFile := filepath.Join(configDir, tokenFileName)
 
 	return tokenFile, nil
 }

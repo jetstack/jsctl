@@ -49,13 +49,17 @@ func authStatus() *cobra.Command {
 					return fmt.Errorf("failed to login with credentials file %q: %w", credentials, err)
 				}
 			} else {
-				tokenPath, err = auth.DetermineTokenFilePath()
+				tokenPath, err = auth.DetermineTokenFilePath(ctx)
 				if err != nil {
-					fmt.Println("Can't find token", err)
+					return fmt.Errorf("failed to determine token path: %w", err)
 				}
+				if _, err := os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("token missing at %s", tokenPath)
+				}
+
 				fmt.Println("Token path:", tokenPath)
 
-				token, err = auth.LoadOAuthToken()
+				token, err = auth.LoadOAuthToken(ctx)
 				if err != nil {
 					fmt.Println("Not logged in")
 					return nil
@@ -117,18 +121,15 @@ func authLogin() *cobra.Command {
 				return fmt.Errorf("failed to obtain token: %w", err)
 			}
 
-			if err = auth.SaveOAuthToken(token); err != nil {
+			if err = auth.SaveOAuthToken(ctx, token); err != nil {
 				return fmt.Errorf("failed to save token: %w", err)
 			}
 
 			fmt.Println("Login succeeded")
 
-			err = config.Create(&config.Config{})
-			switch {
-			case errors.Is(err, config.ErrConfigExists):
-				break
-			case err != nil:
-				return fmt.Errorf("failed to create configuration file: %w", err)
+			err = config.Save(ctx, &config.Config{})
+			if err != nil {
+				return fmt.Errorf("failed to save configuration: %w", err)
 			}
 
 			cnf, ok := config.FromContext(ctx)
@@ -157,7 +158,7 @@ func authLogout() *cobra.Command {
 		Use:  "logout",
 		Args: cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
-			err := auth.DeleteOAuthToken()
+			err := auth.DeleteOAuthToken(ctx)
 			switch {
 			case errors.Is(err, auth.ErrNoToken):
 				return fmt.Errorf("host contains no authentication data")

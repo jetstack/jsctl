@@ -95,13 +95,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 
 				http := client.New(ctx, apiURL)
 
-				// TODO: this would ideally come from the config in ctx
-				configDir, err := os.UserConfigDir()
-				if err != nil {
-					return err
-				}
-
-				registryCredentialsBytes, err := registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, http, configDir)
+				registryCredentialsBytes, err := registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, http)
 				if err != nil {
 					return fmt.Errorf("failed to fetch or load registry credentials: %s", err)
 				}
@@ -242,13 +236,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 
 				http := client.New(ctx, apiURL)
 
-				// TODO: this would ideally come from the config in ctx
-				configDir, err := os.UserConfigDir()
-				if err != nil {
-					return err
-				}
-
-				registryCredentialsBytes, err := registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, http, configDir)
+				registryCredentialsBytes, err := registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, http)
 				if err != nil {
 					return fmt.Errorf("failed to fetch or load registry credentials: %s", err)
 				}

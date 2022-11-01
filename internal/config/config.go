@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -12,6 +14,9 @@ import (
 const (
 	configFileName = "config.json"
 )
+
+// ContextKey is a type used as a key for the config path in the context
+type ContextKey struct{}
 
 // The Config type describes the structure of the user's local configuration file. These values are used for performing
 // operations against the control-plane API.
@@ -23,83 +28,214 @@ type Config struct {
 // ErrNoConfiguration is the error given when a configuration file cannot be found in the config directory.
 var ErrNoConfiguration = errors.New("no configuration file")
 
-// ErrConfigExists is the error given when a configuration file is already present in the config directory.
-var ErrConfigExists = errors.New("config exists")
-
-// Load the configuration file from the config directory, decoding it into a Config type. The location of the configuration
-// file changes based on the host operating system. See the documentation for os.UserConfigDir for specifics on where
-// the config file is loaded from. Returns ErrNoConfiguration if the config file cannot be found.
-func Load() (*Config, error) {
-	configDir, err := os.UserConfigDir()
+// DefaultConfigDir returns the preferred config directory for the current platform
+func DefaultConfigDir() (string, error) {
+	dir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("failed to get user home directory: %s", err)
 	}
 
-	configFile := filepath.Join(configDir, "jsctl", configFileName)
-	file, err := os.Open(configFile)
+	dir = filepath.Join(dir, ".jsctl")
+
+	return dir, nil
+}
+
+// MigrateDefaultConfig has been implemented in response to:
+// https://github.com/jetstack/jsctl/issues/52
+// We were using UserConfigDir from the os package, however, users did not
+// expect this. So we have moved to ~/.jsctl or something equivalent instead.
+func MigrateDefaultConfig(newConfigDir string) error {
+	legacyDirs, err := legacyConfigDirs()
+	if err != nil {
+		return fmt.Errorf("legacy config dirs needed in migration: %s", err)
+	}
+
+	// there might be many legacy dirs to try, however, we can only migrate at
+	// most one. If newConfigDir is present, then we will not overwrite it.
+	for _, legacyDir := range legacyDirs {
+		if _, err := os.Stat(legacyDir); os.IsNotExist(err) {
+			// then there is no work to do
+			continue
+		}
+
+		if _, err := os.Stat(newConfigDir); !os.IsNotExist(err) {
+			// then we can't continue because we don't want to overwrite the new config dir
+			return fmt.Errorf("config dir %q already exists, please remove either %q or %q", newConfigDir, newConfigDir, legacyDir)
+		}
+
+		// move the config to the new dir
+		err := os.Rename(legacyDir, newConfigDir)
+		if err != nil {
+			return fmt.Errorf("failed to move config dir from %q to %q: %s", legacyDir, newConfigDir, err)
+		}
+
+		fmt.Fprintf(os.Stderr, "Migrated config from %q to %q\n", legacyDir, newConfigDir)
+	}
+
+	return nil
+}
+
+// legacyConfigDir returns the possible legacy config directory for the
+// current platform which might have been used in a previous version of jsctl.
+// Currently, this only returns the value of UserConfigDir()
+func legacyConfigDirs() ([]string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine the legacy config directory: %s", err)
+	}
+
+	configDir = filepath.Join(configDir, "jsctl")
+
+	return []string{configDir}, nil
+}
+
+// Load the configuration file from the config directory specified in the provided context.Context.
+// Returns ErrNoConfiguration if the config file cannot be found.
+func Load(ctx context.Context) (*Config, error) {
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return nil, fmt.Errorf("no config path provided")
+	}
+	configFile := filepath.Join(configDir, configFileName)
+
+	data, err := ReadConfigFile(ctx, configFileName)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		return nil, ErrNoConfiguration
 	case err != nil:
 		return nil, err
 	}
-	defer file.Close()
 
 	var config Config
-	if err = json.NewDecoder(file).Decode(&config); err != nil {
-		return nil, err
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config file %q: %w", configFile, err)
 	}
 
 	return &config, nil
 }
 
-// Create a new configuration file in the config directory containing the contents of the given Config type. The location
-// of the configuration file changes based on the host operating system. See the documentation for os.UserConfigDir for
-// specifics on where the config file is written to. Returns ErrConfigExists if a config file already exists.
-func Create(config *Config) error {
-	configDir, err := os.UserConfigDir()
+// Delete will remove the config file if one exists at the path set in the context
+func Delete(ctx context.Context) error {
+	var err error
+
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return fmt.Errorf("no config path provided")
+	}
+	configFile := filepath.Join(configDir, configFileName)
+
+	_, err = os.Stat(configFile)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
 
-	jsctlDir := filepath.Join(configDir, "jsctl")
-	if _, err = os.Stat(jsctlDir); errors.Is(err, os.ErrNotExist) {
-		if err = os.MkdirAll(jsctlDir, 0755); err != nil {
-			return err
+	return os.Remove(configFile)
+}
+
+// Save the provided configuration, updating an existing file if it already exists.
+func Save(ctx context.Context, cfg *Config) error {
+	jsonBytes, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %s", err)
+	}
+
+	err = WriteConfigFile(ctx, configFileName, jsonBytes)
+	if err != nil {
+		return fmt.Errorf("failed to write config: %s", err)
+	}
+
+	return nil
+}
+
+// ReadConfigFile reads a file from the config directory specified in the
+// provided context
+func ReadConfigFile(ctx context.Context, path string) ([]byte, error) {
+	var err error
+
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return nil, fmt.Errorf("no config path provided")
+	}
+	configFile := filepath.Join(configDir, path)
+
+	// check that the file is not a symlink
+	// https://github.com/jetstack/jsctl/issues/43
+	configFileInfo, err := os.Lstat(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat config file %q: %w", configFile, err)
+	}
+	if configFileInfo.Mode()&os.ModeSymlink != 0 {
+		return nil, fmt.Errorf("config file %q is a symlink, refusing to read", configFile)
+	}
+
+	// check the file permissions and update them if not 0600
+	if configFileInfo.Mode().Perm() != 0600 {
+		// TODO: we should error here in future. This is here to gracefully
+		// handle config files from older versions
+		fmt.Fprintf(os.Stderr, "warning: config file %q has insecure file permissions, correcting them\n", configFile)
+		err = os.Chmod(configFile, 0600)
+		if err != nil {
+			return nil, fmt.Errorf("failed to correct config file permissions for %q", configFile)
 		}
 	}
 
-	configFile := filepath.Join(jsctlDir, configFileName)
-	if _, err = os.Stat(configFile); err == nil {
-		return ErrConfigExists
-	}
-
-	file, err := os.Create(configFile)
+	file, err := os.Open(configFile)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to open config file %q: %w", configFile, err)
 	}
 	defer file.Close()
 
-	return json.NewEncoder(file).Encode(config)
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file %q: %w", configFile, err)
+	}
+
+	return data, nil
 }
 
-// Save the provided configuration, updating an existing file if it already exists. The location of the configuration
-// file changes based on the host operating system. See the documentation for os.UserConfigDir for specifics on where
-// the config file is written to.
-func Save(config *Config) error {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return err
+// WriteConfigFile writes a file with the correct permissions to the
+// config directory specified in the provided context
+func WriteConfigFile(ctx context.Context, path string, data []byte) error {
+	var err error
+
+	configDir, ok := ctx.Value(ContextKey{}).(string)
+	if !ok {
+		return fmt.Errorf("no config path provided")
+	}
+	configFile := filepath.Join(configDir, path)
+
+	// check that the file is not a symlink
+	// https://github.com/jetstack/jsctl/issues/43
+	configFileInfo, err := os.Lstat(configFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to stat config file %q: %w", configFile, err)
+	}
+	if err == nil { // file exists
+		if configFileInfo.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("config file %q is a symlink, refusing to write", configFile)
+		}
+		// check the file permissions and update them if not 0600
+		if configFileInfo.Mode().Perm() != 0600 {
+			// TODO: we should error here in future. This is here to gracefully
+			// handle config files from older versions
+			fmt.Fprintf(os.Stderr, "warning: config file %q has insecure file permissions, correcting them\n", configFile)
+			err = os.Chmod(configFile, 0600)
+			if err != nil {
+				return fmt.Errorf("failed to correct config file permissions for %q", configFile)
+			}
+		}
 	}
 
-	configFile := filepath.Join(configDir, "jsctl", configFileName)
-	file, err := os.Create(configFile)
+	err = os.WriteFile(configFile, data, 0600)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write config %q: %w", configFile, err)
 	}
-	defer file.Close()
 
-	return json.NewEncoder(file).Encode(config)
+	return nil
 }
 
 type ctxKey struct{}

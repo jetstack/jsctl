@@ -31,18 +31,19 @@ func TestRegistryAuthInit(t *testing.T) {
 	defer os.Remove(tempConfigDir)
 
 	ctx := config.ToContext(context.Background(), &config.Config{Organization: "example"})
+	ctx = context.WithValue(ctx, config.ContextKey{}, tempConfigDir)
 
-	bytes, err := registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, httpClient, tempConfigDir)
+	bytes, err := registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, httpClient)
 	require.NoError(t, err)
 	assert.Equal(t, "1\n", string(bytes))
 
 	// call it again to make sure that the file is reused
-	bytes, err = registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, httpClient, tempConfigDir)
+	bytes, err = registry.FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx, httpClient)
 	require.NoError(t, err)
 	assert.Equal(t, "1\n", string(bytes))
 
 	// check that the contents on disk is also correct
-	bytes, err = os.ReadFile(tempConfigDir + "/jsctl/eu.gcr.io--jetstack-secure-enterprise.json")
+	bytes, err = os.ReadFile(tempConfigDir + "/eu.gcr.io--jetstack-secure-enterprise.json")
 	require.NoError(t, err)
 	assert.Equal(t, "1\n", string(bytes))
 

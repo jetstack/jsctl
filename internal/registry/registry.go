@@ -20,40 +20,45 @@ const jetstackSecureRegistryFileKey = "eu.gcr.io--jetstack-secure-enterprise"
 
 // StatusJetstackSecureEnterpriseRegistry will return the status of the registry
 // credentials for the Jetstack Secure Enterprise registry stashed to disk
-func StatusJetstackSecureEnterpriseRegistry(configDir string) (string, error) {
-	registryCredentialsPath := filepath.Join(configDir, "jsctl", fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
-
-	_, err := os.Stat(registryCredentialsPath)
-	if errors.Is(err, os.ErrNotExist) {
+func StatusJetstackSecureEnterpriseRegistry(ctx context.Context) (string, error) {
+	_, err := config.ReadConfigFile(ctx, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("error reading registry credentials: %s", err)
+	} else if errors.Is(err, os.ErrNotExist) {
 		return "not authenticated", nil
 	}
-	if err != nil {
-		return "", fmt.Errorf("error checking if registry credentials exist: %s", err)
+	return "authenticated", nil
+}
+
+// PathJetstackSecureEnterpriseRegistry will return the path where the credentials for the registry are located
+func PathJetstackSecureEnterpriseRegistry(ctx context.Context) (string, error) {
+	configDir, ok := ctx.Value(config.ContextKey{}).(string)
+	if !ok {
+		return "", fmt.Errorf("no config directory found in context")
 	}
 
-	return "authenticated", nil
+	return filepath.Join(configDir, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey)), nil
 }
 
 // FetchOrLoadJetstackSecureEnterpriseRegistryCredentials will check of there are
 // a local copy of registry credentials. If there is, then these are returned,
 // if not, then a new set is fetched and stashed in the jsctl config dir specified
-func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context, httpClient subscription.HTTPClient, configDir string) ([]byte, error) {
-	err := os.MkdirAll(filepath.Join(configDir, "jsctl"), os.ModePerm)
-	if err != nil {
-		return nil, fmt.Errorf("error creating jsctl config dir: %s", err)
+func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context, httpClient subscription.HTTPClient) ([]byte, error) {
+	var err error
+
+	configDir, ok := ctx.Value(config.ContextKey{}).(string)
+	if !ok {
+		return nil, fmt.Errorf("no config directory found in context")
 	}
 
-	registryCredentialsPath := filepath.Join(configDir, "jsctl", fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
+	registryCredentialsPath := filepath.Join(configDir, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
 
-	_, err = os.Stat(registryCredentialsPath)
-	if !errors.Is(err, os.ErrNotExist) {
-		// then we can just load and return the file
-		bytes, err := os.ReadFile(registryCredentialsPath)
-		if err != nil {
-			return nil, fmt.Errorf("error reading registry credentials file: %s", err)
-		}
-
-		return bytes, nil
+	data, err := config.ReadConfigFile(ctx, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("error reading registry credentials: %s", err)
+	}
+	if err == nil {
+		return data, nil
 	}
 
 	cnf, ok := config.FromContext(ctx)
@@ -87,8 +92,7 @@ func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context,
 		return nil, fmt.Errorf("failed to decode registry credentials: %w", err)
 	}
 
-	// stash the bytes in the config dir for use in future invocations
-	err = os.WriteFile(registryCredentialsPath, registryCredentialsBytes, 0600)
+	err = config.WriteConfigFile(ctx, fmt.Sprintf("%s.json", jetstackSecureRegistryFileKey), registryCredentialsBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write registry credentials to path %q: %w", registryCredentialsPath, err)
 	}
