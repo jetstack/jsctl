@@ -7,9 +7,10 @@ import (
 	"io"
 	"testing"
 
-	"github.com/jetstack/jsctl/internal/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/jetstack/jsctl/internal/kubernetes"
 )
 
 //go:embed testdata/stream.yaml
