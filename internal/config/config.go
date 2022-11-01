@@ -28,6 +28,67 @@ type Config struct {
 // ErrNoConfiguration is the error given when a configuration file cannot be found in the config directory.
 var ErrNoConfiguration = errors.New("no configuration file")
 
+// DefaultConfigDir returns the preferred config directory for the current platform
+func DefaultConfigDir() (string, error) {
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home directory: %s", err)
+	}
+
+	dir = filepath.Join(dir, ".jsctl")
+
+	return dir, nil
+}
+
+// MigrateDefaultConfig has been implemented in response to:
+// https://github.com/jetstack/jsctl/issues/52
+// We were using UserConfigDir from the os package, however, users did not
+// expect this. So we have moved to ~/.jsctl or something equivalent instead.
+func MigrateDefaultConfig(newConfigDir string) error {
+	legacyDirs, err := legacyConfigDirs()
+	if err != nil {
+		return fmt.Errorf("legacy config dirs needed in migration: %s", err)
+	}
+
+	// there might be many legacy dirs to try, however, we can only migrate at
+	// most one. If newConfigDir is present, then we will not overwrite it.
+	for _, legacyDir := range legacyDirs {
+		if _, err := os.Stat(legacyDir); os.IsNotExist(err) {
+			// then there is no work to do
+			continue
+		}
+
+		if _, err := os.Stat(newConfigDir); !os.IsNotExist(err) {
+			// then we can't continue because we don't want to overwrite the new config dir
+			return fmt.Errorf("config dir %q already exists, please remove either %q or %q", newConfigDir, newConfigDir, legacyDir)
+		}
+
+		// move the config to the new dir
+		err := os.Rename(legacyDir, newConfigDir)
+		if err != nil {
+			return fmt.Errorf("failed to move config dir from %q to %q: %s", legacyDir, newConfigDir, err)
+		}
+
+		fmt.Fprintf(os.Stderr, "Migrated config from %q to %q\n", legacyDir, newConfigDir)
+	}
+
+	return nil
+}
+
+// legacyConfigDir returns the possible legacy config directory for the
+// current platform which might have been used in a previous version of jsctl.
+// Currently, this only returns the value of UserConfigDir()
+func legacyConfigDirs() ([]string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine the legacy config directory: %s", err)
+	}
+
+	configDir = filepath.Join(configDir, "jsctl")
+
+	return []string{configDir}, nil
+}
+
 // Load the configuration file from the config directory specified in the provided context.Context.
 // Returns ErrNoConfiguration if the config file cannot be found.
 func Load(ctx context.Context) (*Config, error) {

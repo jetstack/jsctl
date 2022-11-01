@@ -32,13 +32,11 @@ func Command() *cobra.Command {
 	}
 
 	// determine the default location of the jsctl config file
-	var defaultConfigDir string
-	defaultConfigDir, err = os.UserConfigDir()
+	defaultConfigDir, err := config.DefaultConfigDir()
 	if err != nil {
-		fmt.Println("failed to determine user config directory, using current directory")
+		fmt.Fprintf(os.Stderr, "failed to determine default user config directory, using current directory")
 		defaultConfigDir = "."
 	}
-	defaultConfigDir += "/jsctl"
 
 	flags := cmd.PersistentFlags()
 	flags.BoolVar(&stdout, "stdout", false, "If provided, manifests are written to stdout rather than applied to the current cluster")
@@ -62,7 +60,24 @@ func Command() *cobra.Command {
 
 func run(fn func(ctx context.Context, args []string) error) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		var err error
 		ctx := cmd.Context()
+
+		defaultConfigDir, err := config.DefaultConfigDir()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to determine default user config directory, using current directory\n")
+			defaultConfigDir = "."
+		}
+
+		// if the user is using configDir defaulting, then we need to check for
+		// legacy config directories and migrate them if they exist
+		if configDir == defaultConfigDir {
+			err := config.MigrateDefaultConfig(configDir)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "failed to migrate legacy config directory: %s\n", err)
+				os.Exit(1)
+			}
+		}
 
 		// write the configuration directory to the context so that it can be
 		// used in subcommands
@@ -71,7 +86,7 @@ func run(fn func(ctx context.Context, args []string) error) func(cmd *cobra.Comm
 		// ensure that the config dir specified exists, this allows other
 		// commands to write to sub paths of this directory without concern
 		// for the config dir existing
-		err := os.MkdirAll(configDir, 0700)
+		err = os.MkdirAll(configDir, 0700)
 		if err != nil {
 			exitf("failed to create config directory: %s", err)
 		}
