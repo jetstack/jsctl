@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -9,8 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
-
-	"github.com/jetstack/jsctl/internal/operator"
 )
 
 // CRDClient is used to query information on CRDs within a Kubernetes cluster.
@@ -37,18 +36,17 @@ func NewCRDClient(config *rest.Config) (*CRDClient, error) {
 	return &CRDClient{client: restClient}, nil
 }
 
-// InstallationStatus is a helper to see the status of the Installation CRD, the
-// main installation used by the operator.
-func (c *CRDClient) InstallationStatus(ctx context.Context) error {
+// Present returns true if the named CRD is present in the cluster.
+func (c *CRDClient) Present(ctx context.Context, name string) (bool, error) {
 	var err error
 
 	err = c.client.Get().Resource("customresourcedefinitions").Name("installations.operator.jetstack.io").Do(ctx).Error()
 	switch {
 	case errors.IsNotFound(err):
-		return operator.ErrNoInstallationCRD
+		return false, nil
 	case err != nil:
-		return err
+		return false, fmt.Errorf("error querying for CRD: %s", err)
 	}
 
-	return nil
+	return true, nil
 }

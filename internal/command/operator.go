@@ -401,12 +401,12 @@ func operatorInstallationStatus() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = crdClient.InstallationStatus(ctx)
-			switch {
-			case errors.Is(err, operator.ErrNoInstallationCRD):
-				return fmt.Errorf("no installations.operator.jetstack.io CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
-			case err != nil:
+			present, err := crdClient.Present(ctx, "installations.operator.jetstack.io")
+			if err != nil {
 				return fmt.Errorf("failed to query installation CRDs: %w", err)
+			}
+			if !present {
+				return fmt.Errorf("no installations.operator.jetstack.io CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
 			}
 
 			// next, get the status of the installation components
