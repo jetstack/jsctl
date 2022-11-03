@@ -397,11 +397,11 @@ func operatorInstallationStatus() *cobra.Command {
 			}
 
 			// first check if the operator and CRD is installed, this allows a better error message to be shown
-			crdClient, err := operator.NewCRDClient(kubeCfg)
+			crdClient, err := kubernetes.NewCRDClient(kubeCfg)
 			if err != nil {
 				return err
 			}
-			err = crdClient.Status(ctx)
+			err = crdClient.InstallationStatus(ctx)
 			switch {
 			case errors.Is(err, operator.ErrNoInstallationCRD):
 				return fmt.Errorf("no installations.operator.jetstack.io CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)

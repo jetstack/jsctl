@@ -1,14 +1,16 @@
-package operator
+package kubernetes
 
 import (
 	"context"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
+
+	"github.com/jetstack/jsctl/internal/operator"
 )
 
 // CRDClient is used to query information on CRDs within a Kubernetes cluster.
@@ -23,8 +25,8 @@ func NewCRDClient(config *rest.Config) (*CRDClient, error) {
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
 	config.NegotiatedSerializer = serializer.NewCodecFactory(runtime.NewScheme())
 	config.ContentConfig.GroupVersion = &schema.GroupVersion{
-		Group:   apiextensionsv1.GroupName,
-		Version: apiextensionsv1.SchemeGroupVersion.Version,
+		Group:   v1.GroupName,
+		Version: v1.SchemeGroupVersion.Version,
 	}
 
 	restClient, err := rest.UnversionedRESTClientFor(config)
@@ -35,13 +37,15 @@ func NewCRDClient(config *rest.Config) (*CRDClient, error) {
 	return &CRDClient{client: restClient}, nil
 }
 
-func (c *CRDClient) Status(ctx context.Context) error {
+// InstallationStatus is a helper to see the status of the Installation CRD, the
+// main installation used by the operator.
+func (c *CRDClient) InstallationStatus(ctx context.Context) error {
 	var err error
 
 	err = c.client.Get().Resource("customresourcedefinitions").Name("installations.operator.jetstack.io").Do(ctx).Error()
 	switch {
-	case kerrors.IsNotFound(err):
-		return ErrNoInstallationCRD
+	case errors.IsNotFound(err):
+		return operator.ErrNoInstallationCRD
 	case err != nil:
 		return err
 	}
