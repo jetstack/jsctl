@@ -14,6 +14,7 @@ import (
 	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/kubernetes"
+	"github.com/jetstack/jsctl/internal/kubernetes/clients"
 	"github.com/jetstack/jsctl/internal/operator"
 	"github.com/jetstack/jsctl/internal/prompt"
 	"github.com/jetstack/jsctl/internal/registry"
@@ -304,16 +305,16 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 					return err
 				}
 
-				installationClient, err := kubernetes.NewInstallationClient(kubeCfg)
+				installationClient, err := clients.NewInstallationClient(kubeCfg)
 				if err != nil {
 					return err
 				}
 
 				_, err = installationClient.Status(ctx)
 				switch {
-				case errors.Is(err, kubernetes.ErrNoInstallationCRD):
+				case errors.Is(err, clients.ErrNoInstallationCRD):
 					return fmt.Errorf("no installations.operator.jetstack.io CRD found in cluster %q, have you run 'jsctl operator deploy'?", kubeCfg.Host)
-				case err != nil && !errors.Is(err, kubernetes.ErrNoInstallation):
+				case err != nil && !errors.Is(err, clients.ErrNoInstallation):
 					return fmt.Errorf("failed to check cluster status before deploying new installation: %w", err)
 				}
 
@@ -391,13 +392,13 @@ func operatorInstallationStatus() *cobra.Command {
 				return err
 			}
 
-			installationClient, err := kubernetes.NewInstallationClient(kubeCfg)
+			installationClient, err := clients.NewInstallationClient(kubeCfg)
 			if err != nil {
 				return err
 			}
 
 			// first check if the operator and CRD is installed, this allows a better error message to be shown
-			crdClient, err := kubernetes.NewCRDClient(kubeCfg)
+			crdClient, err := clients.NewCRDClient(kubeCfg)
 			if err != nil {
 				return err
 			}
@@ -412,7 +413,7 @@ func operatorInstallationStatus() *cobra.Command {
 			// next, get the status of the installation components
 			statuses, err := installationClient.Status(ctx)
 			switch {
-			case errors.Is(err, kubernetes.ErrNoInstallation):
+			case errors.Is(err, clients.ErrNoInstallation):
 				return fmt.Errorf("no installations.operator.jetstack.io resources found in cluster %q, have you run 'jsctl operator installations apply'?", kubeCfg.Host)
 			case err != nil:
 				return fmt.Errorf("failed to query installation: %w", err)

@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	"github.com/jetstack/jsctl/internal/kubernetes"
+	"github.com/jetstack/jsctl/internal/kubernetes/clients"
 )
 
 // ClusterPreInstallStatus is a collection of information about a cluster that
@@ -28,7 +28,7 @@ type crdGroup struct {
 func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*ClusterPreInstallStatus, error) {
 	var status ClusterPreInstallStatus
 
-	crdClient, err := kubernetes.NewCRDClient(cfg)
+	crdClient, err := clients.NewCRDClient(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("error creating CRD client: %w", err)
 	}
