@@ -9,11 +9,13 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/toqueteos/webbrowser"
+	"gopkg.in/yaml.v2"
 
 	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/cluster"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/kubernetes"
+	"github.com/jetstack/jsctl/internal/kubernetes/status"
 	"github.com/jetstack/jsctl/internal/prompt"
 	"github.com/jetstack/jsctl/internal/table"
 )
@@ -31,6 +33,7 @@ func Clusters() *cobra.Command {
 		clustersList(),
 		clustersDelete(),
 		clustersView(),
+		clustersStatus(),
 	)
 
 	return cmd
@@ -233,6 +236,36 @@ func clustersView() *cobra.Command {
 			}
 
 			return fmt.Errorf("cluster %s does not exist in organization %s", name, cnf.Organization)
+		}),
+	}
+}
+
+func clustersStatus() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Prints information about the state in the currently configured cluster in kubeconfig",
+		Long:  "The information printed by this command can be used to determine the state of a cluster prior to installing Jetstack Secure.",
+		Args:  cobra.ExactValidArgs(0),
+		Run: run(func(ctx context.Context, args []string) error {
+			kubeCfg, err := kubernetes.NewConfig(kubeConfig)
+			if err != nil {
+				return err
+			}
+
+			s, err := status.GatherClusterPreInstallStatus(ctx, kubeCfg)
+			if err != nil {
+				return fmt.Errorf("failed to gather cluster status: %w", err)
+			}
+
+			// marshal the status as yaml
+			y, err := yaml.Marshal(s)
+			if err != nil {
+				return fmt.Errorf("failed to marshal status: %w", err)
+			}
+
+			fmt.Println(string(y))
+
+			return nil
 		}),
 	}
 }

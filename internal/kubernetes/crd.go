@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -45,8 +46,25 @@ func (c *CRDClient) Present(ctx context.Context, name string) (bool, error) {
 	case errors.IsNotFound(err):
 		return false, nil
 	case err != nil:
-		return false, fmt.Errorf("error querying for CRD: %s", err)
+		return false, fmt.Errorf("error querying for CRD: %w", err)
 	}
 
 	return true, nil
+}
+
+func (c *CRDClient) List(ctx context.Context) ([]string, error) {
+	var crds v1.CustomResourceDefinitionList
+	err := c.client.Get().Resource("customresourcedefinitions").Do(ctx).Into(&crds)
+	if err != nil {
+		return nil, fmt.Errorf("error querying for CRDs: %w", err)
+	}
+
+	var names []string
+	for _, crd := range crds.Items {
+		names = append(names, crd.Name)
+	}
+
+	sort.Strings(names)
+
+	return names, nil
 }
