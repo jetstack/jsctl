@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 
 	"github.com/jetstack/jsctl/internal/kubernetes/clients"
@@ -38,7 +39,9 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 		"jetstack.io",
 	}
 
-	crds, err := crdClient.List(ctx)
+	var crdList v1.CustomResourceDefinitionList
+
+	err = crdClient.List(ctx, &crdList)
 	if err != nil {
 		return nil, fmt.Errorf("error querying for CRDs: %w", err)
 	}
@@ -46,9 +49,9 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 	for _, g := range groups {
 		var crdGroup crdGroup
 		crdGroup.Name = g
-		for _, crd := range crds {
-			if strings.HasSuffix(crd, g) {
-				crdGroup.CRDs = append(crdGroup.CRDs, crd)
+		for _, crd := range crdList.Items {
+			if strings.HasSuffix(crd.Name, g) {
+				crdGroup.CRDs = append(crdGroup.CRDs, crd.Name)
 			}
 		}
 		status.CRDGroups = append(status.CRDGroups, crdGroup)

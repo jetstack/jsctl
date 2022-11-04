@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -64,4 +65,21 @@ func (c *Generic[T, ListT]) List(ctx context.Context, result ListT) error {
 	}
 
 	return nil
+}
+
+func (c *Generic[T, ListT]) Present(ctx context.Context, name string) (bool, error) {
+	err := c.restClient.Get().
+		Resource(c.resource).
+		Name(name).
+		Do(ctx).
+		Error()
+
+	switch {
+	case apiErrors.IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("error testing presence: %w", err)
+	}
+
+	return true, nil
 }

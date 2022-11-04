@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,4 +72,37 @@ func TestGeneric_List(t *testing.T) {
 	assert.Equal(t, "jetstack-secure", result.Items[0].Namespace)
 	assert.Equal(t, "cert-manager-approver-policy-549fd4c6dc-kn7qz", result.Items[1].Name)
 	assert.Equal(t, "jetstack-secure", result.Items[1].Namespace)
+}
+
+func TestGeneric_Present(t *testing.T) {
+	ctx := context.Background()
+
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		if strings.Contains(r.URL.Path, "test-pod") {
+			w.WriteHeader(404)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		data, err := os.ReadFile("fixtures/pod-list.json")
+		require.NoError(t, err)
+		w.Write(data)
+	}))
+
+	cfg := &rest.Config{
+		Host: server.URL,
+	}
+
+	client, err := NewGenericClient[*v1.Pod, *v1.PodList](cfg, v1.GroupName, v1.SchemeGroupVersion.Version, "pods")
+	require.NoError(t, err)
+
+	present, err := client.Present(ctx, "test-pod")
+	require.NoError(t, err)
+	require.True(t, called)
+	assert.False(t, present)
+
+	present, err = client.Present(ctx, "cainjector-545d764f69-xqmzh")
+	require.NoError(t, err)
+	assert.True(t, present)
 }
