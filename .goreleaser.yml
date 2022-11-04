@@ -81,7 +81,8 @@ archives:
 checksum:
   name_template: "{{ .ProjectName }}-{{ .Version }}-SHA256SUMS"
   algorithm: sha256
-release: {}
+release:
+  draft: true
 changelog:
   use: github-native
   skip: false
