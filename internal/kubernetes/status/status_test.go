@@ -2,6 +2,7 @@ package status
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -75,6 +77,32 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 					"installations.operator.jetstack.io",
 				},
 			},
+		},
+	})
+}
+
+func Test_findComponents(t *testing.T) {
+	var err error
+	data, err := os.ReadFile("fixtures/pod-list.json")
+	require.NoError(t, err)
+
+	var pods v1.PodList
+
+	err = json.Unmarshal(data, &pods)
+	require.NoError(t, err)
+
+	components := findComponents(pods.Items)
+
+	assert.Equal(t, components, map[string]map[string]string{
+		"cert-manager": {
+			"namespace":             "jetstack-secure",
+			"version":               "v1.9.1",
+			"installationMechanism": "helm",
+		},
+		"jetstack-secure-agent": {
+			"namespace":             "jetstack-secure",
+			"version":               "v1.4.0",
+			"installationMechanism": "helm",
 		},
 	})
 }

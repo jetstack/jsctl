@@ -142,3 +142,9 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 
 	return &status, nil
 }
+
+func findComponents(pods []v1.Pod) map[string]map[string]string {
+	components := make(map[string]map[string]string)
+
+	return components
+}
