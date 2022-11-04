@@ -402,7 +402,7 @@ func operatorInstallationStatus() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			present, err := crdClient.Present(ctx, "installations.operator.jetstack.io")
+			present, err := crdClient.Present(ctx, clients.GenericRequestOptions{Name: "installations.operator.jetstack.io"})
 			if err != nil {
 				return fmt.Errorf("failed to query installation CRDs: %w", err)
 			}

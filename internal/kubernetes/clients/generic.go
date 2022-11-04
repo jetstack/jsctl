@@ -17,6 +17,13 @@ type Generic[T, ListT runtime.Object] struct {
 	resource   string
 }
 
+// GenericRequestOptions wrap data used to form requests
+type GenericRequestOptions struct {
+	Name      string
+	Namespace string
+	// TODO: Headers, Params
+}
+
 // NewGenericClient returns a new instance of a Generic client configured to
 // query the specified resource. Use type parameters for types and list types
 // for the desired result types and gvk function parameters to specify the
@@ -41,12 +48,17 @@ func NewGenericClient[T, ListT runtime.Object](config *rest.Config, group, versi
 	}, nil
 }
 
-func (c *Generic[T, ListT]) Get(ctx context.Context, name string, result T) error {
-	err := c.restClient.Get().
-		Resource(c.resource).
-		Name(name).
-		Do(ctx).
-		Into(result)
+func (c *Generic[T, ListT]) Get(ctx context.Context, options GenericRequestOptions, result T) error {
+	r := c.restClient.Get().Resource(c.resource)
+
+	if options.Namespace != "" {
+		r = r.Namespace(options.Namespace)
+	}
+	if options.Name != "" {
+		r = r.Name(options.Name)
+	}
+
+	err := r.Do(ctx).Into(result)
 	if err != nil {
 		return fmt.Errorf("error getting %T: %w", result, err)
 	}
@@ -54,12 +66,14 @@ func (c *Generic[T, ListT]) Get(ctx context.Context, name string, result T) erro
 	return nil
 }
 
-func (c *Generic[T, ListT]) List(ctx context.Context, result ListT) error {
-	err := c.restClient.
-		Get().
-		Resource(c.resource).
-		Do(ctx).
-		Into(result)
+func (c *Generic[T, ListT]) List(ctx context.Context, options GenericRequestOptions, result ListT) error {
+	r := c.restClient.Get().Resource(c.resource)
+
+	if options.Namespace != "" {
+		r = r.Namespace(options.Namespace)
+	}
+
+	err := r.Do(ctx).Into(result)
 	if err != nil {
 		return fmt.Errorf("error listing %T: %w", result, err)
 	}
@@ -67,13 +81,17 @@ func (c *Generic[T, ListT]) List(ctx context.Context, result ListT) error {
 	return nil
 }
 
-func (c *Generic[T, ListT]) Present(ctx context.Context, name string) (bool, error) {
-	err := c.restClient.Get().
-		Resource(c.resource).
-		Name(name).
-		Do(ctx).
-		Error()
+func (c *Generic[T, ListT]) Present(ctx context.Context, options GenericRequestOptions) (bool, error) {
+	r := c.restClient.Get().Resource(c.resource)
 
+	if options.Namespace != "" {
+		r = r.Namespace(options.Namespace)
+	}
+	if options.Name != "" {
+		r = r.Name(options.Name)
+	}
+
+	err := r.Do(ctx).Error()
 	switch {
 	case apiErrors.IsNotFound(err):
 		return false, nil

@@ -41,7 +41,7 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 
 	var crdList v1.CustomResourceDefinitionList
 
-	err = crdClient.List(ctx, &crdList)
+	err = crdClient.List(ctx, clients.GenericRequestOptions{}, &crdList)
 	if err != nil {
 		return nil, fmt.Errorf("error querying for CRDs: %w", err)
 	}

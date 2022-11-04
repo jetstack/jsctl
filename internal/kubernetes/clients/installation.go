@@ -71,7 +71,7 @@ func (ic *InstallationClient) Status(ctx context.Context) ([]ComponentStatus, er
 	// this is the expected name of the single Installation resource in the cluster
 	name := "installation"
 
-	err = ic.client.Get(ctx, name, &installation)
+	err = ic.client.Get(ctx, GenericRequestOptions{Name: name}, &installation)
 	switch {
 	case apiErrors.IsNotFound(err):
 		return nil, ErrNoInstallation
