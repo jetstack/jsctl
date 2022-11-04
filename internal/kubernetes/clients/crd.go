@@ -7,41 +7,36 @@ import (
 
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 )
 
 // CRDClient is used to query information on CRDs within a Kubernetes cluster.
 type CRDClient struct {
-	client *rest.RESTClient
+	client *Generic[*v1.CustomResourceDefinition, *v1.CustomResourceDefinitionList]
 }
 
 // NewCRDClient returns a new instance of the CRDClient that can be used to
 // query information on CRDs within a cluster
 func NewCRDClient(config *rest.Config) (*CRDClient, error) {
-	config.APIPath = "/apis"
-	config.UserAgent = rest.DefaultKubernetesUserAgent()
-	config.NegotiatedSerializer = serializer.NewCodecFactory(runtime.NewScheme())
-	config.ContentConfig.GroupVersion = &schema.GroupVersion{
-		Group:   v1.GroupName,
-		Version: v1.SchemeGroupVersion.Version,
-	}
-
-	restClient, err := rest.UnversionedRESTClientFor(config)
+	genericClient, err := NewGenericClient[*v1.CustomResourceDefinition, *v1.CustomResourceDefinitionList](
+		config,
+		v1.GroupName,
+		v1.SchemeGroupVersion.Version,
+		"customresourcedefinitions",
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating generic client: %w", err)
 	}
 
-	return &CRDClient{client: restClient}, nil
+	return &CRDClient{client: genericClient}, nil
 }
 
 // Present returns true if the named CRD is present in the cluster.
 func (c *CRDClient) Present(ctx context.Context, name string) (bool, error) {
-	var err error
 
-	err = c.client.Get().Resource("customresourcedefinitions").Name("installations.operator.jetstack.io").Do(ctx).Error()
+	var crd v1.CustomResourceDefinition
+
+	err := c.client.Get(ctx, name, &crd)
 	switch {
 	case errors.IsNotFound(err):
 		return false, nil
@@ -53,14 +48,15 @@ func (c *CRDClient) Present(ctx context.Context, name string) (bool, error) {
 }
 
 func (c *CRDClient) List(ctx context.Context) ([]string, error) {
-	var crds v1.CustomResourceDefinitionList
-	err := c.client.Get().Resource("customresourcedefinitions").Do(ctx).Into(&crds)
+	var crdList v1.CustomResourceDefinitionList
+
+	err := c.client.List(ctx, &crdList)
 	if err != nil {
-		return nil, fmt.Errorf("error querying for CRDs: %w", err)
+		return nil, fmt.Errorf("error listing CRDs: %w", err)
 	}
 
 	var names []string
-	for _, crd := range crds.Items {
+	for _, crd := range crdList.Items {
 		names = append(names, crd.Name)
 	}
 

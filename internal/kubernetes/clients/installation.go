@@ -3,19 +3,18 @@ package clients
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 
 	"github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
-	errors2 "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 )
 
 type (
 	// The InstallationClient is used to query information on an Installation resource within a Kubernetes cluster.
 	InstallationClient struct {
-		client *rest.RESTClient
+		client *Generic[*v1alpha1.Installation, *v1alpha1.InstallationList]
 	}
 
 	// ComponentStatus describes the status of an individual operator component.
@@ -25,26 +24,6 @@ type (
 		Message string `json:"message,omitempty"`
 	}
 )
-
-// NewInstallationClient returns a new instance of the InstallationClient that will interact with the Kubernetes
-// cluster specified in the rest.Config.
-func NewInstallationClient(config *rest.Config) (*InstallationClient, error) {
-	// Set up the rest config to obtain Installation resources
-	config.APIPath = "/apis"
-	config.UserAgent = rest.DefaultKubernetesUserAgent()
-	config.NegotiatedSerializer = serializer.NewCodecFactory(v1alpha1.GlobalScheme)
-	config.ContentConfig.GroupVersion = &schema.GroupVersion{
-		Group:   v1alpha1.InstallationGVK.Group,
-		Version: v1alpha1.InstallationGVK.Version,
-	}
-
-	restClient, err := rest.UnversionedRESTClientFor(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &InstallationClient{client: restClient}, nil
-}
 
 var (
 	// ErrNoInstallation is the error given when querying an Installation resource that does not exist.
@@ -64,6 +43,22 @@ var (
 	}
 )
 
+// NewInstallationClient returns a new instance of the InstallationClient that will interact with the Kubernetes
+// cluster specified in the rest.Config.
+func NewInstallationClient(config *rest.Config) (*InstallationClient, error) {
+	genericClient, err := NewGenericClient[*v1alpha1.Installation, *v1alpha1.InstallationList](
+		config,
+		v1alpha1.SchemeGroupVersion.Group,
+		v1alpha1.SchemeGroupVersion.Version,
+		"installations",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating generic client: %w", err)
+	}
+
+	return &InstallationClient{client: genericClient}, nil
+}
+
 // Status returns a slice of ComponentStatus types that describe the state of individual components installed by the
 // operator. Returns ErrNoInstallation if an Installation resource cannot be found in the cluster. It uses the
 // status conditions on an Installation resource and maps those to a ComponentStatus, the ComponentStatus.Name field
@@ -73,17 +68,15 @@ func (ic *InstallationClient) Status(ctx context.Context) ([]ComponentStatus, er
 	var err error
 	var installation v1alpha1.Installation
 
-	const (
-		resource = "installations"
-		name     = "installation"
-	)
+	// this is the expected name of the single Installation resource in the cluster
+	name := "installation"
 
-	err = ic.client.Get().Resource(resource).Name(name).Do(ctx).Into(&installation)
+	err = ic.client.Get(ctx, name, &installation)
 	switch {
-	case errors2.IsNotFound(err):
+	case apiErrors.IsNotFound(err):
 		return nil, ErrNoInstallation
 	case err != nil:
-		return nil, err
+		return nil, fmt.Errorf("error getting installation: %w", err)
 	}
 
 	statuses := make([]ComponentStatus, 0)
