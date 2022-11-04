@@ -47,10 +47,13 @@ var (
 // cluster specified in the rest.Config.
 func NewInstallationClient(config *rest.Config) (*InstallationClient, error) {
 	genericClient, err := NewGenericClient[*v1alpha1.Installation, *v1alpha1.InstallationList](
-		config,
-		v1alpha1.SchemeGroupVersion.Group,
-		v1alpha1.SchemeGroupVersion.Version,
-		"installations",
+		&GenericClientOptions{
+			RestConfig: config,
+			APIPath:    "/apis",
+			Group:      v1alpha1.SchemeGroupVersion.Group,
+			Version:    v1alpha1.SchemeGroupVersion.Version,
+			Kind:       "installations",
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating generic client: %w", err)
@@ -71,7 +74,7 @@ func (ic *InstallationClient) Status(ctx context.Context) ([]ComponentStatus, er
 	// this is the expected name of the single Installation resource in the cluster
 	name := "installation"
 
-	err = ic.client.Get(ctx, GenericRequestOptions{Name: name}, &installation)
+	err = ic.client.Get(ctx, &GenericRequestOptions{Name: name}, &installation)
 	switch {
 	case apiErrors.IsNotFound(err):
 		return nil, ErrNoInstallation

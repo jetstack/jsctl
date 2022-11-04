@@ -17,6 +17,15 @@ type Generic[T, ListT runtime.Object] struct {
 	resource   string
 }
 
+// GenericClientOptions wrap the options for a Generic client initialization
+type GenericClientOptions struct {
+	RestConfig *rest.Config
+	APIPath    string
+	Group      string
+	Version    string
+	Kind       string
+}
+
 // GenericRequestOptions wrap data used to form requests
 type GenericRequestOptions struct {
 	Name      string
@@ -28,13 +37,20 @@ type GenericRequestOptions struct {
 // query the specified resource. Use type parameters for types and list types
 // for the desired result types and gvk function parameters to specify the
 // group, version, and kind of the resource to query.
-func NewGenericClient[T, ListT runtime.Object](config *rest.Config, group, version, kind string) (*Generic[T, ListT], error) {
-	config.APIPath = "/apis"
+func NewGenericClient[T, ListT runtime.Object](opts *GenericClientOptions) (*Generic[T, ListT], error) {
+	config := opts.RestConfig
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
 	config.NegotiatedSerializer = serializer.NewCodecFactory(runtime.NewScheme())
 	config.ContentConfig.GroupVersion = &schema.GroupVersion{
-		Group:   group,
-		Version: version,
+		Group:   opts.Group,
+		Version: opts.Version,
+	}
+
+	// v1 apis are available at a different path
+	if opts.APIPath != "" {
+		config.APIPath = opts.APIPath
+	} else {
+		config.APIPath = "/apis/"
 	}
 
 	restClient, err := rest.UnversionedRESTClientFor(config)
@@ -44,11 +60,11 @@ func NewGenericClient[T, ListT runtime.Object](config *rest.Config, group, versi
 
 	return &Generic[T, ListT]{
 		restClient: restClient,
-		resource:   kind,
+		resource:   opts.Kind,
 	}, nil
 }
 
-func (c *Generic[T, ListT]) Get(ctx context.Context, options GenericRequestOptions, result T) error {
+func (c *Generic[T, ListT]) Get(ctx context.Context, options *GenericRequestOptions, result T) error {
 	r := c.restClient.Get().Resource(c.resource)
 
 	if options.Namespace != "" {
@@ -66,7 +82,7 @@ func (c *Generic[T, ListT]) Get(ctx context.Context, options GenericRequestOptio
 	return nil
 }
 
-func (c *Generic[T, ListT]) List(ctx context.Context, options GenericRequestOptions, result ListT) error {
+func (c *Generic[T, ListT]) List(ctx context.Context, options *GenericRequestOptions, result ListT) error {
 	r := c.restClient.Get().Resource(c.resource)
 
 	if options.Namespace != "" {
@@ -81,7 +97,7 @@ func (c *Generic[T, ListT]) List(ctx context.Context, options GenericRequestOpti
 	return nil
 }
 
-func (c *Generic[T, ListT]) Present(ctx context.Context, options GenericRequestOptions) (bool, error) {
+func (c *Generic[T, ListT]) Present(ctx context.Context, options *GenericRequestOptions) (bool, error) {
 	r := c.restClient.Get().Resource(c.resource)
 
 	if options.Namespace != "" {

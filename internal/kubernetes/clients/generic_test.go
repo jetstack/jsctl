@@ -31,18 +31,26 @@ func TestGeneric_Get(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1.Pod, *v1.PodList](cfg, v1.GroupName, v1.SchemeGroupVersion.Version, "pods")
+	client, err := NewGenericClient[*v1.Pod, *v1.PodList](
+		&GenericClientOptions{
+			RestConfig: cfg,
+			APIPath:    "/api/",
+			Group:      v1.GroupName,
+			Version:    v1.SchemeGroupVersion.Version,
+			Kind:       "pods",
+		},
+	)
 	require.NoError(t, err)
 
 	var result v1.Pod
 
-	err = client.Get(ctx, GenericRequestOptions{Name: "test-pod", Namespace: "test-namespace"}, &result)
+	err = client.Get(ctx, &GenericRequestOptions{Name: "test-pod", Namespace: "test-namespace"}, &result)
 	require.NoError(t, err)
 
 	assert.True(t, called)
 	assert.Equal(t, result.Name, "test-pod")
 	assert.Equal(t, result.Namespace, "test-namespace")
-	assert.Equal(t, "/apis/v1/namespaces/test-namespace/pods/test-pod", requestedPath)
+	assert.Equal(t, "/api/v1/namespaces/test-namespace/pods/test-pod", requestedPath)
 }
 
 func TestGeneric_Get_ClusterScope(t *testing.T) {
@@ -60,14 +68,16 @@ func TestGeneric_Get_ClusterScope(t *testing.T) {
 	}
 
 	client, err := NewGenericClient[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList](
-		cfg,
-		v1extensions.GroupName,
-		v1extensions.SchemeGroupVersion.Version,
-		"customresourcedefinitions",
+		&GenericClientOptions{
+			RestConfig: cfg,
+			Group:      v1extensions.GroupName,
+			Version:    v1extensions.SchemeGroupVersion.Version,
+			Kind:       "customresourcedefinitions",
+		},
 	)
 
 	var result v1extensions.CustomResourceDefinition
-	err = client.Get(ctx, GenericRequestOptions{Name: "crd-name"}, &result)
+	err = client.Get(ctx, &GenericRequestOptions{Name: "crd-name"}, &result)
 	require.NoError(t, err)
 
 	assert.Equal(t, "/apis/apiextensions.k8s.io/v1/customresourcedefinitions/crd-name", requestedPath)
@@ -91,16 +101,24 @@ func TestGeneric_List(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1.Pod, *v1.PodList](cfg, v1.GroupName, v1.SchemeGroupVersion.Version, "pods")
+	client, err := NewGenericClient[*v1.Pod, *v1.PodList](
+		&GenericClientOptions{
+			RestConfig: cfg,
+			APIPath:    "/api/",
+			Group:      v1.GroupName,
+			Version:    v1.SchemeGroupVersion.Version,
+			Kind:       "pods",
+		},
+	)
 	require.NoError(t, err)
 
 	var result v1.PodList
 
-	err = client.List(ctx, GenericRequestOptions{Namespace: "jetstack-secure"}, &result)
+	err = client.List(ctx, &GenericRequestOptions{Namespace: "jetstack-secure"}, &result)
 	require.NoError(t, err)
 
 	require.True(t, called)
-	assert.Equal(t, "/apis/v1/namespaces/jetstack-secure/pods", requestedPath)
+	assert.Equal(t, "/api/v1/namespaces/jetstack-secure/pods", requestedPath)
 	require.Equal(t, 2, len(result.Items))
 
 	assert.Equal(t, "cainjector-545d764f69-xqmzh", result.Items[0].Name)
@@ -124,14 +142,16 @@ func TestGeneric_List_ClusterScope(t *testing.T) {
 	}
 
 	client, err := NewGenericClient[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList](
-		cfg,
-		v1extensions.GroupName,
-		v1extensions.SchemeGroupVersion.Version,
-		"customresourcedefinitions",
+		&GenericClientOptions{
+			RestConfig: cfg,
+			Group:      v1extensions.GroupName,
+			Version:    v1extensions.SchemeGroupVersion.Version,
+			Kind:       "customresourcedefinitions",
+		},
 	)
 
 	var result v1extensions.CustomResourceDefinitionList
-	err = client.List(ctx, GenericRequestOptions{}, &result)
+	err = client.List(ctx, &GenericRequestOptions{}, &result)
 	require.NoError(t, err)
 
 	assert.Equal(t, "/apis/apiextensions.k8s.io/v1/customresourcedefinitions", requestedPath)
@@ -157,15 +177,22 @@ func TestGeneric_Present(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1.Pod, *v1.PodList](cfg, v1.GroupName, v1.SchemeGroupVersion.Version, "pods")
+	client, err := NewGenericClient[*v1.Pod, *v1.PodList](
+		&GenericClientOptions{
+			RestConfig: cfg,
+			Group:      v1.GroupName,
+			Version:    v1.SchemeGroupVersion.Version,
+			Kind:       "pods",
+		},
+	)
 	require.NoError(t, err)
 
-	present, err := client.Present(ctx, GenericRequestOptions{Name: "test-pod", Namespace: "jetstack-secure"})
+	present, err := client.Present(ctx, &GenericRequestOptions{Name: "test-pod", Namespace: "jetstack-secure"})
 	require.NoError(t, err)
 	require.True(t, called)
 	assert.False(t, present)
 
-	present, err = client.Present(ctx, GenericRequestOptions{Name: "cainjector-545d764f69-xqmzh", Namespace: "jetstack-secure"})
+	present, err = client.Present(ctx, &GenericRequestOptions{Name: "cainjector-545d764f69-xqmzh", Namespace: "jetstack-secure"})
 	require.NoError(t, err)
 	assert.True(t, present)
 }

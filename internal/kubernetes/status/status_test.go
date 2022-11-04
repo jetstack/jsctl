@@ -14,11 +14,21 @@ import (
 
 func TestGatherClusterPreInstallStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
 		w.Header().Set("Content-Type", "application/json")
 		// read the contents of fixtures files
 
-		data, err := os.ReadFile("fixtures/crd-list.json")
-		require.NoError(t, err)
+		var data []byte
+		switch r.URL.Path {
+		case "/apis/apiextensions.k8s.io/v1/customresourcedefinitions":
+			data, err = os.ReadFile("fixtures/crd-list.json")
+			require.NoError(t, err)
+		case "/api/v1/namespaces":
+			data, err = os.ReadFile("fixtures/namespace-list.json")
+			require.NoError(t, err)
+		default:
+			t.Fatalf("unexpected request: %s", r.URL.Path)
+		}
 
 		w.Write(data)
 	}))
@@ -31,6 +41,9 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, status, &ClusterPreInstallStatus{
+		Namepaces: []string{
+			"jetstack-secure",
+		},
 		CRDGroups: []crdGroup{
 			{
 				Name: "cert-manager.io",
