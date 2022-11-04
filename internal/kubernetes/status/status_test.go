@@ -26,6 +26,9 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 		case "/api/v1/namespaces":
 			data, err = os.ReadFile("fixtures/namespace-list.json")
 			require.NoError(t, err)
+		case "/apis/networking.k8s.io/v1/ingresses":
+			data, err = os.ReadFile("fixtures/ing-list.json")
+			require.NoError(t, err)
 		default:
 			t.Fatalf("unexpected request: %s", r.URL.Path)
 		}
@@ -43,6 +46,15 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 	assert.Equal(t, status, &ClusterPreInstallStatus{
 		Namepaces: []string{
 			"jetstack-secure",
+		},
+		Ingresses: []summaryIngress{
+			{
+				Name:      "example",
+				Namespace: "default",
+				CertManagerAnnotations: map[string]string{
+					"cert-manager.io/cluster-issuer": "nameOfClusterIssuer",
+				},
+			},
 		},
 		CRDGroups: []crdGroup{
 			{
