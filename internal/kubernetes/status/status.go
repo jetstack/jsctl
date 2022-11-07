@@ -175,7 +175,6 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 	if err != nil {
 		return nil, fmt.Errorf("failed to identify components in the cluster: %s", err)
 	}
-
 	status.Components = componentStatuses
 
 	return &status, nil
@@ -185,20 +184,58 @@ func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
 	componentStatuses := make(map[string]installedComponent)
 
 	for _, pod := range pods {
-		certManagerControllerStatus, err := components.FindCertManagerController(&pod)
-		if err != nil {
-			return nil, fmt.Errorf("failed while testing pod as cert-manager-controller: %s", err)
-		}
-		if certManagerControllerStatus != nil {
-			componentStatuses[certManagerControllerStatus.Name()] = certManagerControllerStatus
-		}
-
 		jetstackSecureAgentStatus, err := components.FindJetstackSecureAgent(&pod)
 		if err != nil {
 			return nil, fmt.Errorf("failed while testing pod as jetstack-secure-agent: %s", err)
 		}
 		if jetstackSecureAgentStatus != nil {
 			componentStatuses[jetstackSecureAgentStatus.Name()] = jetstackSecureAgentStatus
+			continue
+		}
+
+		jetstackSecureOperatorStatus, err := components.FindJetstackSecureOperator(&pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed while testing pod as js-operator: %s", err)
+		}
+		if jetstackSecureOperatorStatus != nil {
+			componentStatuses[jetstackSecureOperatorStatus.Name()] = jetstackSecureOperatorStatus
+			continue
+		}
+
+		certManagerControllerStatus, err := components.FindCertManagerController(&pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed while testing pod as cert-manager-controller: %s", err)
+		}
+		if certManagerControllerStatus != nil {
+			componentStatuses[certManagerControllerStatus.Name()] = certManagerControllerStatus
+			continue
+		}
+
+		certManagerCAInjectorStatus, err := components.FindCertManagerCAInjector(&pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed while testing pod as cert-manager-cainjector: %s", err)
+		}
+		if certManagerCAInjectorStatus != nil {
+			componentStatuses[certManagerCAInjectorStatus.Name()] = certManagerCAInjectorStatus
+			continue
+		}
+
+		certManagerApproverPolicyStatus, err := components.FindCertManagerApproverPolicy(&pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed while testing pod as cert-manager approver policy: %s", err)
+		}
+		if certManagerApproverPolicyStatus != nil {
+			componentStatuses[certManagerApproverPolicyStatus.Name()] = certManagerApproverPolicyStatus
+			continue
+		}
+
+		certManagerWebhookStatus, err := components.FindCertManagerWebhook(&pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed while testing pod as cert-manager webhook: %s", err)
+		}
+		if certManagerWebhookStatus != nil {
+			componentStatuses[certManagerWebhookStatus.Name()] = certManagerWebhookStatus
+			continue
 		}
 	}
 

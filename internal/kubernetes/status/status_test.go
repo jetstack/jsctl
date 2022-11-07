@@ -2,7 +2,6 @@ package status
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1core "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 
 	"github.com/jetstack/jsctl/internal/kubernetes/status/components"
@@ -84,26 +82,12 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 			},
 		},
 		Components: map[string]installedComponent{
-			"cert-manager-controller": components.NewCertManagerControllerStatus("jetstack-secure", "v1.9.1"),
-			"jetstack-secure-agent":   components.NewJetstackSeucreAgentStatus("jetstack-secure", "v0.1.38"),
+			"jetstack-secure-agent":        components.NewJetstackSeucreAgentStatus("jetstack-secure", "v0.1.38"),
+			"jetstack-secure-operator":     components.NewJetstackSecureOperatorStatus("jetstack-secure", "v0.0.1-alpha.17"),
+			"cert-manager-controller":      components.NewCertManagerControllerStatus("jetstack-secure", "v1.9.1"),
+			"cert-manager-cainjector":      components.NewCertManagerCAInjectorStatus("jetstack-secure", "v1.9.1"),
+			"cert-manager-webhook":         components.NewCertManagerWebhookStatus("jetstack-secure", "v1.9.1"),
+			"cert-manager-approver-policy": components.NewCertManagerApproverPolicyStatus("jetstack-secure", "v0.4.0"),
 		},
 	})
-}
-
-func Test_findComponents(t *testing.T) {
-	var err error
-	data, err := os.ReadFile("fixtures/pod-list.json")
-	require.NoError(t, err)
-
-	var pods v1core.PodList
-
-	err = json.Unmarshal(data, &pods)
-	require.NoError(t, err)
-
-	componentStatuses, err := findComponents(pods.Items)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(componentStatuses))
-
-	assert.NotNil(t, componentStatuses["cert-manager-controller"])
-	assert.NotNil(t, componentStatuses["jetstack-secure-agent"])
 }
