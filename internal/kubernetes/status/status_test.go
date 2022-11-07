@@ -10,8 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	v1core "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
+
+	"github.com/jetstack/jsctl/internal/kubernetes/status/components"
 )
 
 func TestGatherClusterPreInstallStatus(t *testing.T) {
@@ -22,11 +24,14 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 
 		var data []byte
 		switch r.URL.Path {
-		case "/apis/apiextensions.k8s.io/v1/customresourcedefinitions":
-			data, err = os.ReadFile("fixtures/crd-list.json")
-			require.NoError(t, err)
 		case "/api/v1/namespaces":
 			data, err = os.ReadFile("fixtures/namespace-list.json")
+			require.NoError(t, err)
+		case "/api/v1/pods":
+			data, err = os.ReadFile("fixtures/pod-list.json")
+			require.NoError(t, err)
+		case "/apis/apiextensions.k8s.io/v1/customresourcedefinitions":
+			data, err = os.ReadFile("fixtures/crd-list.json")
 			require.NoError(t, err)
 		case "/apis/networking.k8s.io/v1/ingresses":
 			data, err = os.ReadFile("fixtures/ing-list.json")
@@ -78,6 +83,10 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 				},
 			},
 		},
+		Components: map[string]installedComponent{
+			"cert-manager-controller": components.NewCertManagerControllerStatus("jetstack-secure", "v1.9.1"),
+			"jetstack-secure-agent":   components.NewJetstackSeucreAgentStatus("jetstack-secure", "v0.1.38"),
+		},
 	})
 }
 
@@ -86,23 +95,15 @@ func Test_findComponents(t *testing.T) {
 	data, err := os.ReadFile("fixtures/pod-list.json")
 	require.NoError(t, err)
 
-	var pods v1.PodList
+	var pods v1core.PodList
 
 	err = json.Unmarshal(data, &pods)
 	require.NoError(t, err)
 
-	components := findComponents(pods.Items)
+	componentStatuses, err := findComponents(pods.Items)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(componentStatuses))
 
-	assert.Equal(t, components, map[string]map[string]string{
-		"cert-manager": {
-			"namespace":             "jetstack-secure",
-			"version":               "v1.9.1",
-			"installationMechanism": "helm",
-		},
-		"jetstack-secure-agent": {
-			"namespace":             "jetstack-secure",
-			"version":               "v1.4.0",
-			"installationMechanism": "helm",
-		},
-	})
+	assert.NotNil(t, componentStatuses["cert-manager-controller"])
+	assert.NotNil(t, componentStatuses["jetstack-secure-agent"])
 }

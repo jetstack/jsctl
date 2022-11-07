@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/jetstack/jsctl/internal/kubernetes/clients"
+	"github.com/jetstack/jsctl/internal/kubernetes/status/components"
 )
 
 // ClusterPreInstallStatus is a collection of information about a cluster that
@@ -22,6 +23,10 @@ type ClusterPreInstallStatus struct {
 	Namepaces []string `yaml:"namespaces"`
 	// Ingresses is a list of ingresses in the cluster related to cert-manager
 	Ingresses []summaryIngress `yaml:"ingresses"`
+
+	// Components is a list of components installed in the cluster which are
+	// cert-manager or jetstack-secure related
+	Components map[string]installedComponent `yaml:"components"`
 }
 
 // crdGroup is a list of custom resource definitions that are all part of the
@@ -37,6 +42,15 @@ type summaryIngress struct {
 	Name                   string            `yaml:"name"`
 	Namespace              string            `yaml:"namespace"`
 	CertManagerAnnotations map[string]string `yaml:"certManagerAnnotations"`
+}
+
+// installedComponent is a interface which a custom component status must
+// implement. This is designed to be extended to support other components with
+// more interesting statuses in the future while supporting the base ones too.
+type installedComponent interface {
+	Name() string
+	Namespace() string
+	Version() string
 }
 
 // GatherClusterPreInstallStatus returns a ClusterPreInstallStatus for the
@@ -140,11 +154,53 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 		})
 	}
 
+	// gather pods and identify the relevant installted components
+	podClient, err := clients.NewGenericClient[*v1.Pod, *v1.PodList](
+		&clients.GenericClientOptions{
+			RestConfig: cfg,
+			APIPath:    "/api/",
+			Group:      v1.GroupName,
+			Version:    v1.SchemeGroupVersion.Version,
+			Kind:       "pods",
+		},
+	)
+
+	var pods v1.PodList
+	err = podClient.List(ctx, &clients.GenericRequestOptions{}, &pods)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods: %s", err)
+	}
+
+	componentStatuses, err := findComponents(pods.Items)
+	if err != nil {
+		return nil, fmt.Errorf("failed to identify components in the cluster: %s", err)
+	}
+
+	status.Components = componentStatuses
+
 	return &status, nil
 }
 
-func findComponents(pods []v1.Pod) map[string]map[string]string {
-	components := make(map[string]map[string]string)
+func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
+	componentStatuses := make(map[string]installedComponent)
 
-	return components
+	for _, pod := range pods {
+		certManagerControllerStatus, err := components.FindCertManagerController(&pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed while testing pod as cert-manager-controller: %s", err)
+		}
+		if certManagerControllerStatus != nil {
+			componentStatuses[certManagerControllerStatus.Name()] = certManagerControllerStatus
+		}
+
+		jetstackSecureAgentStatus, err := components.FindJetstackSecureAgent(&pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed while testing pod as jetstack-secure-agent: %s", err)
+		}
+		if jetstackSecureAgentStatus != nil {
+			componentStatuses[jetstackSecureAgentStatus.Name()] = jetstackSecureAgentStatus
+		}
+	}
+
+	return componentStatuses, nil
 }
