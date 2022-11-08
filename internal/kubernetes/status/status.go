@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	awspca "github.com/cert-manager/aws-privateca-issuer/pkg/api/v1beta1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	googlecas "github.com/jetstack/google-cas-issuer/api/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	v1networking "k8s.io/api/networking/v1"
 	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -27,6 +30,10 @@ type ClusterPreInstallStatus struct {
 	// Components is a list of components installed in the cluster which are
 	// cert-manager or jetstack-secure related
 	Components map[string]installedComponent `yaml:"components"`
+
+	// Issuers is a list of issuers of all kinds found in the cluster. Including
+	// external issuers.
+	Issuers []summaryIssuer `yaml:"issuers"`
 }
 
 // crdGroup is a list of custom resource definitions that are all part of the
@@ -42,6 +49,13 @@ type summaryIngress struct {
 	Name                   string            `yaml:"name"`
 	Namespace              string            `yaml:"namespace"`
 	CertManagerAnnotations map[string]string `yaml:"certManagerAnnotations"`
+}
+
+// summaryIssuer is a wrapper of some summary information about an issuer
+type summaryIssuer struct {
+	Name      string `yaml:"name"`
+	Kind      string `yaml:"kind"`
+	Namespace string `yaml:"namespace,omitempty"`
 }
 
 // installedComponent is a interface which a custom component status must
@@ -158,7 +172,7 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 		})
 	}
 
-	// gather pods and identify the relevant installted components
+	// gather pods and identify the relevant installed components
 	podClient, err := clients.NewGenericClient[*v1.Pod, *v1.PodList](
 		&clients.GenericClientOptions{
 			RestConfig: cfg,
@@ -175,19 +189,147 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 		return nil, fmt.Errorf("failed to list pods: %s", err)
 	}
 
-	componentStatuses, err := findComponents(pods.Items)
+	status.Components, err = findComponents(pods.Items)
 	if err != nil {
 		return nil, fmt.Errorf("failed to identify components in the cluster: %s", err)
 	}
-	status.Components = componentStatuses
+
+	// gather issuers and find each issuer of each kind
+	status.Issuers, err = findIssuers(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed while finding issuers in the cluster: %s", err)
+	}
 
 	return &status, nil
 }
 
-func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
-	componentStatuses := make(map[string]installedComponent)
+func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error) {
+	issuerClient, err := clients.NewAllIssuers(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create issuer client: %s", err)
+	}
+	issuerKinds, err := issuerClient.ListKinds(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list issuer kinds: %s", err)
+	}
 
-	searchForComponents := []installedComponent{
+	var summaryIssuers []summaryIssuer
+	for _, kind := range issuerKinds {
+		switch kind {
+		case clients.CertManagerIssuer:
+			client, err := clients.NewCertManagerIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create clusterissuer client: %s", err)
+			}
+			var issuers cmapi.IssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list clusterissuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					Name:      issuer.Name,
+					Namespace: issuer.Namespace,
+					Kind:      issuer.Kind,
+				})
+			}
+		case clients.CertManagerClusterIssuer:
+			client, err := clients.NewCertManagerClusterIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create clusterissuer client: %s", err)
+			}
+			var clusterIssuers cmapi.ClusterIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &clusterIssuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list clusterissuers: %s", err)
+			}
+			for _, issuer := range clusterIssuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					Name:      issuer.Name,
+					Namespace: issuer.Namespace,
+					Kind:      issuer.Kind,
+				})
+			}
+		case clients.GoogleCASIssuer:
+			client, err := clients.NewGoogleCASIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create cas client: %s", err)
+			}
+			var issuers googlecas.GoogleCASIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list cas issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					Name:      issuer.Name,
+					Namespace: issuer.Namespace,
+					Kind:      issuer.Kind,
+				})
+			}
+		case clients.GoogleCASClusterIssuer:
+			client, err := clients.NewGoogleCASClusterIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create cas cluster issuer client: %s", err)
+			}
+			var issuers googlecas.GoogleCASClusterIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list cas cluster issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					Name:      issuer.Name,
+					Namespace: issuer.Namespace,
+					Kind:      issuer.Kind,
+				})
+			}
+		case clients.AWSPCAIssuer:
+			client, err := clients.NewAWSPCAIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create aws pca issuer client: %s", err)
+			}
+			var issuers awspca.AWSPCAIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list pca issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					Name:      issuer.Name,
+					Namespace: issuer.Namespace,
+					Kind:      issuer.Kind,
+				})
+			}
+		case clients.AWSPCAClusterIssuer:
+			client, err := clients.NewAWSPCAClusterIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create aws pca cluster issuer client: %s", err)
+			}
+			var issuers awspca.AWSPCAClusterIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list pca cluster issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					Name:      issuer.Name,
+					Namespace: issuer.Namespace,
+					Kind:      issuer.Kind,
+				})
+			}
+		}
+	}
+
+	return summaryIssuers, nil
+}
+
+// findComponents takes a list of pods and returns a list of detected components
+// which might be relevant to Jetstack Secure
+func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
+	foundComponents := make(map[string]installedComponent)
+
+	knownComponents := []installedComponent{
 		&components.CertManagerControllerStatus{},
 		&components.CertManagerCAInjectorStatus{},
 		&components.CertManagerWebhookStatus{},
@@ -213,8 +355,8 @@ func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
 		&components.SmallStepIssuerStatus{},
 	}
 
-	for i := range searchForComponents {
-		component := searchForComponents[i]
+	for i := range knownComponents {
+		component := knownComponents[i]
 		var found bool
 		var err error
 		for _, pod := range pods {
@@ -227,9 +369,9 @@ func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
 			}
 		}
 		if found {
-			componentStatuses[component.Name()] = component
+			foundComponents[component.Name()] = component
 		}
 	}
 
-	return componentStatuses, nil
+	return foundComponents, nil
 }

@@ -34,6 +34,22 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 		case "/apis/networking.k8s.io/v1/ingresses":
 			data, err = os.ReadFile("fixtures/ing-list.json")
 			require.NoError(t, err)
+		case "/apis/cert-manager.io/v1/clusterissuers":
+			data, err = os.ReadFile("fixtures/cluster-issuer-list.json")
+			require.NoError(t, err)
+		case "/apis/cert-manager.io/v1/issuers":
+			data, err = os.ReadFile("fixtures/issuer-list.json")
+			require.NoError(t, err)
+		case "/apis/cas-issuer.jetstack.io/v1beta1/googlecasissuers":
+			data, err = os.ReadFile("fixtures/googlecasissuer-list.json")
+			require.NoError(t, err)
+		case "/apis/cas-issuer.jetstack.io/v1beta1/googlecasclusterissuers":
+			// the type is present but there are no resources
+			data = []byte(`{"items": []}`)
+			require.NoError(t, err)
+		case "/apis/awspca.cert-manager.io/v1beta1/awspcaissuers":
+			data, err = os.ReadFile("fixtures/awspcaissuer-list.json")
+			require.NoError(t, err)
 		default:
 			t.Fatalf("unexpected request: %s", r.URL.Path)
 		}
@@ -65,6 +81,7 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 			{
 				Name: "cert-manager.io",
 				CRDs: []string{
+					"awspcaissuers.awspca.cert-manager.io",
 					"certificaterequestpolicies.policy.cert-manager.io",
 					"certificaterequests.cert-manager.io",
 					"certificates.cert-manager.io",
@@ -77,6 +94,8 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 			{
 				Name: "jetstack.io",
 				CRDs: []string{
+					"googlecasclusterissuers.cas-issuer.jetstack.io",
+					"googlecasissuers.cas-issuer.jetstack.io",
 					"installations.operator.jetstack.io",
 				},
 			},
@@ -88,6 +107,28 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 			"cert-manager-cainjector":      components.NewCertManagerCAInjectorStatus("jetstack-secure", "v1.9.1"),
 			"cert-manager-webhook":         components.NewCertManagerWebhookStatus("jetstack-secure", "v1.9.1"),
 			"cert-manager-approver-policy": components.NewCertManagerApproverPolicyStatus("jetstack-secure", "v0.4.0"),
+		},
+		Issuers: []summaryIssuer{
+			{
+				Name:      "pca-sample",
+				Namespace: "jetstack-secure",
+				Kind:      "AWSPCAIssuer",
+			},
+			{
+				Name:      "cm-cluster-issuer-sample",
+				Namespace: "",
+				Kind:      "ClusterIssuer",
+			},
+			{
+				Name:      "googlecasissuer-sample",
+				Namespace: "jetstack-secure",
+				Kind:      "GoogleCASIssuer",
+			},
+			{
+				Name:      "cm-issuer-sample",
+				Namespace: "jetstack-secure",
+				Kind:      "Issuer",
+			},
 		},
 	})
 }
