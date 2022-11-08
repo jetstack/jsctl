@@ -29,33 +29,28 @@ func (a *AWSPCAIssuerStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-// NewAWSPCAIssuerStatus returns an instance that can be used in testing
-func NewAWSPCAIssuerStatus(namespace, version string) *AWSPCAIssuerStatus {
-	return &AWSPCAIssuerStatus{
-		namespace: namespace,
-		version:   version,
-	}
-}
-
-func FindAWSPCAIssuer(pod *v1core.Pod) (*AWSPCAIssuerStatus, error) {
-	var status AWSPCAIssuerStatus
-	status.namespace = pod.Namespace
+func (a *AWSPCAIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
+	a.namespace = pod.Namespace
 
 	found := false
 	for _, container := range pod.Spec.Containers {
 		if strings.Contains(container.Image, "cert-manager-aws-privateca-issuer") {
 			found = true
 			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				a.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			} else {
-				status.version = "unknown"
+				a.version = "unknown"
 			}
 		}
 	}
 
-	if found {
-		return &status, nil
-	}
+	return found, nil
+}
 
-	return nil, nil
+// NewAWSPCAIssuerStatus returns an instance that can be used in testing
+func NewAWSPCAIssuerStatus(namespace, version string) *AWSPCAIssuerStatus {
+	return &AWSPCAIssuerStatus{
+		namespace: namespace,
+		version:   version,
+	}
 }

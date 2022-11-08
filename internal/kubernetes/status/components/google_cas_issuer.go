@@ -29,33 +29,28 @@ func (c *GoogleCASIssuerStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-// NewGoogleCASIssuerStatus returns an instance that can be used in testing
-func NewGoogleCASIssuerStatus(namespace, version string) *GoogleCASIssuerStatus {
-	return &GoogleCASIssuerStatus{
-		namespace: namespace,
-		version:   version,
-	}
-}
-
-func FindGoogleCASIssuer(pod *v1core.Pod) (*GoogleCASIssuerStatus, error) {
-	var status GoogleCASIssuerStatus
-	status.namespace = pod.Namespace
+func (c *GoogleCASIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
+	c.namespace = pod.Namespace
 
 	found := false
 	for _, container := range pod.Spec.Containers {
 		if strings.Contains(container.Image, "google-cas-issuer") {
 			found = true
 			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			} else {
-				status.version = "unknown"
+				c.version = "unknown"
 			}
 		}
 	}
 
-	if found {
-		return &status, nil
-	}
+	return found, nil
+}
 
-	return nil, nil
+// NewGoogleCASIssuerStatus returns an instance that can be used in testing
+func NewGoogleCASIssuerStatus(namespace, version string) *GoogleCASIssuerStatus {
+	return &GoogleCASIssuerStatus{
+		namespace: namespace,
+		version:   version,
+	}
 }

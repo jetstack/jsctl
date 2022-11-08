@@ -29,6 +29,24 @@ func (c *SmallStepIssuerStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
+func (c *SmallStepIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
+	c.namespace = pod.Namespace
+
+	found := false
+	for _, container := range pod.Spec.Containers {
+		if strings.Contains(container.Image, "step-issuer") {
+			found = true
+			if strings.Contains(container.Image, ":") {
+				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+			} else {
+				c.version = "unknown"
+			}
+		}
+	}
+
+	return found, nil
+}
+
 // NewSmallStepIssuerStatus returns an instance that can be used in testing
 func NewSmallStepIssuerStatus(namespace, version string) *SmallStepIssuerStatus {
 	return &SmallStepIssuerStatus{

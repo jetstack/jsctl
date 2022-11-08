@@ -29,33 +29,28 @@ func (c *CertManagerCAInjectorStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-// NewCertManagerCAInjectorStatus returns an instance that can be used in testing
-func NewCertManagerCAInjectorStatus(namespace, version string) *CertManagerCAInjectorStatus {
-	return &CertManagerCAInjectorStatus{
-		namespace: namespace,
-		version:   version,
-	}
-}
-
-func FindCertManagerCAInjector(pod *v1core.Pod) (*CertManagerCAInjectorStatus, error) {
-	var status CertManagerCAInjectorStatus
-	status.namespace = pod.Namespace
+func (c *CertManagerCAInjectorStatus) Match(pod *v1core.Pod) (bool, error) {
+	c.namespace = pod.Namespace
 
 	found := false
 	for _, container := range pod.Spec.Containers {
 		if strings.Contains(container.Image, "cert-manager-cainjector") {
 			found = true
 			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			} else {
-				status.version = "unknown"
+				c.version = "unknown"
 			}
 		}
 	}
 
-	if found {
-		return &status, nil
-	}
+	return found, nil
+}
 
-	return nil, nil
+// NewCertManagerCAInjectorStatus returns an instance that can be used in testing
+func NewCertManagerCAInjectorStatus(namespace, version string) *CertManagerCAInjectorStatus {
+	return &CertManagerCAInjectorStatus{
+		namespace: namespace,
+		version:   version,
+	}
 }

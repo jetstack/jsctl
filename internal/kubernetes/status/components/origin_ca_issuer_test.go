@@ -20,9 +20,11 @@ func TestOriginCAIssuer(t *testing.T) {
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
 
-	status, err := FindOriginCAIssuer(&pod)
+	var status OriginCAIssuerStatus
+
+	found, err := status.Match(&pod)
 	require.NoError(t, err)
-	require.NotNilf(t, status, "expected status to be not nil")
+	require.True(t, found)
 
 	assert.Equal(t, "origin-ca-issuer", status.Name())
 	assert.Equal(t, "example", status.Namespace())

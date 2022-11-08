@@ -20,9 +20,11 @@ func TestCertManagerApproverPolicyEnterprise(t *testing.T) {
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
 
-	status, err := FindCertManagerApproverPolicyEnterprise(&pod)
+	var status CertManagerApproverPolicyEnterpriseStatus
+
+	found, err := status.Match(&pod)
 	require.NoError(t, err)
-	require.NotNilf(t, status, "expected status to be not nil")
+	require.True(t, found)
 
 	assert.Equal(t, "cert-manager-approver-policy-enterprise", status.Name())
 	assert.Equal(t, "example", status.Namespace())

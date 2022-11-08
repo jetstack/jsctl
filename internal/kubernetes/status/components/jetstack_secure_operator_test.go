@@ -20,9 +20,11 @@ func TestJetstackSecureOperator(t *testing.T) {
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
 
-	status, err := FindJetstackSecureOperator(&pod)
+	var status JetstackSecureOperatorStatus
+
+	found, err := status.Match(&pod)
 	require.NoError(t, err)
-	require.NotNilf(t, status, "expected status to be not nil")
+	require.True(t, found)
 
 	assert.Equal(t, "jetstack-secure-operator", status.Name())
 	assert.Equal(t, "jetstack-secure", status.Namespace())

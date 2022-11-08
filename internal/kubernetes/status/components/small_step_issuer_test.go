@@ -20,9 +20,11 @@ func TestSmallStepIssuer(t *testing.T) {
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
 
-	status, err := FindSmallStepIssuer(&pod)
+	var status SmallStepIssuerStatus
+
+	found, err := status.Match(&pod)
 	require.NoError(t, err)
-	require.NotNilf(t, status, "expected status to be not nil")
+	require.True(t, found)
 
 	assert.Equal(t, "small-step-issuer", status.Name())
 	assert.Equal(t, "step-issuer-system", status.Namespace())

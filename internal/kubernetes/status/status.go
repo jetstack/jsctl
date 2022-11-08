@@ -51,6 +51,10 @@ type installedComponent interface {
 	Name() string
 	Namespace() string
 	Version() string
+
+	// Match will populate the installedComponent with information from the pod
+	// if the pod is determined to be a pod from that component
+	Match(pod *v1.Pod) (bool, error)
 }
 
 // GatherClusterPreInstallStatus returns a ClusterPreInstallStatus for the
@@ -183,59 +187,47 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
 	componentStatuses := make(map[string]installedComponent)
 
-	for _, pod := range pods {
-		jetstackSecureAgentStatus, err := components.FindJetstackSecureAgent(&pod)
-		if err != nil {
-			return nil, fmt.Errorf("failed while testing pod as jetstack-secure-agent: %s", err)
-		}
-		if jetstackSecureAgentStatus != nil {
-			componentStatuses[jetstackSecureAgentStatus.Name()] = jetstackSecureAgentStatus
-			continue
-		}
+	searchForComponents := []installedComponent{
+		&components.CertManagerControllerStatus{},
+		&components.CertManagerCAInjectorStatus{},
+		&components.CertManagerWebhookStatus{},
 
-		jetstackSecureOperatorStatus, err := components.FindJetstackSecureOperator(&pod)
-		if err != nil {
-			return nil, fmt.Errorf("failed while testing pod as js-operator: %s", err)
-		}
-		if jetstackSecureOperatorStatus != nil {
-			componentStatuses[jetstackSecureOperatorStatus.Name()] = jetstackSecureOperatorStatus
-			continue
-		}
+		&components.CertManagerCSIDriverStatus{},
 
-		certManagerControllerStatus, err := components.FindCertManagerController(&pod)
-		if err != nil {
-			return nil, fmt.Errorf("failed while testing pod as cert-manager-controller: %s", err)
-		}
-		if certManagerControllerStatus != nil {
-			componentStatuses[certManagerControllerStatus.Name()] = certManagerControllerStatus
-			continue
-		}
+		&components.CertManagerCSIDriverSPIFFEStatus{},
+		&components.CertManagerCSIDriverSpiffeApproverStatus{},
 
-		certManagerCAInjectorStatus, err := components.FindCertManagerCAInjector(&pod)
-		if err != nil {
-			return nil, fmt.Errorf("failed while testing pod as cert-manager-cainjector: %s", err)
-		}
-		if certManagerCAInjectorStatus != nil {
-			componentStatuses[certManagerCAInjectorStatus.Name()] = certManagerCAInjectorStatus
-			continue
-		}
+		&components.CertManagerApproverPolicyStatus{},
+		&components.CertManagerApproverPolicyEnterpriseStatus{},
 
-		certManagerApproverPolicyStatus, err := components.FindCertManagerApproverPolicy(&pod)
-		if err != nil {
-			return nil, fmt.Errorf("failed while testing pod as cert-manager approver policy: %s", err)
-		}
-		if certManagerApproverPolicyStatus != nil {
-			componentStatuses[certManagerApproverPolicyStatus.Name()] = certManagerApproverPolicyStatus
-			continue
-		}
+		&components.JetstackSecureAgentStatus{},
+		&components.JetstackSecureOperatorStatus{},
 
-		certManagerWebhookStatus, err := components.FindCertManagerWebhook(&pod)
-		if err != nil {
-			return nil, fmt.Errorf("failed while testing pod as cert-manager webhook: %s", err)
+		&components.VenafiOAuthHelperStatus{},
+		&components.CertDiscoveryVenafiStatus{},
+
+		&components.GoogleCASIssuerStatus{},
+		&components.AWSPCAIssuerStatus{},
+		&components.KMSIssuerStatus{},
+		&components.OriginCAIssuerStatus{},
+		&components.SmallStepIssuerStatus{},
+	}
+
+	for i := range searchForComponents {
+		component := searchForComponents[i]
+		var found bool
+		var err error
+		for _, pod := range pods {
+			found, err = component.Match(&pod)
+			if err != nil {
+				return nil, fmt.Errorf("failed while testing pod as %s: %s", component.Name(), err)
+			}
+			if found {
+				break
+			}
 		}
-		if certManagerWebhookStatus != nil {
-			componentStatuses[certManagerWebhookStatus.Name()] = certManagerWebhookStatus
-			continue
+		if found {
+			componentStatuses[component.Name()] = component
 		}
 	}
 

@@ -6,56 +6,51 @@ import (
 	v1core "k8s.io/api/core/v1"
 )
 
-type CertManagerCSIDriverSpifferApproverStatus struct {
+type CertManagerCSIDriverSpiffeApproverStatus struct {
 	namespace, version string
 }
 
-func (c *CertManagerCSIDriverSpifferApproverStatus) Name() string {
+func (c *CertManagerCSIDriverSpiffeApproverStatus) Name() string {
 	return "cert-manager-csi-driver-spiffe-approver"
 }
 
-func (c *CertManagerCSIDriverSpifferApproverStatus) Namespace() string {
+func (c *CertManagerCSIDriverSpiffeApproverStatus) Namespace() string {
 	return c.namespace
 }
 
-func (c *CertManagerCSIDriverSpifferApproverStatus) Version() string {
+func (c *CertManagerCSIDriverSpiffeApproverStatus) Version() string {
 	return c.version
 }
 
-func (c *CertManagerCSIDriverSpifferApproverStatus) MarshalYAML() (interface{}, error) {
+func (c *CertManagerCSIDriverSpiffeApproverStatus) MarshalYAML() (interface{}, error) {
 	return map[string]string{
 		"namespace": c.namespace,
 		"version":   c.version,
 	}, nil
 }
 
-// NewCertManagerCSIDriverSpifferApproverStatus returns an instance that can be used in testing
-func NewCertManagerCSIDriverSpifferApproverStatus(namespace, version string) *CertManagerCSIDriverSpifferApproverStatus {
-	return &CertManagerCSIDriverSpifferApproverStatus{
-		namespace: namespace,
-		version:   version,
-	}
-}
-
-func FindCertManagerCSIDriverSpifferApprover(pod *v1core.Pod) (*CertManagerCSIDriverSpifferApproverStatus, error) {
-	var status CertManagerCSIDriverSpifferApproverStatus
-	status.namespace = pod.Namespace
+func (c *CertManagerCSIDriverSpiffeApproverStatus) Match(pod *v1core.Pod) (bool, error) {
+	c.namespace = pod.Namespace
 
 	found := false
 	for _, container := range pod.Spec.Containers {
 		if strings.Contains(container.Image, "cert-manager-csi-driver-spiffe-approver") {
 			found = true
 			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			} else {
-				status.version = "unknown"
+				c.version = "unknown"
 			}
 		}
 	}
 
-	if found {
-		return &status, nil
-	}
+	return found, nil
+}
 
-	return nil, nil
+// NewCertManagerCSIDriverSpifferApproverStatus returns an instance that can be used in testing
+func NewCertManagerCSIDriverSpifferApproverStatus(namespace, version string) *CertManagerCSIDriverSpiffeApproverStatus {
+	return &CertManagerCSIDriverSpiffeApproverStatus{
+		namespace: namespace,
+		version:   version,
+	}
 }

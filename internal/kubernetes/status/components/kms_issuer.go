@@ -29,33 +29,28 @@ func (c *KMSIssuerStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-// NewKMSIssuerStatus returns an instance that can be used in testing
-func NewKMSIssuerStatus(namespace, version string) *KMSIssuerStatus {
-	return &KMSIssuerStatus{
-		namespace: namespace,
-		version:   version,
-	}
-}
-
-func FindKMSIssuer(pod *v1core.Pod) (*KMSIssuerStatus, error) {
-	var status KMSIssuerStatus
-	status.namespace = pod.Namespace
+func (c *KMSIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
+	c.namespace = pod.Namespace
 
 	found := false
 	for _, container := range pod.Spec.Containers {
 		if strings.Contains(container.Image, "kms-issuer") {
 			found = true
 			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			} else {
-				status.version = "unknown"
+				c.version = "unknown"
 			}
 		}
 	}
 
-	if found {
-		return &status, nil
-	}
+	return found, nil
+}
 
-	return nil, nil
+// NewKMSIssuerStatus returns an instance that can be used in testing
+func NewKMSIssuerStatus(namespace, version string) *KMSIssuerStatus {
+	return &KMSIssuerStatus{
+		namespace: namespace,
+		version:   version,
+	}
 }

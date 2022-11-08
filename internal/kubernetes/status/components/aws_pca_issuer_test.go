@@ -20,9 +20,11 @@ func TestAWSPCAIssuer(t *testing.T) {
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
 
-	status, err := FindAWSPCAIssuer(&pod)
+	var status AWSPCAIssuerStatus
+
+	found, err := status.Match(&pod)
 	require.NoError(t, err)
-	require.NotNilf(t, status, "expected status to be not nil")
+	require.True(t, found)
 
 	assert.Equal(t, "aws-pca-issuer", status.Name())
 	assert.Equal(t, "jetstack-secure", status.Namespace())

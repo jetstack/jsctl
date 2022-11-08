@@ -20,9 +20,11 @@ func TestKMSIssuer(t *testing.T) {
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
 
-	status, err := FindKMSIssuer(&pod)
+	var status KMSIssuerStatus
+
+	found, err := status.Match(&pod)
 	require.NoError(t, err)
-	require.NotNilf(t, status, "expected status to be not nil")
+	require.True(t, found)
 
 	assert.Equal(t, "kms-issuer", status.Name())
 	assert.Equal(t, "example", status.Namespace())

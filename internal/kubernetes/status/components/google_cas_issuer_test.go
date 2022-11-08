@@ -20,9 +20,11 @@ func TestGoogleCASIssuer(t *testing.T) {
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
 
-	status, err := FindGoogleCASIssuer(&pod)
+	var status GoogleCASIssuerStatus
+
+	found, err := status.Match(&pod)
 	require.NoError(t, err)
-	require.NotNilf(t, status, "expected status to be not nil")
+	require.True(t, found)
 
 	assert.Equal(t, "google-cas-issuer", status.Name())
 	assert.Equal(t, "example", status.Namespace())

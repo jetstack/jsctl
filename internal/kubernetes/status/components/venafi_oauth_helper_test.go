@@ -20,9 +20,11 @@ func TestVenafiOAuthHelper(t *testing.T) {
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
 
-	status, err := FindVenafiOAuthHelper(&pod)
+	var status VenafiOAuthHelperStatus
+
+	found, err := status.Match(&pod)
 	require.NoError(t, err)
-	require.NotNilf(t, status, "expected status to be not nil")
+	require.True(t, found)
 
 	assert.Equal(t, "venafi-oauth-helper", status.Name())
 	assert.Equal(t, "example", status.Namespace())

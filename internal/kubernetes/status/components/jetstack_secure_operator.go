@@ -29,33 +29,28 @@ func (j *JetstackSecureOperatorStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-// NewJetstackSecureOperatorStatus returns an instance that can be used in testing
-func NewJetstackSecureOperatorStatus(namespace, version string) *JetstackSecureOperatorStatus {
-	return &JetstackSecureOperatorStatus{
-		namespace: namespace,
-		version:   version,
-	}
-}
-
-func FindJetstackSecureOperator(pod *v1core.Pod) (*JetstackSecureOperatorStatus, error) {
-	var status JetstackSecureOperatorStatus
-	status.namespace = pod.Namespace
+func (j *JetstackSecureOperatorStatus) Match(pod *v1core.Pod) (bool, error) {
+	j.namespace = pod.Namespace
 
 	found := false
 	for _, container := range pod.Spec.Containers {
 		if strings.Contains(container.Image, "js-operator") {
 			found = true
 			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				j.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			} else {
-				status.version = "unknown"
+				j.version = "unknown"
 			}
 		}
 	}
 
-	if found {
-		return &status, nil
-	}
+	return found, nil
+}
 
-	return nil, nil
+// NewJetstackSecureOperatorStatus returns an instance that can be used in testing
+func NewJetstackSecureOperatorStatus(namespace, version string) *JetstackSecureOperatorStatus {
+	return &JetstackSecureOperatorStatus{
+		namespace: namespace,
+		version:   version,
+	}
 }

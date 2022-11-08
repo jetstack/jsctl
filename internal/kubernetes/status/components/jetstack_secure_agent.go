@@ -29,34 +29,28 @@ func (j *JetstackSecureAgentStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-// NewJetstackSecureAgentStatus returns an instance that can be used in testing
-func NewJetstackSeucreAgentStatus(namespace, version string) *JetstackSecureAgentStatus {
-	return &JetstackSecureAgentStatus{
-		namespace: namespace,
-		version:   version,
-	}
-}
-
-func FindJetstackSecureAgent(pod *v1core.Pod) (*JetstackSecureAgentStatus, error) {
-	var status JetstackSecureAgentStatus
-	status.namespace = pod.Namespace
+func (j *JetstackSecureAgentStatus) Match(pod *v1core.Pod) (bool, error) {
+	j.namespace = pod.Namespace
 
 	found := false
 	for _, container := range pod.Spec.Containers {
-		// TODO: this might need to be updated soon / is brittle
 		if strings.Contains(container.Image, "jetstack/preflight") {
 			found = true
 			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				j.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			} else {
-				status.version = "unknown"
+				j.version = "unknown"
 			}
 		}
 	}
 
-	if found {
-		return &status, nil
-	}
+	return found, nil
+}
 
-	return nil, nil
+// NewJetstackSecureAgentStatus returns an instance that can be used in testing
+func NewJetstackSecureAgentStatus(namespace, version string) *JetstackSecureAgentStatus {
+	return &JetstackSecureAgentStatus{
+		namespace: namespace,
+		version:   version,
+	}
 }

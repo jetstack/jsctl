@@ -29,33 +29,28 @@ func (c *CertManagerWebhookStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-// NewCertManagerWebhookStatus returns an instance that can be used in testing
-func NewCertManagerWebhookStatus(namespace, version string) *CertManagerWebhookStatus {
-	return &CertManagerWebhookStatus{
-		namespace: namespace,
-		version:   version,
-	}
-}
-
-func FindCertManagerWebhook(pod *v1core.Pod) (*CertManagerWebhookStatus, error) {
-	var status CertManagerWebhookStatus
-	status.namespace = pod.Namespace
+func (c *CertManagerWebhookStatus) Match(pod *v1core.Pod) (bool, error) {
+	c.namespace = pod.Namespace
 
 	found := false
 	for _, container := range pod.Spec.Containers {
 		if strings.Contains(container.Image, "cert-manager-webhook") {
 			found = true
 			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			} else {
-				status.version = "unknown"
+				c.version = "unknown"
 			}
 		}
 	}
 
-	if found {
-		return &status, nil
-	}
+	return found, nil
+}
 
-	return nil, nil
+// NewCertManagerWebhookStatus returns an instance that can be used in testing
+func NewCertManagerWebhookStatus(namespace, version string) *CertManagerWebhookStatus {
+	return &CertManagerWebhookStatus{
+		namespace: namespace,
+		version:   version,
+	}
 }
