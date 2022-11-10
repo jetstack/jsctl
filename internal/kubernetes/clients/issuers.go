@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	kmsissuerapi "github.com/Skyscanner/kms-issuer/apis/certmanager/v1alpha1"
 	awspca "github.com/cert-manager/aws-privateca-issuer/pkg/api/v1beta1"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	origincaissuerapi "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
 	googlecas "github.com/jetstack/google-cas-issuer/api/v1beta1"
+	veiapi "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
 	v1extenstions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 )
@@ -17,21 +20,23 @@ type AnyIssuer int64
 const (
 	CertManagerIssuer AnyIssuer = iota
 	CertManagerClusterIssuer
+	VenafiEnhancedIssuer
+	VenafiEnhancedClusterIssuer
 	AWSPCAIssuer
 	AWSPCAClusterIssuer
 	KMSIssuer
 	GoogleCASIssuer
 	GoogleCASClusterIssuer
 	OriginCAIssuer
-	// OriginCAClusterIssuer TODO: confirm this doesn't have a cluster issuer
 	SmallStepIssuer
 	SmallStepClusterIssuer
-	// KMSClusterIssuer TODO: confirm this doesn't have a cluster issuer
 )
 
 var AllIssuersList = []AnyIssuer{
 	CertManagerIssuer,
 	CertManagerClusterIssuer,
+	VenafiEnhancedIssuer,
+	VenafiEnhancedClusterIssuer,
 	AWSPCAIssuer,
 	AWSPCAClusterIssuer,
 	KMSIssuer,
@@ -48,6 +53,10 @@ func (s AnyIssuer) String() string {
 		return "issuers.cert-manager.io"
 	case CertManagerClusterIssuer:
 		return "clusterissuers.cert-manager.io"
+	case VenafiEnhancedIssuer:
+		return "venafiissuers.jetstack.io"
+	case VenafiEnhancedClusterIssuer:
+		return "venaficlusterissuers.jetstack.io"
 	case AWSPCAIssuer:
 		return "awspcaissuers.awspca.cert-manager.io"
 	case AWSPCAClusterIssuer:
@@ -216,6 +225,82 @@ func NewAWSPCAClusterIssuerClient(config *rest.Config) (*Generic[*awspca.AWSPCAC
 			Group:      awspca.GroupVersion.Group,
 			Version:    awspca.GroupVersion.Version,
 			Kind:       "awspcaclusterissuers",
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating generic client: %w", err)
+	}
+
+	return genericClient, nil
+}
+
+// NewKMSIssuerClient returns an instance of a generic client for querying
+// KMS Issuers
+func NewKMSIssuerClient(config *rest.Config) (*Generic[*kmsissuerapi.KMSIssuer, *kmsissuerapi.KMSIssuerList], error) {
+	genericClient, err := NewGenericClient[*kmsissuerapi.KMSIssuer, *kmsissuerapi.KMSIssuerList](
+		&GenericClientOptions{
+			RestConfig: config,
+			APIPath:    "/apis",
+			Group:      kmsissuerapi.GroupVersion.Group,
+			Version:    kmsissuerapi.GroupVersion.Version,
+			Kind:       "kmsissuers",
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating generic client: %w", err)
+	}
+
+	return genericClient, nil
+}
+
+// NewVenafiEnhancedIssuerClient returns an instance of a generic client for querying
+// Venafi enhanced issuers
+func NewVenafiEnhancedIssuerClient(config *rest.Config) (*Generic[*veiapi.VenafiIssuer, *veiapi.VenafiIssuerList], error) {
+	genericClient, err := NewGenericClient[*veiapi.VenafiIssuer, *veiapi.VenafiIssuerList](
+		&GenericClientOptions{
+			RestConfig: config,
+			APIPath:    "/apis",
+			Group:      veiapi.SchemeGroupVersion.Group,
+			Version:    veiapi.SchemeGroupVersion.Group,
+			Kind:       "venafiissuers",
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating generic client: %w", err)
+	}
+
+	return genericClient, nil
+}
+
+// NewVenafiEnhancedClusterIssuerClient returns an instance of a generic client for querying
+// Venafi enhanced cluster issuers
+func NewVenafiEnhancedClusterIssuerClient(config *rest.Config) (*Generic[*veiapi.VenafiClusterIssuer, *veiapi.VenafiClusterIssuerList], error) {
+	genericClient, err := NewGenericClient[*veiapi.VenafiClusterIssuer, *veiapi.VenafiClusterIssuerList](
+		&GenericClientOptions{
+			RestConfig: config,
+			APIPath:    "/apis",
+			Group:      veiapi.SchemeGroupVersion.Group,
+			Version:    veiapi.SchemeGroupVersion.Group,
+			Kind:       "venaficlusterissuers",
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating generic client: %w", err)
+	}
+
+	return genericClient, nil
+}
+
+// NewOriginCAIssuerClient returns an instance of a generic client for querying
+// Origin CA Issuers
+func NewOriginCAIssuerClient(config *rest.Config) (*Generic[*origincaissuerapi.OriginIssuer, *origincaissuerapi.OriginIssuerList], error) {
+	genericClient, err := NewGenericClient[*origincaissuerapi.OriginIssuer, *origincaissuerapi.OriginIssuerList](
+		&GenericClientOptions{
+			RestConfig: config,
+			APIPath:    "/apis",
+			Group:      origincaissuerapi.GroupVersion.Group,
+			Version:    origincaissuerapi.GroupVersion.Version,
+			Kind:       "originissuers",
 		},
 	)
 	if err != nil {

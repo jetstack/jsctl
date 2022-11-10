@@ -1,0 +1,118 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "venafi-enhanced-issuer-controller-manager",
+    "namespace": "example",
+    "labels": {
+      "control-plane": "controller-manager",
+      "helm.sh/chart": "venafi-enhanced-issuer-v0.0.0",
+      "app.kubernetes.io/name": "venafi-enhanced-issuer",
+      "app.kubernetes.io/instance": "RELEASE-NAME",
+      "app.kubernetes.io/version": "v0.0.0",
+      "app.kubernetes.io/managed-by": "Helm"
+    }
+  },
+  "spec": {
+    "containers": [
+      {
+        "args": [
+          "--secure-listen-address=0.0.0.0:8443",
+          "--upstream=http://127.0.0.1:8080/",
+          "--logtostderr=true",
+          "--v=0"
+        ],
+        "env": [
+          {
+            "name": "KUBERNETES_CLUSTER_DOMAIN",
+            "value": "cluster.local"
+          }
+        ],
+        "image": "gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0",
+        "name": "kube-rbac-proxy",
+        "ports": [
+          {
+            "containerPort": 8443,
+            "name": "https",
+            "protocol": "TCP"
+          }
+        ],
+        "resources": {
+          "limits": {
+            "cpu": "500m",
+            "memory": "128Mi"
+          },
+          "requests": {
+            "cpu": "5m",
+            "memory": "64Mi"
+          }
+        },
+        "securityContext": {
+          "allowPrivilegeEscalation": false,
+          "capabilities": {
+            "drop": [
+              "ALL"
+            ]
+          }
+        }
+      },
+      {
+        "args": [
+          "--health-probe-bind-address=:8081",
+          "--metrics-bind-address=127.0.0.1:8080"
+        ],
+        "env": [
+          {
+            "name": "KUBERNETES_CLUSTER_DOMAIN",
+            "value": "cluster.local"
+          }
+        ],
+        "image": "eu.gcr.io/jetstack-secure-enterprise/venafi-enhanced-issuer:v0.1.6",
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 8081
+          },
+          "initialDelaySeconds": 15,
+          "periodSeconds": 20
+        },
+        "name": "manager",
+        "readinessProbe": {
+          "httpGet": {
+            "path": "/readyz",
+            "port": 8081
+          },
+          "initialDelaySeconds": 5,
+          "periodSeconds": 10
+        },
+        "resources": {
+          "limits": {
+            "cpu": "500m",
+            "memory": "128Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "64Mi"
+          }
+        },
+        "securityContext": {
+          "allowPrivilegeEscalation": false,
+          "capabilities": {
+            "drop": [
+              "ALL"
+            ]
+          },
+          "readOnlyRootFilesystem": true
+        }
+      }
+    ],
+    "securityContext": {
+      "runAsNonRoot": true,
+      "seccompProfile": {
+        "type": "RuntimeDefault"
+      }
+    },
+    "serviceAccountName": "venafi-enhanced-issuer-controller-manager",
+    "terminationGracePeriodSeconds": 10
+  }
+}

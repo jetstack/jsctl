@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"strings"
 
+	kmsissuerapi "github.com/Skyscanner/kms-issuer/apis/certmanager/v1alpha1"
 	awspca "github.com/cert-manager/aws-privateca-issuer/pkg/api/v1beta1"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	origincaissuerapi "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
 	googlecas "github.com/jetstack/google-cas-issuer/api/v1beta1"
-	v1 "k8s.io/api/core/v1"
+	veiapi "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	v1networking "k8s.io/api/networking/v1"
 	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
@@ -17,15 +20,18 @@ import (
 	"github.com/jetstack/jsctl/internal/kubernetes/status/components"
 )
 
-// ClusterPreInstallStatus is a collection of information about a cluster that
+// ClusterStatus is a collection of information about a cluster that
 // can be helpful for users about to install.
-type ClusterPreInstallStatus struct {
+type ClusterStatus struct {
+	// CRDGroups is a series of groups of CRDs by their domain, e.g. jetstack.io
 	CRDGroups []crdGroup `yaml:"crds"`
+
 	// Namespaces is a list of namespaces that exist in the cluster which are
 	// related to Jetstack Secure components
-	Namepaces []string `yaml:"namespaces"`
-	// Ingresses is a list of ingresses in the cluster related to cert-manager
-	Ingresses []summaryIngress `yaml:"ingresses"`
+	Namespaces []string `yaml:"namespaces"`
+
+	// IngressShimIngresses is a list of ingresses in the cluster using cert-manager ingress shim
+	IngressShimIngresses []summaryIngress `yaml:"ingress-shim-ingresses"`
 
 	// Components is a list of components installed in the cluster which are
 	// cert-manager or jetstack-secure related
@@ -53,8 +59,17 @@ type summaryIngress struct {
 
 // summaryIssuer is a wrapper of some summary information about an issuer
 type summaryIssuer struct {
-	Name      string `yaml:"name"`
-	Kind      string `yaml:"kind"`
+	// APIVersion is the API group name and the version
+	APIVersion string `yaml:"apiVersion"`
+
+	// Kind is the name of the kind in that API group
+	Kind string `yaml:"kind"`
+
+	// Name is the name of that Issuer resource
+	Name string `yaml:"name"`
+
+	// Namespace is the namespace of that Issuer resource if the Issuer is not
+	// cluster scoped
 	Namespace string `yaml:"namespace,omitempty"`
 }
 
@@ -68,28 +83,28 @@ type installedComponent interface {
 
 	// Match will populate the installedComponent with information from the pod
 	// if the pod is determined to be a pod from that component
-	Match(pod *v1.Pod) (bool, error)
+	Match(pod *corev1.Pod) (bool, error)
 }
 
-// GatherClusterPreInstallStatus returns a ClusterPreInstallStatus for the
+// GatherClusterStatus returns a ClusterStatus for the
 // supplied cluster
-func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*ClusterPreInstallStatus, error) {
+func GatherClusterStatus(ctx context.Context, cfg *rest.Config) (*ClusterStatus, error) {
 	var err error
-	var status ClusterPreInstallStatus
+	var status ClusterStatus
 
 	// gather the namespaces in the cluster and list only the ones related to
 	// Jetstack Secure
-	namespaceClient, err := clients.NewGenericClient[*v1.Namespace, *v1.NamespaceList](
+	namespaceClient, err := clients.NewGenericClient[*corev1.Namespace, *corev1.NamespaceList](
 		&clients.GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1.GroupName,
-			Version:    v1.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "namespaces",
 		},
 	)
 
-	var namespaces v1.NamespaceList
+	var namespaces corev1.NamespaceList
 	err = namespaceClient.List(ctx, &clients.GenericRequestOptions{}, &namespaces)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list namespaces: %s", err)
@@ -97,7 +112,7 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 
 	for _, namespace := range namespaces.Items {
 		if namespace.Name == "cert-manager" || namespace.Name == "jetstack-secure" {
-			status.Namepaces = append(status.Namepaces, namespace.Name)
+			status.Namespaces = append(status.Namespaces, namespace.Name)
 		}
 	}
 
@@ -130,7 +145,7 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 		status.CRDGroups = append(status.CRDGroups, crdGroup)
 	}
 
-	// gather ingresses related to cert-manager in the cluster
+	// gather ingress shim ingresses, based on their annotations
 	ingressClient, err := clients.NewGenericClient[*v1networking.Ingress, *v1networking.IngressList](
 		&clients.GenericClientOptions{
 			RestConfig: cfg,
@@ -153,11 +168,16 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 				relatedToCertManager = true
 				break
 			}
+			// kube-lego annotatio
+			if k == "kubernetes.io/tls-acme" {
+				relatedToCertManager = true
+				break
+			}
 		}
 		if !relatedToCertManager {
 			continue
 		}
-		status.Ingresses = append(status.Ingresses, summaryIngress{
+		status.IngressShimIngresses = append(status.IngressShimIngresses, summaryIngress{
 			Name:      ingress.Name,
 			Namespace: ingress.Namespace,
 			CertManagerAnnotations: func() map[string]string {
@@ -173,17 +193,17 @@ func GatherClusterPreInstallStatus(ctx context.Context, cfg *rest.Config) (*Clus
 	}
 
 	// gather pods and identify the relevant installed components
-	podClient, err := clients.NewGenericClient[*v1.Pod, *v1.PodList](
+	podClient, err := clients.NewGenericClient[*corev1.Pod, *corev1.PodList](
 		&clients.GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1.GroupName,
-			Version:    v1.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
 
-	var pods v1.PodList
+	var pods corev1.PodList
 	err = podClient.List(ctx, &clients.GenericRequestOptions{}, &pods)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods: %s", err)
@@ -228,9 +248,10 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					Name:      issuer.Name,
-					Namespace: issuer.Namespace,
-					Kind:      issuer.Kind,
+					APIVersion: cmapi.SchemeGroupVersion.String(),
+					Name:       issuer.Name,
+					Namespace:  issuer.Namespace,
+					Kind:       issuer.Kind,
 				})
 			}
 		case clients.CertManagerClusterIssuer:
@@ -245,9 +266,9 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			}
 			for _, issuer := range clusterIssuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					Name:      issuer.Name,
-					Namespace: issuer.Namespace,
-					Kind:      issuer.Kind,
+					APIVersion: cmapi.SchemeGroupVersion.String(),
+					Name:       issuer.Name,
+					Kind:       issuer.Kind,
 				})
 			}
 		case clients.GoogleCASIssuer:
@@ -262,9 +283,10 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					Name:      issuer.Name,
-					Namespace: issuer.Namespace,
-					Kind:      issuer.Kind,
+					APIVersion: googlecas.GroupVersion.String(),
+					Name:       issuer.Name,
+					Namespace:  issuer.Namespace,
+					Kind:       issuer.Kind,
 				})
 			}
 		case clients.GoogleCASClusterIssuer:
@@ -279,9 +301,9 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					Name:      issuer.Name,
-					Namespace: issuer.Namespace,
-					Kind:      issuer.Kind,
+					APIVersion: googlecas.GroupVersion.String(),
+					Name:       issuer.Name,
+					Kind:       issuer.Kind,
 				})
 			}
 		case clients.AWSPCAIssuer:
@@ -296,9 +318,10 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					Name:      issuer.Name,
-					Namespace: issuer.Namespace,
-					Kind:      issuer.Kind,
+					APIVersion: awspca.GroupVersion.String(),
+					Name:       issuer.Name,
+					Namespace:  issuer.Namespace,
+					Kind:       issuer.Kind,
 				})
 			}
 		case clients.AWSPCAClusterIssuer:
@@ -313,12 +336,86 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					Name:      issuer.Name,
-					Namespace: issuer.Namespace,
-					Kind:      issuer.Kind,
+					APIVersion: awspca.GroupVersion.String(),
+					Name:       issuer.Name,
+					Kind:       issuer.Kind,
+				})
+			}
+		case clients.KMSIssuer:
+			client, err := clients.NewKMSIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create kms issuer client: %s", err)
+			}
+			var issuers kmsissuerapi.KMSIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list kms issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					APIVersion: kmsissuerapi.GroupVersion.String(),
+					Name:       issuer.Name,
+					Namespace:  issuer.Namespace,
+					Kind:       issuer.Kind,
+				})
+			}
+		case clients.VenafiEnhancedIssuer:
+			client, err := clients.NewVenafiEnhancedIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create venafi enhanced issuer client: %s", err)
+			}
+			var issuers veiapi.VenafiIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list venafi issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					APIVersion: kmsissuerapi.GroupVersion.String(),
+					Name:       issuer.Name,
+					Namespace:  issuer.Namespace,
+					Kind:       issuer.Kind,
+				})
+			}
+		case clients.VenafiEnhancedClusterIssuer:
+			client, err := clients.NewVenafiEnhancedClusterIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create venafi enhanced cluster issuer client: %s", err)
+			}
+			var issuers veiapi.VenafiClusterIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list venafi cluster issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					APIVersion: kmsissuerapi.GroupVersion.String(),
+					Name:       issuer.Name,
+					Kind:       issuer.Kind,
+				})
+			}
+		case clients.OriginCAIssuer:
+			client, err := clients.NewOriginCAIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create origin ca issuer client: %s", err)
+			}
+			var issuers origincaissuerapi.OriginIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list origin ca issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					APIVersion: kmsissuerapi.GroupVersion.String(),
+					Name:       issuer.Name,
+					Namespace:  issuer.Namespace,
+					Kind:       issuer.Kind,
 				})
 			}
 		}
+		// TODO
+		// case SmallStepIssuer:
+		// case SmallStepClusterIssuer:
 	}
 
 	return summaryIssuers, nil
@@ -326,16 +423,22 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 
 // findComponents takes a list of pods and returns a list of detected components
 // which might be relevant to Jetstack Secure
-func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
+func findComponents(pods []corev1.Pod) (map[string]installedComponent, error) {
 	foundComponents := make(map[string]installedComponent)
 
 	knownComponents := []installedComponent{
+		// TODO make all one
 		&components.CertManagerControllerStatus{},
 		&components.CertManagerCAInjectorStatus{},
 		&components.CertManagerWebhookStatus{},
 
+		&components.CertManagerIstioCSRStatus{},
+
 		&components.CertManagerCSIDriverStatus{},
 
+		&components.CertManagerTrustManagerStatus{},
+
+		// TODO make all one
 		&components.CertManagerCSIDriverSPIFFEStatus{},
 		&components.CertManagerCSIDriverSpiffeApproverStatus{},
 
@@ -348,6 +451,8 @@ func findComponents(pods []v1.Pod) (map[string]installedComponent, error) {
 		&components.VenafiOAuthHelperStatus{},
 		&components.CertDiscoveryVenafiStatus{},
 
+		&components.VenafiEnhancedIssuerStatus{},
+		&components.IsolatedIssuerStatus{},
 		&components.GoogleCASIssuerStatus{},
 		&components.AWSPCAIssuerStatus{},
 		&components.KMSIssuerStatus{},

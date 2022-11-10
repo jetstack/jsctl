@@ -1,0 +1,66 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "cert-manager-istio-csr",
+    "namespace": "cert-manager",
+    "labels": {
+      "app.kubernetes.io/name": "cert-manager-istio-csr",
+      "helm.sh/chart": "cert-manager-istio-csr-v0.5.0",
+      "app.kubernetes.io/instance": "RELEASE-NAME",
+      "app.kubernetes.io/version": "v0.5.0",
+      "app.kubernetes.io/managed-by": "Helm"
+    }
+  },
+  "spec": {
+    "serviceAccountName": "cert-manager-istio-csr",
+    "containers": [
+      {
+        "name": "cert-manager-istio-csr",
+        "image": "quay.io/jetstack/cert-manager-istio-csr:v0.5.0",
+        "imagePullPolicy": "IfNotPresent",
+        "ports": [
+          {
+            "containerPort": 6443
+          },
+          {
+            "containerPort": 9402
+          }
+        ],
+        "readinessProbe": {
+          "httpGet": {
+            "port": 6060,
+            "path": "/readyz"
+          },
+          "initialDelaySeconds": 3,
+          "periodSeconds": 7
+        },
+        "command": [
+          "cert-manager-istio-csr"
+        ],
+        "args": [
+          "--log-level=1",
+          "--metrics-port=9402",
+          "--readiness-probe-port=6060",
+          "--readiness-probe-path=/readyz",
+          "--certificate-namespace=istio-system",
+          "--issuer-name=istio-ca",
+          "--issuer-kind=Issuer",
+          "--issuer-group=cert-manager.io",
+          "--preserve-certificate-requests=false",
+          "--root-ca-file=",
+          "--serving-certificate-dns-names=cert-manager-istio-csr.cert-manager.svc",
+          "--serving-certificate-duration=1h",
+          "--trust-domain=cluster.local",
+          "--cluster-id=Kubernetes",
+          "--max-client-certificate-duration=1h",
+          "--serving-address=0.0.0.0:6443",
+          "--serving-certificate-key-size=2048",
+          "--leader-election-namespace=istio-system"
+        ],
+        "resources": {
+        }
+      }
+    ]
+  }
+}

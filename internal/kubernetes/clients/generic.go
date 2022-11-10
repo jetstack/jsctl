@@ -28,9 +28,12 @@ type GenericClientOptions struct {
 
 // GenericRequestOptions wrap data used to form requests
 type GenericRequestOptions struct {
-	Name      string
+	// Name is the name of the resource to fetch. Set only when fetching a single
+	// resource.
+	Name string
+	// Namespace is the name of the namespace to fetch resources from. Set only
+	// when fetching resources in a single namespace and namespaced resources.
 	Namespace string
-	// TODO: Headers, Params
 }
 
 // NewGenericClient returns a new instance of a Generic client configured to

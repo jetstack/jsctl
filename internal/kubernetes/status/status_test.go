@@ -61,14 +61,14 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 		Host: server.URL,
 	}
 
-	status, err := GatherClusterPreInstallStatus(context.Background(), cfg)
+	status, err := GatherClusterStatus(context.Background(), cfg)
 	require.NoError(t, err)
 
-	assert.Equal(t, status, &ClusterPreInstallStatus{
-		Namepaces: []string{
+	assert.Equal(t, status, &ClusterStatus{
+		Namespaces: []string{
 			"jetstack-secure",
 		},
-		Ingresses: []summaryIngress{
+		IngressShimIngresses: []summaryIngress{
 			{
 				Name:      "example",
 				Namespace: "default",
@@ -110,24 +110,28 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 		},
 		Issuers: []summaryIssuer{
 			{
-				Name:      "pca-sample",
-				Namespace: "jetstack-secure",
-				Kind:      "AWSPCAIssuer",
+				Name:       "pca-sample",
+				Namespace:  "jetstack-secure",
+				Kind:       "AWSPCAIssuer",
+				APIVersion: "awspca.cert-manager.io/v1beta1",
 			},
 			{
-				Name:      "cm-cluster-issuer-sample",
-				Namespace: "",
-				Kind:      "ClusterIssuer",
+				Name:       "cm-cluster-issuer-sample",
+				Namespace:  "",
+				Kind:       "ClusterIssuer",
+				APIVersion: "cert-manager.io/v1",
 			},
 			{
-				Name:      "googlecasissuer-sample",
-				Namespace: "jetstack-secure",
-				Kind:      "GoogleCASIssuer",
+				Name:       "googlecasissuer-sample",
+				Namespace:  "jetstack-secure",
+				Kind:       "GoogleCASIssuer",
+				APIVersion: "cas-issuer.jetstack.io/v1beta1",
 			},
 			{
-				Name:      "cm-issuer-sample",
-				Namespace: "jetstack-secure",
-				Kind:      "Issuer",
+				Name:       "cm-issuer-sample",
+				Namespace:  "jetstack-secure",
+				Kind:       "Issuer",
+				APIVersion: "cert-manager.io/v1",
 			},
 		},
 	})

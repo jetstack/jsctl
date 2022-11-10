@@ -252,7 +252,7 @@ func clustersStatus() *cobra.Command {
 				return err
 			}
 
-			s, err := status.GatherClusterPreInstallStatus(ctx, kubeCfg)
+			s, err := status.GatherClusterStatus(ctx, kubeCfg)
 			if err != nil {
 				return fmt.Errorf("failed to gather cluster status: %w", err)
 			}
@@ -263,7 +263,7 @@ func clustersStatus() *cobra.Command {
 				return fmt.Errorf("failed to marshal status: %w", err)
 			}
 
-			fmt.Println(string(y))
+			fmt.Fprintf(os.Stdout, "%s", string(y))
 
 			return nil
 		}),
