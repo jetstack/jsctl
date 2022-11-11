@@ -11,6 +11,7 @@ import (
 	origincaissuerapi "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
 	googlecas "github.com/jetstack/google-cas-issuer/api/v1beta1"
 	veiapi "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
+	stepissuerapi "github.com/smallstep/step-issuer/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	v1networking "k8s.io/api/networking/v1"
 	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -412,10 +413,43 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 					Kind:       issuer.Kind,
 				})
 			}
+		case clients.SmallStepIssuer:
+			client, err := clients.NewSmallStepIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create smallstep issuer client: %s", err)
+			}
+			var issuers stepissuerapi.StepIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list smallstep issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					APIVersion: stepissuerapi.GroupVersion.String(),
+					Name:       issuer.Name,
+					Namespace:  issuer.Namespace,
+					Kind:       issuer.Kind,
+				})
+			}
+		case clients.SmallStepClusterIssuer:
+			client, err := clients.NewSmallStepClusterIssuerClient(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create smallstep cluster issuer client: %s", err)
+			}
+			var issuers stepissuerapi.StepClusterIssuerList
+			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list smallstep cluster issuers: %s", err)
+			}
+			for _, issuer := range issuers.Items {
+				summaryIssuers = append(summaryIssuers, summaryIssuer{
+					APIVersion: stepissuerapi.GroupVersion.String(),
+					Name:       issuer.Name,
+					Namespace:  issuer.Namespace,
+					Kind:       issuer.Kind,
+				})
+			}
 		}
-		// TODO
-		// case SmallStepIssuer:
-		// case SmallStepClusterIssuer:
 	}
 
 	return summaryIssuers, nil

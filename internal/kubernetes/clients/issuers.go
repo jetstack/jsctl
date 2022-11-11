@@ -10,6 +10,7 @@ import (
 	origincaissuerapi "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
 	googlecas "github.com/jetstack/google-cas-issuer/api/v1beta1"
 	veiapi "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
+	stepissuerapi "github.com/smallstep/step-issuer/api/v1beta1"
 	v1extenstions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 )
@@ -307,5 +308,42 @@ func NewOriginCAIssuerClient(config *rest.Config) (*Generic[*origincaissuerapi.O
 		return nil, fmt.Errorf("error creating generic client: %w", err)
 	}
 
+	return genericClient, nil
+}
+
+// NewSmallStepIssuerClient returns an instance of a generic client for querying
+// Step Issuers
+func NewSmallStepIssuerClient(config *rest.Config) (*Generic[*stepissuerapi.StepIssuer, *stepissuerapi.StepIssuerList], error) {
+	genericClient, err := NewGenericClient[*stepissuerapi.StepIssuer, *stepissuerapi.StepIssuerList](
+		&GenericClientOptions{
+			RestConfig: config,
+			APIPath:    "/apis",
+			Group:      stepissuerapi.GroupVersion.Group,
+			Version:    stepissuerapi.GroupVersion.Version,
+			Kind:       "stepissuers",
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating generic client: %w", err)
+	}
+
+	return genericClient, nil
+}
+
+// NewSmallStepClusterIssuerClient returns an instance of a generic client for querying
+// Step Cluster Issuers
+func NewSmallStepClusterIssuerClient(config *rest.Config) (*Generic[*stepissuerapi.StepClusterIssuer, *stepissuerapi.StepClusterIssuerList], error) {
+	genericClient, err := NewGenericClient[*stepissuerapi.StepClusterIssuer, *stepissuerapi.StepClusterIssuerList](
+		&GenericClientOptions{
+			RestConfig: config,
+			APIPath:    "/apis",
+			Group:      stepissuerapi.GroupVersion.Group,
+			Version:    stepissuerapi.GroupVersion.Version,
+			Kind:       "stepclusterissuers",
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating generic client: %w", err)
+	}
 	return genericClient, nil
 }
