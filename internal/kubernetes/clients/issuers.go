@@ -262,7 +262,7 @@ func NewVenafiEnhancedIssuerClient(config *rest.Config) (*Generic[*v1alpha1vei.V
 			RestConfig: config,
 			APIPath:    "/apis",
 			Group:      v1alpha1vei.SchemeGroupVersion.Group,
-			Version:    v1alpha1vei.SchemeGroupVersion.Group,
+			Version:    v1alpha1vei.SchemeGroupVersion.Version,
 			Kind:       "venafiissuers",
 		},
 	)
@@ -281,7 +281,7 @@ func NewVenafiEnhancedClusterIssuerClient(config *rest.Config) (*Generic[*v1alph
 			RestConfig: config,
 			APIPath:    "/apis",
 			Group:      v1alpha1vei.SchemeGroupVersion.Group,
-			Version:    v1alpha1vei.SchemeGroupVersion.Group,
+			Version:    v1alpha1vei.SchemeGroupVersion.Version,
 			Kind:       "venaficlusterissuers",
 		},
 	)
