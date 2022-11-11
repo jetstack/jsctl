@@ -2,8 +2,6 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type AWSPCAIssuerStatus struct {
@@ -29,17 +27,19 @@ func (a *AWSPCAIssuerStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-func (a *AWSPCAIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
-	a.namespace = pod.Namespace
+func (a *AWSPCAIssuerStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "cert-manager-aws-privateca-issuer") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				a.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				a.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "cert-manager-aws-privateca-issuer") {
+				found = true
+				a.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					a.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					a.version = "unknown"
+				}
 			}
 		}
 	}

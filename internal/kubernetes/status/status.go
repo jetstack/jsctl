@@ -84,7 +84,7 @@ type installedComponent interface {
 
 	// Match will populate the installedComponent with information from the pod
 	// if the pod is determined to be a pod from that component
-	Match(pod *corev1.Pod) (bool, error)
+	Match(md *components.MatchData) (bool, error)
 }
 
 // GatherClusterStatus returns a ClusterStatus for the
@@ -210,7 +210,11 @@ func GatherClusterStatus(ctx context.Context, cfg *rest.Config) (*ClusterStatus,
 		return nil, fmt.Errorf("failed to list pods: %s", err)
 	}
 
-	status.Components, err = findComponents(pods.Items)
+	md := components.MatchData{
+		Pods: pods.Items,
+	}
+
+	status.Components, err = findComponents(&md)
 	if err != nil {
 		return nil, fmt.Errorf("failed to identify components in the cluster: %s", err)
 	}
@@ -457,7 +461,7 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 
 // findComponents takes a list of pods and returns a list of detected components
 // which might be relevant to Jetstack Secure
-func findComponents(pods []corev1.Pod) (map[string]installedComponent, error) {
+func findComponents(md *components.MatchData) (map[string]installedComponent, error) {
 	foundComponents := make(map[string]installedComponent)
 
 	knownComponents := []installedComponent{
@@ -496,16 +500,9 @@ func findComponents(pods []corev1.Pod) (map[string]installedComponent, error) {
 
 	for i := range knownComponents {
 		component := knownComponents[i]
-		var found bool
-		var err error
-		for _, pod := range pods {
-			found, err = component.Match(&pod)
-			if err != nil {
-				return nil, fmt.Errorf("failed while testing pod as %s: %s", component.Name(), err)
-			}
-			if found {
-				break
-			}
+		found, err := component.Match(md)
+		if err != nil {
+			return nil, fmt.Errorf("failed while testing pod as %s: %s", component.Name(), err)
 		}
 		if found {
 			foundComponents[component.Name()] = component

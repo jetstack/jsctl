@@ -64,7 +64,7 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 	status, err := GatherClusterStatus(context.Background(), cfg)
 	require.NoError(t, err)
 
-	assert.Equal(t, status, &ClusterStatus{
+	assert.Equal(t, &ClusterStatus{
 		Namespaces: []string{
 			"jetstack-secure",
 		},
@@ -134,5 +134,5 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 				APIVersion: "cert-manager.io/v1",
 			},
 		},
-	})
+	}, status)
 }

@@ -2,8 +2,6 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type SmallStepIssuerStatus struct {
@@ -29,17 +27,19 @@ func (c *SmallStepIssuerStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-func (c *SmallStepIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
-	c.namespace = pod.Namespace
+func (c *SmallStepIssuerStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "step-issuer") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				c.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "step-issuer") {
+				found = true
+				c.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					c.version = "unknown"
+				}
 			}
 		}
 	}
@@ -53,27 +53,4 @@ func NewSmallStepIssuerStatus(namespace, version string) *SmallStepIssuerStatus 
 		namespace: namespace,
 		version:   version,
 	}
-}
-
-func FindSmallStepIssuer(pod *v1core.Pod) (*SmallStepIssuerStatus, error) {
-	var status SmallStepIssuerStatus
-	status.namespace = pod.Namespace
-
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "step-issuer") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				status.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				status.version = "unknown"
-			}
-		}
-	}
-
-	if found {
-		return &status, nil
-	}
-
-	return nil, nil
 }

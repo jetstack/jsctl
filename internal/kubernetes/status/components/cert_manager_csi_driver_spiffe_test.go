@@ -22,7 +22,11 @@ func TestCertManagerCSIDriverSPIFFE(t *testing.T) {
 
 	var status CertManagerCSIDriverSPIFFEStatus
 
-	found, err := status.Match(&pod)
+	md := &MatchData{
+		Pods: []v1.Pod{pod},
+	}
+
+	found, err := status.Match(md)
 	require.NoError(t, err)
 	require.True(t, found)
 

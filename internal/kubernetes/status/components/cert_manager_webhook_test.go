@@ -21,7 +21,12 @@ func TestCertManagerWebhook(t *testing.T) {
 	require.NoError(t, err)
 
 	var status CertManagerWebhookStatus
-	found, err := status.Match(&pod)
+
+	md := &MatchData{
+		Pods: []v1.Pod{pod},
+	}
+
+	found, err := status.Match(md)
 	require.NoError(t, err)
 	require.True(t, found)
 

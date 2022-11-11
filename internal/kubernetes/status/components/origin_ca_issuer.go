@@ -2,44 +2,44 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type OriginCAIssuerStatus struct {
 	namespace, version string
 }
 
-func (c *OriginCAIssuerStatus) Name() string {
+func (o *OriginCAIssuerStatus) Name() string {
 	return "origin-ca-issuer"
 }
 
-func (c *OriginCAIssuerStatus) Namespace() string {
-	return c.namespace
+func (o *OriginCAIssuerStatus) Namespace() string {
+	return o.namespace
 }
 
-func (c *OriginCAIssuerStatus) Version() string {
-	return c.version
+func (o *OriginCAIssuerStatus) Version() string {
+	return o.version
 }
 
-func (c *OriginCAIssuerStatus) MarshalYAML() (interface{}, error) {
+func (o *OriginCAIssuerStatus) MarshalYAML() (interface{}, error) {
 	return map[string]string{
-		"namespace": c.namespace,
-		"version":   c.version,
+		"namespace": o.namespace,
+		"version":   o.version,
 	}, nil
 }
 
-func (c *OriginCAIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
-	c.namespace = pod.Namespace
+func (o *OriginCAIssuerStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "origin-ca-issuer") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				c.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "origin-ca-issuer") {
+				found = true
+				o.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					o.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					o.version = "unknown"
+				}
 			}
 		}
 	}

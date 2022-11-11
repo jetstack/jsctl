@@ -2,44 +2,44 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type KMSIssuerStatus struct {
 	namespace, version string
 }
 
-func (c *KMSIssuerStatus) Name() string {
+func (k *KMSIssuerStatus) Name() string {
 	return "kms-issuer"
 }
 
-func (c *KMSIssuerStatus) Namespace() string {
-	return c.namespace
+func (k *KMSIssuerStatus) Namespace() string {
+	return k.namespace
 }
 
-func (c *KMSIssuerStatus) Version() string {
-	return c.version
+func (k *KMSIssuerStatus) Version() string {
+	return k.version
 }
 
-func (c *KMSIssuerStatus) MarshalYAML() (interface{}, error) {
+func (k *KMSIssuerStatus) MarshalYAML() (interface{}, error) {
 	return map[string]string{
-		"namespace": c.namespace,
-		"version":   c.version,
+		"namespace": k.namespace,
+		"version":   k.version,
 	}, nil
 }
 
-func (c *KMSIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
-	c.namespace = pod.Namespace
+func (k *KMSIssuerStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "kms-issuer") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				c.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "kms-issuer") {
+				found = true
+				k.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					k.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					k.version = "unknown"
+				}
 			}
 		}
 	}

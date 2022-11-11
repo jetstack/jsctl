@@ -2,44 +2,44 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type VenafiOAuthHelperStatus struct {
 	namespace, version string
 }
 
-func (c *VenafiOAuthHelperStatus) Name() string {
+func (v *VenafiOAuthHelperStatus) Name() string {
 	return "venafi-oauth-helper"
 }
 
-func (c *VenafiOAuthHelperStatus) Namespace() string {
-	return c.namespace
+func (v *VenafiOAuthHelperStatus) Namespace() string {
+	return v.namespace
 }
 
-func (c *VenafiOAuthHelperStatus) Version() string {
-	return c.version
+func (v *VenafiOAuthHelperStatus) Version() string {
+	return v.version
 }
 
-func (c *VenafiOAuthHelperStatus) MarshalYAML() (interface{}, error) {
+func (v *VenafiOAuthHelperStatus) MarshalYAML() (interface{}, error) {
 	return map[string]string{
-		"namespace": c.namespace,
-		"version":   c.version,
+		"namespace": v.namespace,
+		"version":   v.version,
 	}, nil
 }
 
-func (c *VenafiOAuthHelperStatus) Match(pod *v1core.Pod) (bool, error) {
-	c.namespace = pod.Namespace
+func (v *VenafiOAuthHelperStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "venafi-oauth-helper") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				c.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "venafi-oauth-helper") {
+				found = true
+				v.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					v.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					v.version = "unknown"
+				}
 			}
 		}
 	}

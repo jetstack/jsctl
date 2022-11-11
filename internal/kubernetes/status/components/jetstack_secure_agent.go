@@ -2,8 +2,6 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type JetstackSecureAgentStatus struct {
@@ -29,17 +27,19 @@ func (j *JetstackSecureAgentStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-func (j *JetstackSecureAgentStatus) Match(pod *v1core.Pod) (bool, error) {
-	j.namespace = pod.Namespace
+func (j *JetstackSecureAgentStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "jetstack/preflight") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				j.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				j.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "jetstack/preflight") {
+				found = true
+				j.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					j.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					j.version = "unknown"
+				}
 			}
 		}
 	}

@@ -2,8 +2,6 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type CertManagerIstioCSRStatus struct {
@@ -29,17 +27,19 @@ func (c *CertManagerIstioCSRStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-func (c *CertManagerIstioCSRStatus) Match(pod *v1core.Pod) (bool, error) {
-	c.namespace = pod.Namespace
+func (c *CertManagerIstioCSRStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "cert-manager-istio-csr") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				c.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "cert-manager-istio-csr") {
+				found = true
+				c.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					c.version = "unknown"
+				}
 			}
 		}
 	}

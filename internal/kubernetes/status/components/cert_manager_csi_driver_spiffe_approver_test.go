@@ -22,7 +22,11 @@ func TestCertManagerCSIDriverSpifferApprover(t *testing.T) {
 
 	var status CertManagerCSIDriverSpiffeApproverStatus
 
-	found, err := status.Match(&pod)
+	md := &MatchData{
+		Pods: []v1.Pod{pod},
+	}
+
+	found, err := status.Match(md)
 	require.NoError(t, err)
 	require.True(t, found)
 

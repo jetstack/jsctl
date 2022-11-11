@@ -2,44 +2,44 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type GoogleCASIssuerStatus struct {
 	namespace, version string
 }
 
-func (c *GoogleCASIssuerStatus) Name() string {
+func (g *GoogleCASIssuerStatus) Name() string {
 	return "google-cas-issuer"
 }
 
-func (c *GoogleCASIssuerStatus) Namespace() string {
-	return c.namespace
+func (g *GoogleCASIssuerStatus) Namespace() string {
+	return g.namespace
 }
 
-func (c *GoogleCASIssuerStatus) Version() string {
-	return c.version
+func (g *GoogleCASIssuerStatus) Version() string {
+	return g.version
 }
 
-func (c *GoogleCASIssuerStatus) MarshalYAML() (interface{}, error) {
+func (g *GoogleCASIssuerStatus) MarshalYAML() (interface{}, error) {
 	return map[string]string{
-		"namespace": c.namespace,
-		"version":   c.version,
+		"namespace": g.namespace,
+		"version":   g.version,
 	}, nil
 }
 
-func (c *GoogleCASIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
-	c.namespace = pod.Namespace
+func (g *GoogleCASIssuerStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "google-cas-issuer") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				c.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "google-cas-issuer") {
+				found = true
+				g.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					g.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					g.version = "unknown"
+				}
 			}
 		}
 	}

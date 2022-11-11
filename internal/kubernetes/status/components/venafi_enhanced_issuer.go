@@ -2,8 +2,6 @@ package components
 
 import (
 	"strings"
-
-	v1core "k8s.io/api/core/v1"
 )
 
 type VenafiEnhancedIssuerStatus struct {
@@ -29,17 +27,19 @@ func (v *VenafiEnhancedIssuerStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-func (v *VenafiEnhancedIssuerStatus) Match(pod *v1core.Pod) (bool, error) {
-	v.namespace = pod.Namespace
+func (v *VenafiEnhancedIssuerStatus) Match(md *MatchData) (bool, error) {
+	var found bool
 
-	found := false
-	for _, container := range pod.Spec.Containers {
-		if strings.Contains(container.Image, "venafi-enhanced-issuer") {
-			found = true
-			if strings.Contains(container.Image, ":") {
-				v.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-			} else {
-				v.version = "unknown"
+	for _, pod := range md.Pods {
+		for _, container := range pod.Spec.Containers {
+			if strings.Contains(container.Image, "venafi-enhanced-issuer") {
+				found = true
+				v.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					v.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					v.version = "unknown"
+				}
 			}
 		}
 	}
