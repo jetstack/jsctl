@@ -103,9 +103,7 @@ func TestGatherClusterPreInstallStatus(t *testing.T) {
 		Components: map[string]installedComponent{
 			"jetstack-secure-agent":        components.NewJetstackSecureAgentStatus("jetstack-secure", "v0.1.38"),
 			"jetstack-secure-operator":     components.NewJetstackSecureOperatorStatus("jetstack-secure", "v0.0.1-alpha.17"),
-			"cert-manager-controller":      components.NewCertManagerControllerStatus("jetstack-secure", "v1.9.1"),
-			"cert-manager-cainjector":      components.NewCertManagerCAInjectorStatus("jetstack-secure", "v1.9.1"),
-			"cert-manager-webhook":         components.NewCertManagerWebhookStatus("jetstack-secure", "v1.9.1"),
+			"cert-manager":                 components.NewCertManagerStatus("jetstack-secure", "v1.9.1"),
 			"cert-manager-approver-policy": components.NewCertManagerApproverPolicyStatus("jetstack-secure", "v0.4.0"),
 		},
 		Issuers: []summaryIssuer{

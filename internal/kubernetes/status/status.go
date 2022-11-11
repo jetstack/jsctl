@@ -465,10 +465,7 @@ func findComponents(md *components.MatchData) (map[string]installedComponent, er
 	foundComponents := make(map[string]installedComponent)
 
 	knownComponents := []installedComponent{
-		// TODO make all one
-		&components.CertManagerControllerStatus{},
-		&components.CertManagerCAInjectorStatus{},
-		&components.CertManagerWebhookStatus{},
+		&components.CertManagerStatus{},
 
 		&components.CertManagerIstioCSRStatus{},
 
