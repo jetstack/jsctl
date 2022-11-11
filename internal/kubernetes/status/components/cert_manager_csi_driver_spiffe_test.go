@@ -15,15 +15,15 @@ func TestCertManagerCSIDriverSPIFFE(t *testing.T) {
 	data, err := os.ReadFile("fixtures/cert-manager-csi-driver-spiffe.json")
 	require.NoError(t, err)
 
-	var pod v1.Pod
+	var pods v1.PodList
 
-	err = json.Unmarshal(data, &pod)
+	err = json.Unmarshal(data, &pods)
 	require.NoError(t, err)
 
 	var status CertManagerCSIDriverSPIFFEStatus
 
 	md := &MatchData{
-		Pods: []v1.Pod{pod},
+		Pods: pods.Items,
 	}
 
 	found, err := status.Match(md)

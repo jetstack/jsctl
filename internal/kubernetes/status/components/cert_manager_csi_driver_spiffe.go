@@ -5,7 +5,8 @@ import (
 )
 
 type CertManagerCSIDriverSPIFFEStatus struct {
-	namespace, version string
+	namespace                         string
+	csiDriverVersion, approverVersion string
 }
 
 func (c *CertManagerCSIDriverSPIFFEStatus) Name() string {
@@ -17,18 +18,24 @@ func (c *CertManagerCSIDriverSPIFFEStatus) Namespace() string {
 }
 
 func (c *CertManagerCSIDriverSPIFFEStatus) Version() string {
-	return c.version
+	return c.csiDriverVersion
 }
 
 func (c *CertManagerCSIDriverSPIFFEStatus) MarshalYAML() (interface{}, error) {
-	return map[string]string{
+	return map[string]interface{}{
 		"namespace": c.namespace,
-		"version":   c.version,
+		"versions": map[string]string{
+			"csi-driver": c.csiDriverVersion,
+			"approver":   c.approverVersion,
+		},
 	}, nil
 }
 
 func (c *CertManagerCSIDriverSPIFFEStatus) Match(md *MatchData) (bool, error) {
 	var found bool
+
+	c.csiDriverVersion = missingComponentString
+	c.approverVersion = missingComponentString
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
@@ -36,9 +43,19 @@ func (c *CertManagerCSIDriverSPIFFEStatus) Match(md *MatchData) (bool, error) {
 				found = true
 				c.namespace = pod.Namespace
 				if strings.Contains(container.Image, ":") {
-					c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+					c.csiDriverVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
 				} else {
-					c.version = "unknown"
+					c.csiDriverVersion = "unknown"
+				}
+			}
+
+			if strings.Contains(container.Image, "cert-manager-csi-driver-spiffe-approver") {
+				found = true
+				c.namespace = pod.Namespace
+				if strings.Contains(container.Image, ":") {
+					c.approverVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
+				} else {
+					c.approverVersion = "unknown"
 				}
 			}
 		}
@@ -50,7 +67,8 @@ func (c *CertManagerCSIDriverSPIFFEStatus) Match(md *MatchData) (bool, error) {
 // NewCertManagerCSIDriverSPIFFEStatus returns an instance that can be used in testing
 func NewCertManagerCSIDriverSPIFFEStatus(namespace, version string) *CertManagerCSIDriverSPIFFEStatus {
 	return &CertManagerCSIDriverSPIFFEStatus{
-		namespace: namespace,
-		version:   version,
+		namespace:        namespace,
+		approverVersion:  version,
+		csiDriverVersion: version,
 	}
 }

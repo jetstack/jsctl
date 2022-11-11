@@ -473,9 +473,7 @@ func findComponents(md *components.MatchData) (map[string]installedComponent, er
 
 		&components.CertManagerTrustManagerStatus{},
 
-		// TODO make all one
 		&components.CertManagerCSIDriverSPIFFEStatus{},
-		&components.CertManagerCSIDriverSpiffeApproverStatus{},
 
 		&components.CertManagerApproverPolicyStatus{},
 		&components.CertManagerApproverPolicyEnterpriseStatus{},
