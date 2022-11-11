@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	v1certmanagermeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	v1alpha1operator "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
+	v1core "k8s.io/api/core/v1"
+	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -113,16 +113,16 @@ func ParseCertDiscoveryVenafiConfig(vcName string, vcs map[string]*VenafiConnect
 	}
 }
 
-func GenerateOperatorManifestsForIssuer(issuer *VenafiIssuer) (*operatorv1alpha1.Issuer, *corev1.Secret, error) {
+func GenerateOperatorManifestsForIssuer(issuer *VenafiIssuer) (*v1alpha1operator.Issuer, *v1core.Secret, error) {
 	// Generate Issuer spec
 	if issuer == nil || issuer.Conn == nil || issuer.Conn.VC == nil {
 		return nil, nil, fmt.Errorf(errMsgIncompleteIssuerTemplate, issuer)
 	}
 	vc := issuer.Conn.VC
-	iss := &operatorv1alpha1.Issuer{
-		Venafi: &cmapi.VenafiIssuer{
+	iss := &v1alpha1operator.Issuer{
+		Venafi: &v1certmanager.VenafiIssuer{
 			Zone: vc.Zone,
-			TPP: &cmapi.VenafiTPP{
+			TPP: &v1certmanager.VenafiTPP{
 				URL: vc.URL,
 			},
 		},
@@ -130,13 +130,13 @@ func GenerateOperatorManifestsForIssuer(issuer *VenafiIssuer) (*operatorv1alpha1
 	iss.ClusterScope = issuer.ClusterScope
 	iss.Namespace = issuer.Namespace
 	iss.Name = issuer.Name
-	iss.Venafi.TPP.CredentialsRef = cmmeta.LocalObjectReference{
+	iss.Venafi.TPP.CredentialsRef = v1certmanagermeta.LocalObjectReference{
 		Name: fmt.Sprintf(issuerSecretNameTemplate, iss.Name),
 	}
 
 	// Generate Secret from the Venafi Connection associated with the issuer
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
+	secret := &v1core.Secret{
+		TypeMeta: v1meta.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},
@@ -168,15 +168,15 @@ func GenerateOperatorManifestsForIssuer(issuer *VenafiIssuer) (*operatorv1alpha1
 
 }
 
-func GenerateManifestsForCertDiscoveryVenafi(vc *VenafiConnection) (*operatorv1alpha1.CertDiscoveryVenafi, *corev1.Secret) {
-	cdv := &operatorv1alpha1.CertDiscoveryVenafi{
-		TPP: &operatorv1alpha1.TPP{
+func GenerateManifestsForCertDiscoveryVenafi(vc *VenafiConnection) (*v1alpha1operator.CertDiscoveryVenafi, *v1core.Secret) {
+	cdv := &v1alpha1operator.CertDiscoveryVenafi{
+		TPP: &v1alpha1operator.TPP{
 			URL:  vc.URL,
 			Zone: vc.Zone,
 		},
 	}
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
+	secret := &v1core.Secret{
+		TypeMeta: v1meta.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},

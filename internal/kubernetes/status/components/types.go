@@ -7,3 +7,8 @@ import "k8s.io/api/core/v1"
 type MatchData struct {
 	Pods []v1.Pod
 }
+
+const (
+	missingComponentString = "componentMissing"
+	unknownVersionString   = "unknownVersion"
+)

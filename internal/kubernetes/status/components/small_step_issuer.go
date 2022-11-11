@@ -8,37 +8,37 @@ type SmallStepIssuerStatus struct {
 	namespace, version string
 }
 
-func (c *SmallStepIssuerStatus) Name() string {
+func (s *SmallStepIssuerStatus) Name() string {
 	return "small-step-issuer"
 }
 
-func (c *SmallStepIssuerStatus) Namespace() string {
-	return c.namespace
+func (s *SmallStepIssuerStatus) Namespace() string {
+	return s.namespace
 }
 
-func (c *SmallStepIssuerStatus) Version() string {
-	return c.version
+func (s *SmallStepIssuerStatus) Version() string {
+	return s.version
 }
 
-func (c *SmallStepIssuerStatus) MarshalYAML() (interface{}, error) {
+func (s *SmallStepIssuerStatus) MarshalYAML() (interface{}, error) {
 	return map[string]string{
-		"namespace": c.namespace,
-		"version":   c.version,
+		"namespace": s.namespace,
+		"version":   s.version,
 	}, nil
 }
 
-func (c *SmallStepIssuerStatus) Match(md *MatchData) (bool, error) {
+func (s *SmallStepIssuerStatus) Match(md *MatchData) (bool, error) {
 	var found bool
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
 			if strings.Contains(container.Image, "step-issuer") {
 				found = true
-				c.namespace = pod.Namespace
+				s.namespace = pod.Namespace
 				if strings.Contains(container.Image, ":") {
-					c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
+					s.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 				} else {
-					c.version = "unknown"
+					s.version = "unknown"
 				}
 			}
 		}

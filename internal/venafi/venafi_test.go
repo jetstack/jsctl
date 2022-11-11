@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
+	v1certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	v1certmanagermeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	v1alpha1operator "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1core "k8s.io/api/core/v1"
+	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestParseIssuerConfig(t *testing.T) {
@@ -144,8 +144,8 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 	baseSecretData := map[string][]byte{usernameKey: []byte("foo"), passwordKey: []byte("foo")}
 	tests := map[string]struct {
 		issuerTemplate *VenafiIssuer
-		expectedIssuer *operatorv1alpha1.Issuer
-		expectedSecret *corev1.Secret
+		expectedIssuer *v1alpha1operator.Issuer
+		expectedSecret *v1core.Secret
 		expectedErr    string
 	}{
 		"error if nil issuer passed": {
@@ -173,25 +173,25 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 				Namespace:  "foo",
 				Conn:       baseConn,
 			},
-			expectedIssuer: &operatorv1alpha1.Issuer{
+			expectedIssuer: &v1alpha1operator.Issuer{
 				Name:      "foo",
 				Namespace: "foo",
-				Venafi: &cmapi.VenafiIssuer{
+				Venafi: &v1certmanager.VenafiIssuer{
 					Zone: "foo",
-					TPP: &cmapi.VenafiTPP{
+					TPP: &v1certmanager.VenafiTPP{
 						URL: "foo",
-						CredentialsRef: cmmeta.LocalObjectReference{
+						CredentialsRef: v1certmanagermeta.LocalObjectReference{
 							Name: "foo-jsctl",
 						},
 					},
 				},
 			},
-			expectedSecret: &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
+			expectedSecret: &v1core.Secret{
+				TypeMeta: v1meta.TypeMeta{
 					Kind:       "Secret",
 					APIVersion: "v1",
 				},
-				ObjectMeta: metav1.ObjectMeta{
+				ObjectMeta: v1meta.ObjectMeta{
 					Name:      "foo-jsctl",
 					Namespace: "foo",
 				},
@@ -206,26 +206,26 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 				Conn:         baseConn,
 				ClusterScope: true,
 			},
-			expectedIssuer: &operatorv1alpha1.Issuer{
+			expectedIssuer: &v1alpha1operator.Issuer{
 				Name:         "foo",
 				Namespace:    "foo",
 				ClusterScope: true,
-				Venafi: &cmapi.VenafiIssuer{
+				Venafi: &v1certmanager.VenafiIssuer{
 					Zone: "foo",
-					TPP: &cmapi.VenafiTPP{
+					TPP: &v1certmanager.VenafiTPP{
 						URL: "foo",
-						CredentialsRef: cmmeta.LocalObjectReference{
+						CredentialsRef: v1certmanagermeta.LocalObjectReference{
 							Name: "foo-jsctl",
 						},
 					},
 				},
 			},
-			expectedSecret: &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
+			expectedSecret: &v1core.Secret{
+				TypeMeta: v1meta.TypeMeta{
 					Kind:       "Secret",
 					APIVersion: "v1",
 				},
-				ObjectMeta: metav1.ObjectMeta{
+				ObjectMeta: v1meta.ObjectMeta{
 					Name:      "foo-jsctl",
 					Namespace: "jetstack-secure",
 				},
@@ -242,25 +242,25 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 					ManagedByVOH: true,
 				},
 			},
-			expectedIssuer: &operatorv1alpha1.Issuer{
+			expectedIssuer: &v1alpha1operator.Issuer{
 				Name:      "foo",
 				Namespace: "foo",
-				Venafi: &cmapi.VenafiIssuer{
+				Venafi: &v1certmanager.VenafiIssuer{
 					Zone: "foo",
-					TPP: &cmapi.VenafiTPP{
+					TPP: &v1certmanager.VenafiTPP{
 						URL: "foo",
-						CredentialsRef: cmmeta.LocalObjectReference{
+						CredentialsRef: v1certmanagermeta.LocalObjectReference{
 							Name: "foo-jsctl",
 						},
 					},
 				},
 			},
-			expectedSecret: &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
+			expectedSecret: &v1core.Secret{
+				TypeMeta: v1meta.TypeMeta{
 					Kind:       "Secret",
 					APIVersion: "v1",
 				},
-				ObjectMeta: metav1.ObjectMeta{
+				ObjectMeta: v1meta.ObjectMeta{
 					Name:      "foo-jsctl-voh-bootstrap",
 					Namespace: "foo",
 				},
@@ -295,25 +295,25 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 					},
 				},
 			},
-			expectedIssuer: &operatorv1alpha1.Issuer{
+			expectedIssuer: &v1alpha1operator.Issuer{
 				Name:      "foo",
 				Namespace: "foo",
-				Venafi: &cmapi.VenafiIssuer{
+				Venafi: &v1certmanager.VenafiIssuer{
 					Zone: "foo",
-					TPP: &cmapi.VenafiTPP{
+					TPP: &v1certmanager.VenafiTPP{
 						URL: "foo",
-						CredentialsRef: cmmeta.LocalObjectReference{
+						CredentialsRef: v1certmanagermeta.LocalObjectReference{
 							Name: "foo-jsctl",
 						},
 					},
 				},
 			},
-			expectedSecret: &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
+			expectedSecret: &v1core.Secret{
+				TypeMeta: v1meta.TypeMeta{
 					Kind:       "Secret",
 					APIVersion: "v1",
 				},
-				ObjectMeta: metav1.ObjectMeta{
+				ObjectMeta: v1meta.ObjectMeta{
 					Name:      "foo-jsctl",
 					Namespace: "foo",
 				},

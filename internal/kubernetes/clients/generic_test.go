@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	v1core "k8s.io/api/core/v1"
 	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 )
@@ -31,18 +31,18 @@ func TestGeneric_Get(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1.Pod, *v1.PodList](
+	client, err := NewGenericClient[*v1core.Pod, *v1core.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1.GroupName,
-			Version:    v1.SchemeGroupVersion.Version,
+			Group:      v1core.GroupName,
+			Version:    v1core.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
 	require.NoError(t, err)
 
-	var result v1.Pod
+	var result v1core.Pod
 
 	err = client.Get(ctx, &GenericRequestOptions{Name: "test-pod", Namespace: "test-namespace"}, &result)
 	require.NoError(t, err)
@@ -101,18 +101,18 @@ func TestGeneric_List(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1.Pod, *v1.PodList](
+	client, err := NewGenericClient[*v1core.Pod, *v1core.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1.GroupName,
-			Version:    v1.SchemeGroupVersion.Version,
+			Group:      v1core.GroupName,
+			Version:    v1core.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
 	require.NoError(t, err)
 
-	var result v1.PodList
+	var result v1core.PodList
 
 	err = client.List(ctx, &GenericRequestOptions{Namespace: "jetstack-secure"}, &result)
 	require.NoError(t, err)
@@ -177,11 +177,11 @@ func TestGeneric_Present(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1.Pod, *v1.PodList](
+	client, err := NewGenericClient[*v1core.Pod, *v1core.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
-			Group:      v1.GroupName,
-			Version:    v1.SchemeGroupVersion.Version,
+			Group:      v1core.GroupName,
+			Version:    v1core.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)

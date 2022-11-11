@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	v1core "k8s.io/api/core/v1"
 )
 
 func TestCertManagerApproverPolicyEnterprise(t *testing.T) {
@@ -15,7 +15,7 @@ func TestCertManagerApproverPolicyEnterprise(t *testing.T) {
 	data, err := os.ReadFile("fixtures/cert-manager-approver-policy-enterprise.json")
 	require.NoError(t, err)
 
-	var pod v1.Pod
+	var pod v1core.Pod
 
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
@@ -23,7 +23,7 @@ func TestCertManagerApproverPolicyEnterprise(t *testing.T) {
 	var status CertManagerApproverPolicyEnterpriseStatus
 
 	md := &MatchData{
-		Pods: []v1.Pod{pod},
+		Pods: []v1core.Pod{pod},
 	}
 
 	found, err := status.Match(md)

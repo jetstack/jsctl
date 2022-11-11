@@ -4,11 +4,6 @@ import (
 	"strings"
 )
 
-const (
-	missingComponentString = "componentMissing"
-	unknownVersionString   = "unknownVersion"
-)
-
 // CertManagerStatus is a component status for all cert-manager components
 // (controller, cainjector, webhook)
 type CertManagerStatus struct {
