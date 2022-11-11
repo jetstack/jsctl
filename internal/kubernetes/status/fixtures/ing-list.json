@@ -1,0 +1,60 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "nameOfClusterIssuer",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"nameOfClusterIssuer\"},\"name\":\"example\",\"namespace\":\"default\"},\"spec\":{\"rules\":[{\"host\":\"example.com\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"myservice\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"example.com\"],\"secretName\":\"myingress-cert\"}]}}\n"
+                },
+                "creationTimestamp": "2022-11-04T15:46:14Z",
+                "generation": 1,
+                "name": "example",
+                "namespace": "default",
+                "resourceVersion": "178072",
+                "uid": "d25019cc-9a64-4ffd-9fb8-71b7f27cd12f"
+            },
+            "spec": {
+                "rules": [
+                    {
+                        "host": "example.com",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "myservice",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "example.com"
+                        ],
+                        "secretName": "myingress-cert"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": "",
+        "selfLink": ""
+    }
+}

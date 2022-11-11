@@ -1,0 +1,63 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "aws-privateca-issuer",
+    "namespace": "jetstack-secure",
+    "labels": {
+      "helm.sh/chart": "aws-privateca-issuer-1.2.2",
+      "app.kubernetes.io/name": "aws-privateca-issuer",
+      "app.kubernetes.io/instance": "RELEASE-NAME",
+      "app.kubernetes.io/version": "1.2.2",
+      "app.kubernetes.io/managed-by": "Helm"
+    }
+  },
+  "spec": {
+    "serviceAccountName": "aws-privateca-issuer",
+    "securityContext": {
+      "runAsUser": 65532
+    },
+    "containers": [
+      {
+        "name": "aws-privateca-issuer",
+        "securityContext": {
+          "allowPrivilegeEscalation": false
+        },
+        "image": "public.ecr.aws/k1n1h4h4/cert-manager-aws-privateca-issuer:1.2.2",
+        "imagePullPolicy": "IfNotPresent",
+        "command": [
+          "/manager"
+        ],
+        "args": [
+          "--leader-elect"
+        ],
+        "ports": [
+          {
+            "containerPort": 8080,
+            "name": "http"
+          }
+        ],
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 8081
+          },
+          "initialDelaySeconds": 15,
+          "periodSeconds": 20
+        },
+        "readinessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 8081
+          },
+          "initialDelaySeconds": 5,
+          "periodSeconds": 10
+        },
+        "env": null,
+        "resources": {
+        }
+      }
+    ],
+    "terminationGracePeriodSeconds": 10
+  }
+}

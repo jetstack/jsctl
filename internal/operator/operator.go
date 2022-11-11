@@ -15,16 +15,11 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver"
-	"github.com/cert-manager/cert-manager/pkg/apis/certmanager"
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/rest"
+	v1certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	v1certmanagermeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	v1alpha1operator "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
+	v1core "k8s.io/api/core/v1"
+	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/jetstack/jsctl/internal/prompt"
@@ -213,32 +208,32 @@ type (
 // ApplyInstallationYAML generates a YAML bundle that describes the kubernetes manifest for the operator's Installation
 // custom resource. The ApplyInstallationYAMLOptions specify additional options used to configure the installation.
 func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyInstallationYAMLOptions) error {
-	apiVersion, kind := operatorv1alpha1.InstallationGVK.ToAPIVersionAndKind()
+	apiVersion, kind := v1alpha1operator.InstallationGVK.ToAPIVersionAndKind()
 
-	installation := &operatorv1alpha1.Installation{
-		TypeMeta: metav1.TypeMeta{
+	installation := &v1alpha1operator.Installation{
+		TypeMeta: v1meta.TypeMeta{
 			Kind:       kind,
 			APIVersion: apiVersion,
 		},
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: v1meta.ObjectMeta{
 			Name: "installation",
 		},
-		Spec: operatorv1alpha1.InstallationSpec{
+		Spec: v1alpha1operator.InstallationSpec{
 			Registry: options.ImageRegistry,
-			CertManager: &operatorv1alpha1.CertManager{
-				Controller: &operatorv1alpha1.CertManagerControllerConfig{
+			CertManager: &v1alpha1operator.CertManager{
+				Controller: &v1alpha1operator.CertManagerControllerConfig{
 					ReplicaCount: &options.CertManagerReplicas,
 				},
-				Webhook: &operatorv1alpha1.CertManagerWebhookConfig{
+				Webhook: &v1alpha1operator.CertManagerWebhookConfig{
 					ReplicaCount: &options.CertManagerReplicas,
 				},
 			},
-			ApproverPolicy: &operatorv1alpha1.ApproverPolicy{},
+			ApproverPolicy: &v1alpha1operator.ApproverPolicy{},
 		},
 	}
 	manifestTemplates := &manifests{
 		installation: installation,
-		secrets:      make([]*corev1.Secret, 0),
+		secrets:      make([]*v1core.Secret, 0),
 	}
 
 	if err := applyIstioCSRToInstallation(manifestTemplates, options); err != nil {
@@ -317,8 +312,8 @@ func applyCertDiscoveryVenafiManifests(mf *manifests, options ApplyInstallationY
 }
 
 type manifests struct {
-	installation *operatorv1alpha1.Installation
-	secrets      []*corev1.Secret
+	installation *v1alpha1operator.Installation
+	secrets      []*v1core.Secret
 }
 
 func marshalManifests(mf *manifests) (io.Reader, error) {
@@ -367,18 +362,18 @@ func applyCertManagerVersion(manifestTemplates *manifests, options ApplyInstalla
 
 func applyCSIDriversToInstallation(manifests *manifests, options ApplyInstallationYAMLOptions) {
 	var assign bool
-	var drivers operatorv1alpha1.CSIDrivers
+	var drivers v1alpha1operator.CSIDrivers
 
 	// The validating webhook will reject installation.Spec.CSIDrivers being non-null if there is not at least one
 	// CSI driver enabled. So we check each option and set a boolean to know if we should instantiate it.
 	if options.InstallCSIDriver {
 		assign = true
-		drivers.CertManager = &operatorv1alpha1.CSIDriverCertManager{}
+		drivers.CertManager = &v1alpha1operator.CSIDriverCertManager{}
 	}
 
 	if options.InstallSpiffeCSIDriver {
 		assign = true
-		drivers.CertManagerSpiffe = &operatorv1alpha1.CSIDriverCertManagerSpiffe{
+		drivers.CertManagerSpiffe = &v1alpha1operator.CSIDriverCertManagerSpiffe{
 			ReplicaCount: &options.SpiffeCSIDriverReplicas,
 		}
 	}
@@ -393,7 +388,7 @@ func applyIstioCSRToInstallation(manifests *manifests, options ApplyInstallation
 		return nil
 	}
 
-	manifests.installation.Spec.IstioCSR = &operatorv1alpha1.IstioCSR{
+	manifests.installation.Spec.IstioCSR = &v1alpha1operator.IstioCSR{
 		ReplicaCount: &options.IstioCSRReplicas,
 	}
 
@@ -401,10 +396,10 @@ func applyIstioCSRToInstallation(manifests *manifests, options ApplyInstallation
 		return nil
 	}
 
-	manifests.installation.Spec.IstioCSR.IssuerRef = &cmmeta.ObjectReference{
+	manifests.installation.Spec.IstioCSR.IssuerRef = &v1certmanagermeta.ObjectReference{
 		Name:  options.IstioCSRIssuer,
-		Kind:  cmapi.IssuerKind,
-		Group: certmanager.GroupName,
+		Kind:  v1certmanager.IssuerKind,
+		Group: v1certmanager.SchemeGroupVersion.Group,
 	}
 
 	return nil
@@ -419,7 +414,7 @@ func applyVenafiOauthHelperToInstallation(manifests *manifests, options ApplyIns
 	if options.RegistryCredentials != "" || options.RegistryCredentialsPath != "" {
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
-	manifests.installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{
+	manifests.installation.Spec.VenafiOauthHelper = &v1alpha1operator.VenafiOauthHelper{
 		ImagePullSecrets: imagePullSecrets,
 	}
 
@@ -436,19 +431,19 @@ func applyApproverPolicyEnterpriseToInstallation(manifests *manifests, options A
 	if options.RegistryCredentials != "" || options.RegistryCredentialsPath != "" {
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
-	manifests.installation.Spec.ApproverPolicyEnterprise = &operatorv1alpha1.ApproverPolicyEnterprise{
+	manifests.installation.Spec.ApproverPolicyEnterprise = &v1alpha1operator.ApproverPolicyEnterprise{
 		ImagePullSecrets: imagePullSecrets,
 	}
 
 	return nil
 }
 
-func applyImagePullSecrets(installation *operatorv1alpha1.Installation, options ApplyInstallationYAMLOptions) error {
+func applyImagePullSecrets(installation *v1alpha1operator.Installation, options ApplyInstallationYAMLOptions) error {
 	if !options.InstallVenafiOauthHelper {
 		return nil
 	}
 
-	installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{}
+	installation.Spec.VenafiOauthHelper = &v1alpha1operator.VenafiOauthHelper{}
 
 	return nil
 }
@@ -467,107 +462,4 @@ func SuggestedActions(options ApplyInstallationYAMLOptions) []prompt.Suggestion 
 	}
 
 	return suggestions
-}
-
-type (
-	// The InstallationClient is used to query information on an Installation resource within a Kubernetes cluster.
-	InstallationClient struct {
-		client *rest.RESTClient
-	}
-
-	// ComponentStatus describes the status of an individual operator component.
-	ComponentStatus struct {
-		Name    string `json:"name"`
-		Ready   bool   `json:"ready"`
-		Message string `json:"message,omitempty"`
-	}
-)
-
-// NewInstallationClient returns a new instance of the InstallationClient that will interact with the Kubernetes
-// cluster specified in the rest.Config.
-func NewInstallationClient(config *rest.Config) (*InstallationClient, error) {
-	// Set up the rest config to obtain Installation resources
-	config.APIPath = "/apis"
-	config.UserAgent = rest.DefaultKubernetesUserAgent()
-	config.NegotiatedSerializer = serializer.NewCodecFactory(operatorv1alpha1.GlobalScheme)
-	config.ContentConfig.GroupVersion = &schema.GroupVersion{
-		Group:   operatorv1alpha1.InstallationGVK.Group,
-		Version: operatorv1alpha1.InstallationGVK.Version,
-	}
-
-	restClient, err := rest.UnversionedRESTClientFor(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &InstallationClient{client: restClient}, nil
-}
-
-var (
-	// ErrNoInstallation is the error given when querying an Installation resource that does not exist.
-	ErrNoInstallation = errors.New("no installation")
-
-	// ErrNoInstallationCRD is the error given when the Installation CRD does not exist in the cluster.
-	ErrNoInstallationCRD = errors.New("no installation CRD")
-
-	componentNames = map[operatorv1alpha1.InstallationConditionType]string{
-		operatorv1alpha1.InstallationConditionCertManagerReady:        "cert-manager",
-		operatorv1alpha1.InstallationConditionCertManagerIssuersReady: "issuers",
-		operatorv1alpha1.InstallationConditionCSIDriversReady:         "csi-driver",
-		operatorv1alpha1.InstallationConditionIstioCSRReady:           "istio-csr",
-		operatorv1alpha1.InstallationConditionApproverPolicyReady:     "approver-policy",
-		operatorv1alpha1.InstallationConditionVenafiOauthHelperReady:  "venafi-oauth-helper",
-		operatorv1alpha1.InstallationConditionManifestsReady:          "manifests",
-	}
-)
-
-// Status returns a slice of ComponentStatus types that describe the state of individual components installed by the
-// operator. Returns ErrNoInstallation if an Installation resource cannot be found in the cluster. It uses the
-// status conditions on an Installation resource and maps those to a ComponentStatus, the ComponentStatus.Name field
-// is chosen based on the content of the componentNames map. Add friendly names to that map to include additional
-// component statuses to return.
-func (ic *InstallationClient) Status(ctx context.Context) ([]ComponentStatus, error) {
-	var err error
-	var installation operatorv1alpha1.Installation
-
-	const (
-		resource = "installations"
-		name     = "installation"
-	)
-
-	err = ic.client.Get().Resource(resource).Name(name).Do(ctx).Into(&installation)
-	switch {
-	case kerrors.IsNotFound(err):
-		return nil, ErrNoInstallation
-	case err != nil:
-		return nil, err
-	}
-
-	statuses := make([]ComponentStatus, 0)
-	for _, condition := range installation.Status.Conditions {
-		componentStatus := ComponentStatus{
-			Ready: condition.Status == operatorv1alpha1.ConditionTrue,
-		}
-
-		// Don't place the message if the component is considered ready.
-		if !componentStatus.Ready {
-			componentStatus.Message = condition.Message
-		}
-
-		// Swap the condition type for its friendly component name, don't include anything we don't have
-		// a friendly name for.
-		componentName, ok := componentNames[condition.Type]
-		if !ok {
-			continue
-		}
-
-		componentStatus.Name = componentName
-		statuses = append(statuses, componentStatus)
-	}
-
-	sort.Slice(statuses, func(i, j int) bool {
-		return statuses[i].Name < statuses[j].Name
-	})
-
-	return statuses, nil
 }

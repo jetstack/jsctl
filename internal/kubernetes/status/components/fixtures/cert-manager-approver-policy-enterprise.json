@@ -1,0 +1,83 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "cert-manager-approver-policy",
+    "namespace": "example",
+    "labels": {
+      "app.kubernetes.io/name": "cert-manager-approver-policy",
+      "helm.sh/chart": "cert-manager-approver-policy-v0.4.2",
+      "app.kubernetes.io/instance": "RELEASE-NAME",
+      "app.kubernetes.io/version": "v0.4.0",
+      "app.kubernetes.io/managed-by": "Helm"
+    }
+  },
+  "spec": {
+    "serviceAccountName": "cert-manager-approver-policy",
+    "containers": [
+      {
+        "name": "cert-manager-approver-policy",
+        "image": "eu.gcr.io/jetstack-secure-enterprise/approver-policy-enterprise:v0.4.0-0",
+        "imagePullPolicy": "IfNotPresent",
+        "ports": [
+          {
+            "containerPort": 6443
+          },
+          {
+            "containerPort": 9402
+          }
+        ],
+        "readinessProbe": {
+          "httpGet": {
+            "port": 6060,
+            "path": "/readyz"
+          },
+          "initialDelaySeconds": 3,
+          "periodSeconds": 7
+        },
+        "command": [
+          "cert-manager-approver-policy"
+        ],
+        "args": [
+          "--log-level=1",
+          "--rego-policy-directory=/var/run/rego",
+          "--rego-replicate=",
+          "--rego-replicate-cluster=",
+          "--metrics-bind-address=:9402",
+          "--readiness-probe-bind-address=:6060",
+          "--webhook-host=0.0.0.0",
+          "--webhook-port=6443",
+          "--webhook-service-name=cert-manager-approver-policy",
+          "--webhook-ca-secret-namespace=js-operator",
+          "--webhook-certificate-dir=/tmp"
+        ],
+        "volumeMounts": [
+          {
+            "mountPath": "/tmp",
+            "name": "tmp"
+          },
+          {
+            "mountPath": "/var/run/rego",
+            "name": "rego"
+          }
+        ],
+        "resources": {
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "emptyDir": {
+        },
+        "name": "tmp"
+      },
+      {
+        "configMap": {
+          "name": "cert-manager-approver-policy-rego",
+          "optional": true
+        },
+        "name": "rego"
+      }
+    ]
+  }
+}

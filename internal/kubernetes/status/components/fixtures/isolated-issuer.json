@@ -1,0 +1,77 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "isolated-issuer",
+    "namespace": "example",
+    "labels": {
+      "helm.sh/chart": "isolated-issuer-v0.2.1",
+      "app.kubernetes.io/name": "isolated-issuer",
+      "app.kubernetes.io/instance": "RELEASE-NAME",
+      "app.kubernetes.io/version": "v0.2.1",
+      "app.kubernetes.io/managed-by": "Helm"
+    }
+  },
+  "spec": {
+    "serviceAccountName": "isolated-issuer",
+    "containers": [
+      {
+        "name": "isolated-issuer",
+        "securityContext": {
+          "capabilities": {
+            "add": [
+              "IPC_LOCK"
+            ]
+          },
+          "readOnlyRootFilesystem": true,
+          "runAsNonRoot": true,
+          "runAsUser": 1001
+        },
+        "image": "eu.gcr.io/jetstack-secure-enterprise/isolated-issuer:v0.2.1",
+        "imagePullPolicy": "IfNotPresent",
+        "command": [
+          "isolated-issuer",
+          "run",
+          "--disable-mlock=false",
+          "--log-level=2",
+          "--config=/etc/isolated-issuer/config.yaml"
+        ],
+        "readinessProbe": {
+          "httpGet": {
+            "port": 8080,
+            "path": "/readyz"
+          }
+        },
+        "resources": {
+        },
+        "volumeMounts": [
+          {
+            "name": "isolated-issuer-config",
+            "mountPath": "/etc/isolated-issuer",
+            "readOnly": true
+          },
+          {
+            "name": "isolated-issuer-secrets",
+            "mountPath": "/var/run/secrets/isolated-issuer.jetstack.io",
+            "readOnly": true
+          }
+        ]
+      }
+    ],
+    "volumes": [
+      {
+        "name": "isolated-issuer-config",
+        "configMap": {
+          "name": "isolated-issuer-config"
+        }
+      },
+      {
+        "name": "isolated-issuer-secrets",
+        "secret": {
+          "secretName": "isolated-issuer-secrets",
+          "optional": true
+        }
+      }
+    ]
+  }
+}

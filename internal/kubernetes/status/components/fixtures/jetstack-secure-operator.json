@@ -1,0 +1,186 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "creationTimestamp": "2022-11-03T14:14:04Z",
+    "generateName": "js-operator-5b45587b6f-",
+    "labels": {
+      "app.kubernetes.io/name": "js-operator",
+      "app.kubernetes.io/version": "v0.0.1-alpha.17",
+      "pod-template-hash": "5b45587b6f"
+    },
+    "name": "js-operator-5b45587b6f-67h9t",
+    "namespace": "jetstack-secure",
+    "ownerReferences": [
+      {
+        "apiVersion": "apps/v1",
+        "blockOwnerDeletion": true,
+        "controller": true,
+        "kind": "ReplicaSet",
+        "name": "js-operator-5b45587b6f",
+        "uid": "1bc63e78-97c9-496d-afe0-db2e063ecf33"
+      }
+    ],
+    "resourceVersion": "70886",
+    "uid": "2121f6b4-dc51-48df-b137-397a19ce0091"
+  },
+  "spec": {
+    "containers": [
+      {
+        "args": [
+          "--leader-election-namespace=jetstack-secure",
+          "--log-level=2",
+          "--operator-namespace=jetstack-secure",
+          "--webhook-cert-dir=/tmp",
+          "--webhook-host=0.0.0.0",
+          "--webhook-port=6443"
+        ],
+        "image": "eu.gcr.io/jetstack-secure-enterprise/js-operator:v0.0.1-alpha.17",
+        "imagePullPolicy": "IfNotPresent",
+        "name": "operator",
+        "resources": {
+          "limits": {
+            "memory": "200Mi"
+          },
+          "requests": {
+            "memory": "200Mi"
+          }
+        },
+        "terminationMessagePath": "/dev/termination-log",
+        "terminationMessagePolicy": "File",
+        "volumeMounts": [
+          {
+            "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+            "name": "kube-api-access-q8fnx",
+            "readOnly": true
+          }
+        ]
+      }
+    ],
+    "dnsPolicy": "ClusterFirst",
+    "enableServiceLinks": true,
+    "imagePullSecrets": [
+      {
+        "name": "jse-gcr-creds"
+      }
+    ],
+    "nodeName": "kind-control-plane",
+    "preemptionPolicy": "PreemptLowerPriority",
+    "priority": 0,
+    "restartPolicy": "Always",
+    "schedulerName": "default-scheduler",
+    "securityContext": {},
+    "serviceAccount": "js-operator",
+    "serviceAccountName": "js-operator",
+    "terminationGracePeriodSeconds": 30,
+    "tolerations": [
+      {
+        "effect": "NoExecute",
+        "key": "node.kubernetes.io/not-ready",
+        "operator": "Exists",
+        "tolerationSeconds": 300
+      },
+      {
+        "effect": "NoExecute",
+        "key": "node.kubernetes.io/unreachable",
+        "operator": "Exists",
+        "tolerationSeconds": 300
+      }
+    ],
+    "volumes": [
+      {
+        "name": "kube-api-access-q8fnx",
+        "projected": {
+          "defaultMode": 420,
+          "sources": [
+            {
+              "serviceAccountToken": {
+                "expirationSeconds": 3607,
+                "path": "token"
+              }
+            },
+            {
+              "configMap": {
+                "items": [
+                  {
+                    "key": "ca.crt",
+                    "path": "ca.crt"
+                  }
+                ],
+                "name": "kube-root-ca.crt"
+              }
+            },
+            {
+              "downwardAPI": {
+                "items": [
+                  {
+                    "fieldRef": {
+                      "apiVersion": "v1",
+                      "fieldPath": "metadata.namespace"
+                    },
+                    "path": "namespace"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "status": {
+    "conditions": [
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2022-11-03T14:14:04Z",
+        "status": "True",
+        "type": "Initialized"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2022-11-03T14:14:05Z",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2022-11-03T14:14:05Z",
+        "status": "True",
+        "type": "ContainersReady"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2022-11-03T14:14:04Z",
+        "status": "True",
+        "type": "PodScheduled"
+      }
+    ],
+    "containerStatuses": [
+      {
+        "containerID": "containerd://7098c6d7d21e724a0fb33f1610ac28d244400437370de657c0c8828e7f69adb4",
+        "image": "eu.gcr.io/jetstack-secure-enterprise/js-operator:v0.0.1-alpha.17",
+        "imageID": "eu.gcr.io/jetstack-secure-enterprise/js-operator@sha256:4128d4e53950b3c457f008c3afc4205cbde891e80c658b2f6a5f07b5932b0ed0",
+        "lastState": {},
+        "name": "operator",
+        "ready": true,
+        "restartCount": 0,
+        "started": true,
+        "state": {
+          "running": {
+            "startedAt": "2022-11-03T14:14:05Z"
+          }
+        }
+      }
+    ],
+    "hostIP": "172.18.0.2",
+    "phase": "Running",
+    "podIP": "10.244.0.24",
+    "podIPs": [
+      {
+        "ip": "10.244.0.24"
+      }
+    ],
+    "qosClass": "Burstable",
+    "startTime": "2022-11-03T14:14:04Z"
+  }
+}

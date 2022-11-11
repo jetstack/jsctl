@@ -1,18 +1,13 @@
-// Package kubernetes provides types and methods for communicating with Kubernetes clusters and resources.
 package kubernetes
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 
-	"github.com/mitchellh/go-homedir"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,45 +15,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/yaml"
 )
-
-// NewConfig returns a new rest.Config instance based on the kubeconfig path provided. If the path is blank, an in-cluster
-// configuration is assumed.
-func NewConfig(kubeConfig string) (*rest.Config, error) {
-	var config *rest.Config
-	var err error
-	if kubeConfig != "" {
-		kubeConfigPath, err := homedir.Expand(kubeConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to expand kubeconfig path: %w", err)
-		}
-
-		_, err = os.Stat(kubeConfigPath)
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("kubeconfig doesn't exist: %w", err)
-		} else if err != nil {
-			return nil, fmt.Errorf("failed to check kubeconfig path: %w", err)
-		}
-
-		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
-	} else {
-		config, err = rest.InClusterConfig()
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	if config == nil {
-		return nil, fmt.Errorf("failed to create config, is your kubeconfig present and configured to connect to a cluster that's still running?")
-	}
-
-	return config, nil
-}
 
 type (
 	// The StdOutApplier type applies YAML-encoded Kubernetes resources by writing them to os.Stdout.
@@ -133,7 +91,7 @@ func (k *KubeConfigApplier) Apply(ctx context.Context, r io.Reader) error {
 
 		client := k.client.Resource(mapping.Resource).Namespace(object.GetNamespace())
 
-		_, err = client.Create(ctx, object, metav1.CreateOptions{})
+		_, err = client.Create(ctx, object, v1.CreateOptions{})
 		if errors.IsAlreadyExists(err) {
 			data, err := runtime.Encode(unstructured.UnstructuredJSONScheme, object)
 			if err != nil {
@@ -142,7 +100,7 @@ func (k *KubeConfigApplier) Apply(ctx context.Context, r io.Reader) error {
 
 			force := true
 
-			_, err = client.Patch(ctx, object.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+			_, err = client.Patch(ctx, object.GetName(), types.ApplyPatchType, data, v1.PatchOptions{
 				FieldManager: fieldManager,
 				Force:        &force,
 			})
@@ -151,62 +109,4 @@ func (k *KubeConfigApplier) Apply(ctx context.Context, r io.Reader) error {
 
 		return err
 	})
-}
-
-type (
-	// The ObjectScanner type is used to parse a YAML stream of Kubernetes resources and invoke a callback for each one.
-	ObjectScanner struct {
-		reader io.Reader
-	}
-
-	// The ObjectCallback type is a function that is invoked for each Kubernetes object parsed when calling
-	// ObjectScanner.Apply.
-	ObjectCallback func(ctx context.Context, object *unstructured.Unstructured) error
-)
-
-// NewObjectScanner returns a new instance of the ObjectScanner type that will parse the provided io.Reader's data
-// as a YAML-encoded stream of Kubernetes resources.
-func NewObjectScanner(r io.Reader) *ObjectScanner {
-	return &ObjectScanner{reader: r}
-}
-
-// ForEach iterates through the stream of YAML-encoded Kubernetes resources and invokes the ObjectCallback for each
-// one. Iteration can be cancelled by the ObjectCallback returning a non-nil error or by cancelling the provided
-// context.Context.
-func (oj *ObjectScanner) ForEach(ctx context.Context, fn ObjectCallback) error {
-	const separator = "---"
-
-	scanner := bufio.NewScanner(oj.reader)
-
-	buf := bytes.NewBuffer([]byte{})
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			scanner.Scan()
-			line := scanner.Bytes()
-
-			switch {
-			case line == nil && buf.Len() == 0:
-				return nil
-			case line == nil && buf.Len() > 0:
-				break
-			case string(line) != separator:
-				buf.Write(line)
-				buf.WriteRune('\n')
-				continue
-			}
-
-			var object unstructured.Unstructured
-			if err := yaml.Unmarshal(buf.Bytes(), &object); err != nil {
-				return err
-			}
-
-			buf.Reset()
-			if err := fn(ctx, &object); err != nil {
-				return err
-			}
-		}
-	}
 }

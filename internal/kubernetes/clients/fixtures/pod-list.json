@@ -1,0 +1,406 @@
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "creationTimestamp": "2022-11-03T14:14:04Z",
+        "generateName": "cainjector-545d764f69-",
+        "labels": {
+          "app": "cainjector",
+          "app.kubernetes.io/name": "cainjector",
+          "app.kubernetes.io/part-of": "js-operator",
+          "app.kubernetes.io/version": "v0.0.1-alpha.17",
+          "pod-template-hash": "545d764f69"
+        },
+        "name": "cainjector-545d764f69-xqmzh",
+        "namespace": "jetstack-secure",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "ReplicaSet",
+            "name": "cainjector-545d764f69",
+            "uid": "1bf5388d-0620-481f-9506-318b59042fb0"
+          }
+        ],
+        "resourceVersion": "70880",
+        "uid": "529ea344-3c93-4c28-ba04-1b61680a386b"
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "--v=2",
+              "--leader-election-namespace=jetstack-secure"
+            ],
+            "env": [
+              {
+                "name": "POD_NAMESPACE",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.namespace"
+                  }
+                }
+              }
+            ],
+            "image": "eu.gcr.io/jetstack-secure-enterprise/cert-manager-cainjector:v1.9.1",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "cainjector",
+            "resources": {},
+            "securityContext": {
+              "allowPrivilegeEscalation": false
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-h4xgp",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "imagePullSecrets": [
+          {
+            "name": "jse-gcr-creds"
+          }
+        ],
+        "nodeName": "kind-control-plane",
+        "nodeSelector": {
+          "kubernetes.io/os": "linux"
+        },
+        "preemptionPolicy": "PreemptLowerPriority",
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {
+          "runAsNonRoot": true
+        },
+        "serviceAccount": "cainjector",
+        "serviceAccountName": "cainjector",
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "name": "kube-api-access-h4xgp",
+            "projected": {
+              "defaultMode": 420,
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ],
+                    "name": "kube-root-ca.crt"
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        },
+                        "path": "namespace"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2022-11-03T14:14:04Z",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2022-11-03T14:14:05Z",
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2022-11-03T14:14:05Z",
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2022-11-03T14:14:04Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "containerd://52f385f84af71dcdbf4d8023f1b32fbc1d060f7fd9616e866922c84db77b2e7d",
+            "image": "eu.gcr.io/jetstack-secure-enterprise/cert-manager-cainjector:v1.9.1",
+            "imageID": "eu.gcr.io/jetstack-secure-enterprise/cert-manager-cainjector@sha256:df7f0b5186ddb84eccb383ed4b10ec8b8e2a52e0e599ec51f98086af5f4b4938",
+            "lastState": {},
+            "name": "cainjector",
+            "ready": true,
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2022-11-03T14:14:05Z"
+              }
+            }
+          }
+        ],
+        "hostIP": "172.18.0.2",
+        "phase": "Running",
+        "podIP": "10.244.0.23",
+        "podIPs": [
+          {
+            "ip": "10.244.0.23"
+          }
+        ],
+        "qosClass": "BestEffort",
+        "startTime": "2022-11-03T14:14:04Z"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "creationTimestamp": "2022-11-03T14:15:13Z",
+        "generateName": "cert-manager-approver-policy-549fd4c6dc-",
+        "labels": {
+          "app": "cert-manager-approver-policy",
+          "pod-template-hash": "549fd4c6dc"
+        },
+        "name": "cert-manager-approver-policy-549fd4c6dc-kn7qz",
+        "namespace": "jetstack-secure",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "ReplicaSet",
+            "name": "cert-manager-approver-policy-549fd4c6dc",
+            "uid": "8969a196-1383-4b76-b770-84141ccfc479"
+          }
+        ],
+        "resourceVersion": "71145",
+        "uid": "6ae9dde5-a604-479c-b141-4fd1f41cd4f3"
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "--log-level=1",
+              "--metrics-bind-address=:9402",
+              "--readiness-probe-bind-address=:6060",
+              "--webhook-host=0.0.0.0",
+              "--webhook-port=6443",
+              "--webhook-service-name=cert-manager-approver-policy",
+              "--webhook-ca-secret-namespace=jetstack-secure",
+              "--webhook-certificate-dir=/tmp"
+            ],
+            "command": [
+              "cert-manager-approver-policy"
+            ],
+            "image": "quay.io/jetstack/cert-manager-approver-policy:v0.4.0",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "cert-manager-approver-policy",
+            "ports": [
+              {
+                "containerPort": 6443,
+                "protocol": "TCP"
+              },
+              {
+                "containerPort": 9402,
+                "protocol": "TCP"
+              }
+            ],
+            "readinessProbe": {
+              "failureThreshold": 3,
+              "httpGet": {
+                "path": "/readyz",
+                "port": 6060,
+                "scheme": "HTTP"
+              },
+              "initialDelaySeconds": 3,
+              "periodSeconds": 7,
+              "successThreshold": 1,
+              "timeoutSeconds": 1
+            },
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-l89ml",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "nodeName": "kind-control-plane",
+        "preemptionPolicy": "PreemptLowerPriority",
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "cert-manager-approver-policy",
+        "serviceAccountName": "cert-manager-approver-policy",
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "name": "kube-api-access-l89ml",
+            "projected": {
+              "defaultMode": 420,
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ],
+                    "name": "kube-root-ca.crt"
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        },
+                        "path": "namespace"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2022-11-03T14:15:13Z",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2022-11-03T14:15:17Z",
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2022-11-03T14:15:17Z",
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2022-11-03T14:15:13Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "containerd://79e527eabcc653cfe0ae91184a14ba4844194fcfcfbd5e3e1b6ea6393a61800c",
+            "image": "quay.io/jetstack/cert-manager-approver-policy:v0.4.0",
+            "imageID": "quay.io/jetstack/cert-manager-approver-policy@sha256:6510cedd66a70e615945288bdb026e155e82c1aeec702e2d948f6bd9c58e3d51",
+            "lastState": {},
+            "name": "cert-manager-approver-policy",
+            "ready": true,
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2022-11-03T14:15:14Z"
+              }
+            }
+          }
+        ],
+        "hostIP": "172.18.0.2",
+        "phase": "Running",
+        "podIP": "10.244.0.25",
+        "podIPs": [
+          {
+            "ip": "10.244.0.25"
+          }
+        ],
+        "qosClass": "BestEffort",
+        "startTime": "2022-11-03T14:15:13Z"
+      }
+    }
+  ],
+  "kind": "List",
+  "metadata": {
+    "resourceVersion": "",
+    "selfLink": ""
+  }
+}

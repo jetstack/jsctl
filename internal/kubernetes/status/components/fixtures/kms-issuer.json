@@ -1,0 +1,66 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "kms-issuer",
+    "namespace": "js-operator",
+    "namespace": "example",
+    "labels": {
+      "control-plane": "kms-issuer-controller-manager",
+      "helm.sh/chart": "kms-issuer-1.0.2",
+      "app.kubernetes.io/name": "kms-issuer",
+      "app.kubernetes.io/instance": "RELEASE-NAME",
+      "app.kubernetes.io/version": "v2.0.0",
+      "app.kubernetes.io/managed-by": "Helm"
+    }
+  },
+  "spec": {
+    "containers": [
+      {
+        "command": [
+          "/manager",
+          "--health-probe-bind-address=:8081",
+          "--metrics-bind-address=:8080",
+          "--leader-elect=true",
+          "--enable-approved-check=true",
+          "--local-aws-endpoint="
+        ],
+        "image": "ghcr.io/skyscanner/kms-issuer:v2.0.0",
+        "env": [
+          {
+            "name": "AWS_REGION",
+            "value": ""
+          }
+        ],
+        "imagePullPolicy": "IfNotPresent",
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 8081
+          },
+          "initialDelaySeconds": 15,
+          "periodSeconds": 20
+        },
+        "name": "manager",
+        "readinessProbe": {
+          "httpGet": {
+            "path": "/readyz",
+            "port": 8081
+          },
+          "initialDelaySeconds": 5,
+          "periodSeconds": 10
+        },
+        "resources": {
+        },
+        "securityContext": {
+          "allowPrivilegeEscalation": false
+        }
+      }
+    ],
+    "securityContext": {
+      "runAsNonRoot": true
+    },
+    "serviceAccountName": "kms-issuer",
+    "terminationGracePeriodSeconds": 10
+  }
+}

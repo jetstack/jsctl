@@ -9,17 +9,19 @@ jobs:
     env:
       GOPRIVATE: github.com/jetstack/*
     steps:
-    - name: Configure js-operator repo pull access
-      # js-operator is a private repo that this tool depends on to build,
+    - name: Configure private repo pull access
       # the following configuration will grant this action permissions to pull
-      # that contents of that repo during a go mod download step. The key in
-      # DEPLOY_KEY_READ_JS_OPERATOR is the private key of a deploy key on
-      # the js-operator repo granting read only access.
+      # that contents of that private repos using the deploy keys in the repo secrets
       run: |
         mkdir ~/.ssh
         chmod 700 ~/.ssh
 
         echo "${{ secrets.DEPLOY_KEY_READ_JS_OPERATOR }}" > ~/.ssh/js_operator_id
+        echo "${{ secrets.DEPLOY_KEY_READ_VENAFI_ENHANCED_ISSUER }}" > ~/.ssh/venafi_enhanced_issuer_id
+        echo "${{ secrets.DEPLOY_KEY_READ_EXTERNAL_ISSUER_LIB }}" > ~/.ssh/external_issuer_lib_id
+        
+        chmod 600 ~/.ssh/venafi_enhanced_issuer_id
+        chmod 600 ~/.ssh/external_issuer_lib_id
         chmod 600 ~/.ssh/js_operator_id
 
         cat <<EOT >> ~/.ssh/config
@@ -28,10 +30,28 @@ jobs:
         IdentityFile ~/.ssh/js_operator_id
         IdentitiesOnly yes
         EOT
+        
+        cat <<EOT >> ~/.ssh/config
+        Host venafi-enhanced-issuer.github.com
+        HostName github.com
+        IdentityFile ~/.ssh/venafi_enhanced_issuer_id
+        IdentitiesOnly yes
+        EOT
+        
+        cat <<EOT >> ~/.ssh/config
+        Host external-issuer-lib.github.com
+        HostName github.com
+        IdentityFile ~/.ssh/external_issuer_lib_id
+        IdentitiesOnly yes
+        EOT
 
         cat <<EOT >> ~/.gitconfig
         [url "git@js-operator.github.com:jetstack/js-operator"]
           insteadOf = https://github.com/jetstack/js-operator
+        [url "git@venafi-enhanced-issuer.github.com:jetstack/venafi-enhanced-issuer"]
+          insteadOf = https://github.com/jetstack/venafi-enhanced-issuer
+        [url "git@external-issuer-lib.github.com:jetstack/external-issuer-lib"]
+          insteadOf = https://github.com/jetstack/external-issuer-lib
         EOT
 
     - name: Install Go

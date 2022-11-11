@@ -1,0 +1,39 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "cert-manager-google-cas-issuer",
+    "namespace": "example",
+    "labels": {
+      "app.kubernetes.io/name": "cert-manager-google-cas-issuer",
+      "helm.sh/chart": "cert-manager-google-cas-issuer-v0.6.0",
+      "app.kubernetes.io/instance": "RELEASE-NAME",
+      "app.kubernetes.io/version": "v0.6.0",
+      "app.kubernetes.io/managed-by": "Helm"
+    }
+  },
+  "spec": {
+    "serviceAccountName": "cert-manager-google-cas-issuer",
+    "containers": [
+      {
+        "name": "cert-manager-google-cas-issuer",
+        "image": "quay.io/jetstack/cert-manager-google-cas-issuer:v0.6.0",
+        "imagePullPolicy": "IfNotPresent",
+        "ports": [
+          {
+            "containerPort": 9402
+          }
+        ],
+        "command": [
+          "/google-cas-issuer"
+        ],
+        "args": [
+          "--enable-leader-election",
+          "--log-level=1"
+        ],
+        "resources": {
+        }
+      }
+    ]
+  }
+}

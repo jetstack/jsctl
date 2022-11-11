@@ -1,0 +1,86 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "cert-discovery-venafi",
+    "namespace": "example",
+    "labels": {
+      "control-plane": "cert-discovery-venafi",
+      "helm.sh/chart": "cert-discovery-venafi-0.2.0",
+      "app.kubernetes.io/name": "cert-discovery-venafi",
+      "app.kubernetes.io/instance": "RELEASE-NAME",
+      "app.kubernetes.io/version": "v0.2.0",
+      "app.kubernetes.io/managed-by": "Helm"
+    }
+  },
+  "spec": {
+    "serviceAccountName": "cert-discovery-venafi-sa",
+    "containers": [
+      {
+        "name": "cert-discovery-venafi",
+        "args": [
+          "--metrics-addr=127.0.0.1:8080",
+          "--enable-leader-election"
+        ],
+        "command": [
+          "/cert-discovery-venafi"
+        ],
+        "env": [
+          {
+            "name": "VENAFI_TPP_URL",
+            "value": "https://foo.env.cloudshare.com/vedsdk"
+          },
+          {
+            "name": "VENAFI_TPP_ZONE",
+            "value": "TLS/SSL\\\\Certificates"
+          },
+          {
+            "name": "VENAFI_TPP_ACCESS_TOKEN",
+            "valueFrom": {
+              "secretKeyRef": {
+                "name": "access-token",
+                "key": "access-token"
+              }
+            }
+          }
+        ],
+        "image": "eu.gcr.io/jetstack-secure-enterprise/cert-discovery-venafi:v0.2.0",
+        "imagePullPolicy": "IfNotPresent",
+        "resources": {
+          "limits": {
+            "cpu": "100m",
+            "memory": "100Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "20Mi"
+          }
+        }
+      },
+      {
+        "args": [
+          "--secure-listen-address=0.0.0.0:8443",
+          "--upstream=http://127.0.0.1:8080/",
+          "--logtostderr=true",
+          "--v=10"
+        ],
+        "image": "gcr.io/kubebuilder/kube-rbac-proxy:v0.4.1",
+        "name": "kube-rbac-proxy",
+        "ports": [
+          {
+            "containerPort": 8443,
+            "name": "https"
+          }
+        ],
+        "resources": {
+        }
+      }
+    ],
+    "terminationGracePeriodSeconds": 10,
+    "imagePullSecrets": [
+      {
+        "name": "jetstack-secure-enterprise"
+      }
+    ]
+  }
+}
