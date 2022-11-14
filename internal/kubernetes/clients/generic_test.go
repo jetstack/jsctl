@@ -2,6 +2,8 @@ package clients
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	v1core "k8s.io/api/core/v1"
 	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/rest"
 )
 
@@ -195,4 +199,75 @@ func TestGeneric_Present(t *testing.T) {
 	present, err = client.Present(ctx, &GenericRequestOptions{Name: "cainjector-545d764f69-xqmzh", Namespace: "jetstack-secure"})
 	require.NoError(t, err)
 	assert.True(t, present)
+}
+
+func TestGeneric_Update(t *testing.T) {
+	ctx := context.Background()
+
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		require.Equal(t, "PATCH", r.Method)
+		require.Equal(t, "/apis/v1/namespaces/jetstack-secure/secrets/test", r.URL.Path)
+		bodyBytes, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.Equal(t, `{"stringData":{"foo":"bar"}}`, string(bodyBytes))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+    "apiVersion": "v1",
+    "data": {
+        "key": "dmFsdWU="
+    },
+    "kind": "Secret",
+    "metadata": {
+        "name": "test",
+        "namespace": "jetstack-secure",
+    },
+    "type": "Opaque"
+}`))
+	}))
+
+	cfg := &rest.Config{
+		Host: server.URL,
+	}
+
+	client, err := NewGenericClient[*v1core.Secret, *v1core.Secret](
+		&GenericClientOptions{
+			RestConfig: cfg,
+			Group:      v1core.GroupName,
+			Version:    v1core.SchemeGroupVersion.Version,
+			Kind:       "secrets",
+		},
+	)
+	require.NoError(t, err)
+
+	original, err := json.Marshal(&v1core.Secret{
+		ObjectMeta: v1meta.ObjectMeta{
+			Name:      "test",
+			Namespace: "jetstack-secure",
+		},
+		StringData: map[string]string{
+			"key": "value",
+		},
+	})
+	require.NoError(t, err)
+	updated, err := json.Marshal(&v1core.Secret{
+		ObjectMeta: v1meta.ObjectMeta{
+			Name:      "test",
+			Namespace: "jetstack-secure",
+		},
+		StringData: map[string]string{
+			"key": "value",
+			"foo": "bar",
+		},
+	})
+	require.NoError(t, err)
+
+	patch, err := strategicpatch.CreateTwoWayMergePatch(original, updated, v1core.Secret{})
+	require.NoError(t, err)
+
+	err = client.Patch(ctx, &GenericRequestOptions{Name: "test", Namespace: "jetstack-secure"}, patch)
+	require.NoError(t, err)
+	require.True(t, called)
 }
