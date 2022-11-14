@@ -2,11 +2,14 @@ package clusters
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	v1core "k8s.io/api/core/v1"
+	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 
 	"github.com/jetstack/jsctl/internal/command/types"
 	"github.com/jetstack/jsctl/internal/kubernetes"
@@ -78,6 +81,68 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 				fmt.Fprintf(os.Stderr, "If left set, the controller will re-add owner references to secrets, which will cause them to be deleted as part of the backup process when Certificates are removed from the cluster state. This will lead to reissueance of certificates on restore and could cause potential outages caused by CA rate limiting.\n\n")
 				fmt.Fprintf(os.Stderr, "Note: this might require an update to configuration management for the cluster, GitOps-based (e.g. Flux) or otherwise (Jenkins etc).\n")
 				fmt.Fprintf(os.Stderr, "No cleanup action has been taken at this time\n")
+				return nil
+			}
+
+			fmt.Fprintf(os.Stderr, "Checking for ownerReferences on secrets...\n")
+
+			// if the flag is not found, we still want to check that the owner
+			// references are not present. It can take some time for
+			// cert-manager to remove them, even if cert-manager is running.
+
+			secretsClient, err := clients.NewGenericClient[*v1core.Secret, *v1core.SecretList](
+				&clients.GenericClientOptions{
+					RestConfig: kubeCfg,
+					APIPath:    "/api/",
+					Group:      v1core.GroupName,
+					Version:    v1core.SchemeGroupVersion.Version,
+					Kind:       "secrets",
+				},
+			)
+
+			var secretsList v1core.SecretList
+			err = secretsClient.List(ctx, &clients.GenericRequestOptions{}, &secretsList)
+
+			for _, secret := range secretsList.Items {
+				hasCertificatOwnerRef := false
+				for _, ownerRef := range secret.OwnerReferences {
+					if ownerRef.Kind == "Certificate" {
+						hasCertificatOwnerRef = true
+						break
+					}
+				}
+
+				if hasCertificatOwnerRef {
+					fmt.Fprintf(os.Stderr, "Removing owner reference from %s/%s\n", secret.Namespace, secret.Name)
+					newSecret := secret.DeepCopy()
+					newSecret.OwnerReferences = []v1meta.OwnerReference{}
+
+					for _, ownerRef := range newSecret.OwnerReferences {
+						if ownerRef.Kind != "Certificate" {
+							newSecret.OwnerReferences = append(newSecret.OwnerReferences, ownerRef)
+							break
+						}
+					}
+
+					secretData, err := json.Marshal(secret)
+					if err != nil {
+						return fmt.Errorf("error marshalling secret: %s", err)
+					}
+					newSecretData, err := json.Marshal(newSecret)
+					if err != nil {
+						return fmt.Errorf("error marshalling new secret: %s", err)
+					}
+
+					patch, err := strategicpatch.CreateTwoWayMergePatch(secretData, newSecretData, v1core.Secret{})
+					if err != nil {
+						return fmt.Errorf("error creating patch for secret %s: %s", secret.Name, err)
+					}
+
+					err = secretsClient.Patch(ctx, &clients.GenericRequestOptions{Name: secret.Name, Namespace: secret.Namespace}, patch)
+					if err != nil {
+						return fmt.Errorf("error patching secret %s: %s", secret.Name, err)
+					}
+				}
 			}
 
 			return nil
