@@ -10,6 +10,8 @@ type CertManagerStatus struct {
 	namespace string
 
 	controllerVersion, cainjectorVersion, webhookVersion string
+
+	controllerArgs []string
 }
 
 func (c *CertManagerStatus) Name() string {
@@ -35,6 +37,16 @@ func (c *CertManagerStatus) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
+func (c *CertManagerStatus) GetControllerFlagValue(flag string) (bool, string) {
+	for _, arg := range c.controllerArgs {
+		if strings.HasPrefix(arg, "--"+flag) {
+			return true, strings.TrimPrefix(arg, "--"+flag+"=")
+		}
+	}
+
+	return false, ""
+}
+
 func (c *CertManagerStatus) Match(md *MatchData) (bool, error) {
 	var found bool
 
@@ -52,6 +64,8 @@ func (c *CertManagerStatus) Match(md *MatchData) (bool, error) {
 				} else {
 					c.controllerVersion = unknownVersionString
 				}
+
+				c.controllerArgs = container.Args
 			}
 
 			if strings.Contains(container.Image, "cert-manager-cainjector") {
@@ -80,11 +94,12 @@ func (c *CertManagerStatus) Match(md *MatchData) (bool, error) {
 }
 
 // NewCertManagerStatus returns an instance that can be used in testing
-func NewCertManagerStatus(namespace, version string) *CertManagerStatus {
+func NewCertManagerStatus(namespace, version string, args []string) *CertManagerStatus {
 	return &CertManagerStatus{
 		namespace:         namespace,
 		controllerVersion: version,
 		webhookVersion:    version,
 		cainjectorVersion: version,
+		controllerArgs:    args,
 	}
 }

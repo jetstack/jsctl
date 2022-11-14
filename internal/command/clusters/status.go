@@ -31,7 +31,7 @@ func Status(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 				return fmt.Errorf("failed to gather cluster status: %w", err)
 			}
 
-			// marshal the status as yaml
+			// marshal the status as yaml as a simple means of display for now
 			y, err := yaml.Marshal(s)
 			if err != nil {
 				return fmt.Errorf("failed to marshal status: %w", err)

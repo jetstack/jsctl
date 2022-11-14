@@ -33,4 +33,12 @@ func TestCertManager(t *testing.T) {
 	assert.Equal(t, "cert-manager", status.Name())
 	assert.Equal(t, "jetstack-secure", status.Namespace())
 	assert.Equal(t, "v1.9.1", status.Version())
+
+	verbosityFlagFound, verbosityFlagValue := status.GetControllerFlagValue("v")
+	assert.True(t, verbosityFlagFound)
+	assert.Equal(t, "2", verbosityFlagValue)
+
+	controllersFlagFound, controllersFlagValue := status.GetControllerFlagValue("controllers")
+	assert.True(t, controllersFlagFound)
+	assert.Equal(t, "*,-certificaterequests-approver", controllersFlagValue)
 }
