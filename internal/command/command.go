@@ -43,6 +43,7 @@ func Command() *cobra.Command {
 		Auth(),
 		Clusters(),
 		Config(),
+		Experimental(),
 		Operator(),
 		Organizations(),
 		Registry(),
