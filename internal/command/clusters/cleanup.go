@@ -42,9 +42,9 @@ func secrets(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 
 func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "remove-secret-owner-refs",
-		Short: "Remove owner references to cert-manager resources from all secrets in the cluster",
-		Long:  "Removing owner references from secrets allows cert-manager CRDs to be removed and the underlying secret data to be retained.",
+		Use:   "remove-certificate-owner-refs",
+		Short: "Remove certificate owner references from secret resources",
+		Long:  "Removing Certificate owner references from secrets allows the uninstallation of cert-manager (including CRDs) without deleting the secrets that contain the issued X.509 certificates. This allows the uninstallation of cert-manager without causing application downtime or unneccessary certificate re-issuance. After cert-manager is re-installed and the Certificate resources are be re-applied, the existing secrets will be picked up for the Certificates.",
 		Args:  cobra.MatchAll(cobra.ExactArgs(0)),
 		Run: run(func(ctx context.Context, args []string) error {
 			kubeCfg, err := kubernetes.NewConfig(kubeConfigPath)
