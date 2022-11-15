@@ -21,7 +21,7 @@ import (
 func CleanUp(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cleanup",
-		Short: "Perform cleanup operations on a cluster's Kubernetes state",
+		Short: "Contains commands to prepare cluster for uninstallation of Jetstack Secure software",
 	}
 
 	cmd.AddCommand(secrets(run, kubeConfigPath))
