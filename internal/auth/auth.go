@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"bufio"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -11,8 +12,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -65,10 +68,10 @@ func GetOAuthURLAndState(conf *oauth2.Config) (string, string) {
 	return oAuthURL, state
 }
 
-// WaitForOAuthToken starts an HTTP server that listens for an inbound request providing the oauth2 token. This function
+// WaitForOAuthTokenCallback starts an HTTP server that listens for an inbound request providing the oauth2 token. This function
 // blocks until a valid token is obtained or the provided context is cancelled. The provided state value must match
 // on the inbound request.
-func WaitForOAuthToken(ctx context.Context, conf *oauth2.Config, state string) (*oauth2.Token, error) {
+func WaitForOAuthTokenCallback(ctx context.Context, conf *oauth2.Config, state string) (*oauth2.Token, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -149,6 +152,81 @@ func WaitForOAuthToken(ctx context.Context, conf *oauth2.Config, state string) (
 	}
 
 	return nil, err
+}
+
+// WaitForOAuthTokenCommandLine waits for a user to enter a redirect URL, then extracts the code and state and requests a token
+func WaitForOAuthTokenCommandLine(ctx context.Context, conf *oauth2.Config, state string) (*oauth2.Token, error) {
+	fmt.Fprintf(os.Stderr, "Enter the URL you were redirected to (http://localhost:9999...) and press enter\n")
+
+	signalChan := make(chan os.Signal, 1)
+	resultChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		select {
+		case <-signalChan:
+			errChan <- fmt.Errorf("interrupted")
+		}
+	}()
+	go func() {
+		// read in the raw URL the user pastes in
+		buf := bufio.NewReader(os.Stdin)
+		rawURL, err := buf.ReadBytes('\n')
+		if err != nil {
+			errChan <- err
+		}
+		resultChan <- string(rawURL)
+	}()
+
+	var rawURL string
+	select {
+	case res := <-resultChan:
+		rawURL = res
+	case err := <-errChan:
+		return nil, err
+	}
+
+	// parse the callback URL to extract the code and state
+	parsedURL, err := url.Parse(strings.TrimSpace(string(rawURL)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse query: %w", err)
+	}
+	query, err := url.ParseQuery(parsedURL.RawQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse url query: %w", err)
+	}
+
+	// validate the state in the callback URL matches
+	if state != query.Get("state") {
+		return nil, fmt.Errorf("invalid state: %s != %s", state, query.Get("state"))
+	}
+
+	// fetch a token using the code from the parsed callback URL
+	token, err := conf.Exchange(ctx, query.Get("code"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange token: %w", err)
+	}
+
+	// make a request to the auth endpoint to validate the token we have received
+	req, err := http.NewRequest(http.MethodGet, "https://platform.jetstack.io/api/v1/auth", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request to test token: %w", err)
+	}
+	resp, err := oauth2.NewClient(ctx, conf.TokenSource(ctx, token)).Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to test token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// validate that the response is a 200OK, as this is the only valid response
+	// when testing the token
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to test token: unexpected response %s", resp.Status)
+	}
+
+	// return the token from conf.Exchange
+	return token, nil
 }
 
 // SaveOAuthToken writes the provided token to a JSON file in the user's config directory. This location changes based
