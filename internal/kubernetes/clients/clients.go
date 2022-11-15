@@ -3,18 +3,18 @@ package clients
 import (
 	"fmt"
 
-	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 )
 
 // NewCRDClient returns an instance of a generic client for querying CRDs
-func NewCRDClient(config *rest.Config) (*Generic[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList], error) {
-	genericClient, err := NewGenericClient[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList](
+func NewCRDClient(config *rest.Config) (*Generic[*apiextensionsv1.CustomResourceDefinition, *apiextensionsv1.CustomResourceDefinitionList], error) {
+	genericClient, err := NewGenericClient[*apiextensionsv1.CustomResourceDefinition, *apiextensionsv1.CustomResourceDefinitionList](
 		&GenericClientOptions{
 			RestConfig: config,
 			APIPath:    "/apis",
-			Group:      v1extensions.GroupName,
-			Version:    v1extensions.SchemeGroupVersion.Version,
+			Group:      apiextensionsv1.GroupName,
+			Version:    apiextensionsv1.SchemeGroupVersion.Version,
 			Kind:       "customresourcedefinitions",
 		},
 	)

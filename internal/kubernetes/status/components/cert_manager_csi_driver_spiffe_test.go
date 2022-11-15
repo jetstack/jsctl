@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCertManagerCSIDriverSPIFFE(t *testing.T) {
@@ -15,7 +15,7 @@ func TestCertManagerCSIDriverSPIFFE(t *testing.T) {
 	data, err := os.ReadFile("fixtures/cert-manager-csi-driver-spiffe.json")
 	require.NoError(t, err)
 
-	var pods v1core.PodList
+	var pods corev1.PodList
 
 	err = json.Unmarshal(data, &pods)
 	require.NoError(t, err)

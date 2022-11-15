@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/jetstack/jsctl/internal/docker"
 )
@@ -37,11 +37,11 @@ func TestImagePullSecret(t *testing.T) {
 
 		assert.EqualValues(t, "jetstack-secure", secret.Namespace)
 		assert.EqualValues(t, "jse-gcr-creds", secret.Name)
-		assert.EqualValues(t, v1core.SecretTypeDockerConfigJson, secret.Type)
-		assert.NotEmpty(t, secret.Data[v1core.DockerConfigJsonKey])
+		assert.EqualValues(t, corev1.SecretTypeDockerConfigJson, secret.Type)
+		assert.NotEmpty(t, secret.Data[corev1.DockerConfigJsonKey])
 
 		var actualConfig docker.ConfigJSON
-		assert.NoError(t, json.Unmarshal(secret.Data[v1core.DockerConfigJsonKey], &actualConfig))
+		assert.NoError(t, json.Unmarshal(secret.Data[corev1.DockerConfigJsonKey], &actualConfig))
 		assert.NotEmpty(t, actualConfig.Auths)
 
 		actualGCR := actualConfig.Auths["eu.gcr.io"]

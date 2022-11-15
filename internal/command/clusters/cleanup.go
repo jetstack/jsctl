@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	v1core "k8s.io/api/core/v1"
-	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 
 	"github.com/jetstack/jsctl/internal/command/types"
@@ -52,17 +52,17 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 				return err
 			}
 
-			podClient, err := clients.NewGenericClient[*v1core.Pod, *v1core.PodList](
+			podClient, err := clients.NewGenericClient[*corev1.Pod, *corev1.PodList](
 				&clients.GenericClientOptions{
 					RestConfig: kubeCfg,
 					APIPath:    "/api/",
-					Group:      v1core.GroupName,
-					Version:    v1core.SchemeGroupVersion.Version,
+					Group:      corev1.GroupName,
+					Version:    corev1.SchemeGroupVersion.Version,
 					Kind:       "pods",
 				},
 			)
 
-			var pods v1core.PodList
+			var pods corev1.PodList
 			err = podClient.List(ctx, &clients.GenericRequestOptions{}, &pods)
 
 			md := components.MatchData{Pods: pods.Items}
@@ -90,17 +90,17 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 			// references are not present. It can take some time for
 			// cert-manager to remove them, even if cert-manager is running.
 
-			secretsClient, err := clients.NewGenericClient[*v1core.Secret, *v1core.SecretList](
+			secretsClient, err := clients.NewGenericClient[*corev1.Secret, *corev1.SecretList](
 				&clients.GenericClientOptions{
 					RestConfig: kubeCfg,
 					APIPath:    "/api/",
-					Group:      v1core.GroupName,
-					Version:    v1core.SchemeGroupVersion.Version,
+					Group:      corev1.GroupName,
+					Version:    corev1.SchemeGroupVersion.Version,
 					Kind:       "secrets",
 				},
 			)
 
-			var secretsList v1core.SecretList
+			var secretsList corev1.SecretList
 			err = secretsClient.List(ctx, &clients.GenericRequestOptions{}, &secretsList)
 
 			for _, secret := range secretsList.Items {
@@ -115,7 +115,7 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 				if hasCertificatOwnerRef {
 					fmt.Fprintf(os.Stderr, "Removing owner reference from %s/%s\n", secret.Namespace, secret.Name)
 					newSecret := secret.DeepCopy()
-					newSecret.OwnerReferences = []v1meta.OwnerReference{}
+					newSecret.OwnerReferences = []metav1.OwnerReference{}
 
 					for _, ownerRef := range newSecret.OwnerReferences {
 						if ownerRef.Kind != "Certificate" {
@@ -133,7 +133,7 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 						return fmt.Errorf("error marshalling new secret: %s", err)
 					}
 
-					patch, err := strategicpatch.CreateTwoWayMergePatch(secretData, newSecretData, v1core.Secret{})
+					patch, err := strategicpatch.CreateTwoWayMergePatch(secretData, newSecretData, corev1.Secret{})
 					if err != nil {
 						return fmt.Errorf("error creating patch for secret %s: %s", secret.Name, err)
 					}

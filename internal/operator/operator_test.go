@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	v1certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	v1alpha1operator "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	v1core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/jetstack/jsctl/internal/operator"
@@ -65,7 +65,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		assert.NotEmpty(t, actual.Name)
@@ -86,7 +86,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		if assert.NotNil(t, actual.Spec.CSIDrivers) {
@@ -102,7 +102,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		assert.NotNil(t, actual.Spec.ApproverPolicyEnterprise)
@@ -120,8 +120,8 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var secret v1core.Secret
-		var actual v1alpha1operator.Installation
+		var secret corev1.Secret
+		var actual operatorv1alpha1.Installation
 		s := strings.Split(string(applier.data.Bytes()), "---")
 		assert.Len(t, s, 2)
 		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
@@ -140,7 +140,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		assert.NotNil(t, actual.Spec.VenafiOauthHelper)
@@ -156,8 +156,8 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var secret v1core.Secret
-		var actual v1alpha1operator.Installation
+		var secret corev1.Secret
+		var actual operatorv1alpha1.Installation
 		s := strings.Split(string(applier.data.Bytes()), "---")
 		assert.Len(t, s, 2)
 		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
@@ -174,7 +174,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var installation v1alpha1operator.Installation
+		var installation operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &installation))
 
 		assert.Nil(t, installation.Spec.CertDiscoveryVenafi)
@@ -195,8 +195,8 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var secret v1core.Secret
-		var installation v1alpha1operator.Installation
+		var secret corev1.Secret
+		var installation operatorv1alpha1.Installation
 		s := strings.Split(string(applier.data.Bytes()), "---")
 		assert.Len(t, s, 2)
 		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
@@ -222,7 +222,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
-		var installation v1alpha1operator.Installation
+		var installation operatorv1alpha1.Installation
 		s := strings.Split(string(applier.data.Bytes()), "---")
 		assert.Len(t, s, 3)
 		assert.NoError(t, yaml.Unmarshal([]byte(s[2]), &installation))
@@ -240,7 +240,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		assert.NotNil(t, actual.Spec.IstioCSR)
@@ -257,14 +257,14 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		if assert.NotNil(t, actual.Spec.IstioCSR) && assert.NotNil(t, actual.Spec.IstioCSR.IssuerRef) {
 			issuer := actual.Spec.IstioCSR.IssuerRef
 
-			assert.EqualValues(t, v1certmanager.SchemeGroupVersion.Group, issuer.Group)
-			assert.EqualValues(t, v1certmanager.IssuerKind, issuer.Kind)
+			assert.EqualValues(t, certmanagerv1.SchemeGroupVersion.Group, issuer.Group)
+			assert.EqualValues(t, certmanagerv1.IssuerKind, issuer.Kind)
 			assert.EqualValues(t, options.IstioCSRIssuer, issuer.Name)
 		}
 	})
@@ -278,7 +278,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		assert.EqualValues(t, options.ImageRegistry, actual.Spec.Registry)
@@ -293,7 +293,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		assert.NotNil(t, actual.Spec.CSIDrivers.CertManagerSpiffe)
@@ -308,7 +308,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		if assert.NotNil(t, actual.Spec.CertManager.Webhook) {
@@ -330,7 +330,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		if assert.NotNil(t, actual.Spec.CSIDrivers.CertManagerSpiffe) {
@@ -348,7 +348,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		if assert.NotNil(t, actual.Spec.IstioCSR) {
@@ -365,7 +365,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
 		assert.NoError(t, err)
 
-		var actual v1alpha1operator.Installation
+		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
 		assert.Nil(t, actual.Spec.ApproverPolicy)
@@ -373,7 +373,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 	})
 }
 
-func findIssuer(t *testing.T, name, namespace string, issuers []*v1alpha1operator.Issuer) *v1alpha1operator.Issuer {
+func findIssuer(t *testing.T, name, namespace string, issuers []*operatorv1alpha1.Issuer) *operatorv1alpha1.Issuer {
 	t.Helper()
 
 	for _, issuer := range issuers {
