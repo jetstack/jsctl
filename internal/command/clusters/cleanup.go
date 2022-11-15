@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 
@@ -52,6 +53,29 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 				return err
 			}
 
+			// first, check if cert-manager Certificates are being used
+			crdClient, err := clients.NewCRDClient(kubeCfg)
+			if err != nil {
+				return fmt.Errorf("error creating CRD client: %s", err)
+			}
+			var crds apiextensionsv1.CustomResourceDefinitionList
+			err = crdClient.List(ctx, &clients.GenericRequestOptions{}, &crds)
+			if err != nil {
+				return fmt.Errorf("error listing CRDs: %s", err)
+			}
+			certificateCRDPresent := false
+			for _, crd := range crds.Items {
+				if crd.Name == "certificates.cert-manager.io" {
+					certificateCRDPresent = true
+					break
+				}
+			}
+			if !certificateCRDPresent {
+				fmt.Fprintf(os.Stderr, "This cluster does not contain any cert-manager Certificates. No action is required.\n")
+				return nil
+			}
+
+			// Next, check that the cert-manager controller args do not have --enable-certificate-owner-ref set
 			podClient, err := clients.NewGenericClient[*corev1.Pod, *corev1.PodList](
 				&clients.GenericClientOptions{
 					RestConfig: kubeCfg,
@@ -76,7 +100,7 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 			}
 
 			enableCertificateOwnerRefFlag := "enable-certificate-owner-ref"
-			if found, _ := certManagerStatus.GetControllerFlagValue(enableCertificateOwnerRefFlag); found {
+			if found, value := certManagerStatus.GetControllerFlagValue(enableCertificateOwnerRefFlag); found && value != "false" {
 				fmt.Fprintf(os.Stderr, "cert-manager's Deployment has --%s flag set, this must be set to false or removed.\n\n", enableCertificateOwnerRefFlag)
 				fmt.Fprintf(os.Stderr, "If left set to true, cert-manager will re-add Certificate owner references to the secrets containing the issued certificates, which will cause the secrets to be garbage collected when Certificates are deleted as part of cert-manager uninstallation\n\n")
 				fmt.Fprintf(os.Stderr, "No cleanup action has been taken at this time\n")
