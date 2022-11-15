@@ -84,18 +84,18 @@ func TestGeneric_Get_WithDropFields(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1core.Pod, *v1core.PodList](
+	client, err := NewGenericClient[*corev1.Pod, *corev1.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1core.GroupName,
-			Version:    v1core.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
 	require.NoError(t, err)
 
-	var result v1core.Pod
+	var result corev1.Pod
 
 	err = client.Get(ctx, &GenericRequestOptions{
 		Name:      "test-pod",
@@ -132,18 +132,18 @@ func TestGeneric_List_WithDropFields(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1core.Pod, *v1core.PodList](
+	client, err := NewGenericClient[*corev1.Pod, *corev1.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1core.GroupName,
-			Version:    v1core.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
 	require.NoError(t, err)
 
-	var result v1core.PodList
+	var result corev1.PodList
 
 	err = client.List(ctx, &GenericRequestOptions{
 		Namespace: "test-namespace",

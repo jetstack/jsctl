@@ -15,8 +15,8 @@ func NewCRDClient(config *rest.Config) (*Generic[*v1extensions.CustomResourceDef
 		&GenericClientOptions{
 			RestConfig: config,
 			APIPath:    "/apis",
-			Group:      apiextensionsv1.GroupName,
-			Version:    apiextensionsv1.SchemeGroupVersion.Version,
+			Group:      v1extensions.GroupName,
+			Version:    v1extensions.SchemeGroupVersion.Version,
 			Kind:       "customresourcedefinitions",
 		},
 	)
