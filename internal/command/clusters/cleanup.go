@@ -1,10 +1,12 @@
 package clusters
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -133,7 +135,12 @@ Next Steps:
 			var secretsList corev1.SecretList
 			err = secretsClient.List(ctx, &clients.GenericRequestOptions{}, &secretsList)
 
-			for _, secret := range secretsList.Items {
+			var count int
+			var operations []func() error
+
+			for i := range secretsList.Items {
+				secret := &secretsList.Items[i]
+
 				hasCertificatOwnerRef := false
 				for _, ownerRef := range secret.OwnerReferences {
 					if ownerRef.Kind == "Certificate" {
@@ -143,7 +150,8 @@ Next Steps:
 				}
 
 				if hasCertificatOwnerRef {
-					fmt.Fprintf(os.Stderr, "Removing owner reference from %s/%s\n", secret.Namespace, secret.Name)
+					count += 1
+					fmt.Fprintf(os.Stderr, "%s/%s needs update\n", secret.Namespace, secret.Name)
 					newSecret := secret.DeepCopy()
 					newSecret.OwnerReferences = []metav1.OwnerReference{}
 
@@ -163,16 +171,46 @@ Next Steps:
 						return fmt.Errorf("error marshalling new secret: %s", err)
 					}
 
-					patch, err := strategicpatch.CreateTwoWayMergePatch(secretData, newSecretData, corev1.Secret{})
-					if err != nil {
-						return fmt.Errorf("error creating patch for secret %s: %s", secret.Name, err)
-					}
+					operations = append(operations, func() error {
+						patch, err := strategicpatch.CreateTwoWayMergePatch(secretData, newSecretData, corev1.Secret{})
+						if err != nil {
+							return fmt.Errorf("error creating patch for secret %s: %s", secret.Name, err)
+						}
 
-					err = secretsClient.Patch(ctx, &clients.GenericRequestOptions{Name: secret.Name, Namespace: secret.Namespace}, patch)
+						err = secretsClient.Patch(ctx, &clients.GenericRequestOptions{Name: secret.Name, Namespace: secret.Namespace}, patch)
+						if err != nil {
+							return fmt.Errorf("error patching secret %s: %s", secret.Name, err)
+						}
+
+						fmt.Fprintf(os.Stderr, "%s/%s updated\n", secret.Namespace, secret.Name)
+						return nil
+					})
+				}
+			}
+
+			if count == 0 {
+				fmt.Fprintf(os.Stderr, "No secrets found with ownerReferences to Certificates, no action needed\n")
+				return nil
+			}
+
+			fmt.Fprintf(os.Stderr, "Found %d secrets with ownerReferences to Certificate resources\n", count)
+			fmt.Fprintf(os.Stderr, "Would you like to update the owner references of %d secrets?\n", count)
+			fmt.Fprintf(os.Stderr, "> ")
+			reader := bufio.NewReader(os.Stdin)
+			response, err := reader.ReadString('\n')
+			if err != nil {
+				return fmt.Errorf("error reading input: %s", err)
+			}
+			if strings.HasPrefix(strings.ToLower(strings.TrimSpace(response)), "yes") {
+				for _, operation := range operations {
+					err = operation()
 					if err != nil {
-						return fmt.Errorf("error patching secret %s: %s", secret.Name, err)
+						return err
 					}
 				}
+			} else {
+				fmt.Fprintf(os.Stderr, "No action taken\n")
+				return nil
 			}
 
 			return nil
