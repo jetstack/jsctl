@@ -3,6 +3,7 @@ module github.com/jetstack/jsctl
 go 1.19
 
 require (
+	github.com/Jeffail/gabs/v2 v2.6.1
 	github.com/Masterminds/semver v1.5.0
 	github.com/Skyscanner/kms-issuer v1.0.1-0.20221007144244-feb19f32171b
 	github.com/cert-manager/aws-privateca-issuer v1.2.2

@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Jeffail/gabs/v2"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/rest"
 )
 
@@ -35,6 +37,9 @@ type GenericRequestOptions struct {
 	// Namespace is the name of the namespace to fetch resources from. Set only
 	// when fetching resources in a single namespace and namespaced resources.
 	Namespace string
+
+	// DropFields is a list of fields to drop from the response
+	DropFields []string
 }
 
 // NewGenericClient returns a new instance of a Generic client configured to
@@ -78,9 +83,40 @@ func (c *Generic[T, ListT]) Get(ctx context.Context, options *GenericRequestOpti
 		r = r.Name(options.Name)
 	}
 
-	err := r.Do(ctx).Into(result)
+	// DoRaw allows us to mutate the response if we're dropping fields
+	jsonBody, err := r.DoRaw(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting %T: %w", result, err)
+	}
+
+	if len(options.DropFields) > 0 {
+		// parse the JSON for processing in gabs
+		container, err := gabs.ParseJSON(jsonBody)
+		if err != nil {
+			return fmt.Errorf("failed to parse generated json for resource: %s", err)
+		}
+
+		// craft a new object containing only selected fields
+		for _, v := range options.DropFields {
+			// also support JSONPointers for keys containing '.' chars
+			pathComponents, err := gabs.JSONPointerToSlice(v)
+			if err != nil {
+				return fmt.Errorf("invalid JSONPointer: %s", v)
+			}
+			if container.Exists(pathComponents...) {
+				err := container.Delete(pathComponents...)
+				if err != nil {
+					return fmt.Errorf("failed to delete field: %s", err)
+				}
+			}
+		}
+
+		jsonBody = container.Bytes()
+	}
+
+	err = json.Unmarshal(jsonBody, result)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal resource: %s", err)
 	}
 
 	return nil
@@ -95,9 +131,48 @@ func (c *Generic[T, ListT]) List(ctx context.Context, options *GenericRequestOpt
 		r = r.Namespace(options.Namespace)
 	}
 
-	err := r.Do(ctx).Into(result)
+	jsonBody, err := r.DoRaw(ctx)
 	if err != nil {
 		return fmt.Errorf("error listing %T: %w", result, err)
+	}
+
+	if len(options.DropFields) > 0 {
+
+		// parse the JSON for processing in gabs
+		container, err := gabs.ParseJSON(jsonBody)
+		if err != nil {
+			return fmt.Errorf("failed to parse generated json for resource: %s", err)
+		}
+
+		var items []interface{}
+		for _, i := range container.Search("items").Children() {
+			for _, v := range options.DropFields {
+				// also support JSONPointers for keys containing '.' chars
+				pathComponents, err := gabs.JSONPointerToSlice(v)
+				if err != nil {
+					return fmt.Errorf("invalid JSONPointer: %s", v)
+				}
+				if i.Exists(pathComponents...) {
+					err := i.Delete(pathComponents...)
+					if err != nil {
+						return fmt.Errorf("failed to delete field: %s", err)
+					}
+				}
+			}
+			items = append(items, i.Data())
+		}
+
+		_, err = container.Set(items, "items")
+		if err != nil {
+			return fmt.Errorf("failed to update filtered items: %s", err)
+		}
+
+		jsonBody = container.Bytes()
+	}
+
+	err = json.Unmarshal(jsonBody, result)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal resource: %s", err)
 	}
 
 	return nil
