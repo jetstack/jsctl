@@ -88,7 +88,8 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 			// if the flag is not found, we still want to check that the owner
 			// references are not present. It can take some time for
 			// cert-manager to remove them, even if cert-manager is running.
-
+			// Older versions of cert-manager do not remove the ownerReferences
+			// when the flag is unset.
 			secretsClient, err := clients.NewGenericClient[*corev1.Secret, *corev1.SecretList](
 				&clients.GenericClientOptions{
 					RestConfig: kubeCfg,
