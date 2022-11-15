@@ -147,7 +147,7 @@ Next Steps:
 					newSecret := secret.DeepCopy()
 					newSecret.OwnerReferences = []metav1.OwnerReference{}
 
-					for _, ownerRef := range newSecret.OwnerReferences {
+					for _, ownerRef := range secret.OwnerReferences {
 						if ownerRef.Kind != "Certificate" {
 							newSecret.OwnerReferences = append(newSecret.OwnerReferences, ownerRef)
 							break

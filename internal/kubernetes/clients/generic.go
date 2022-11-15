@@ -125,7 +125,7 @@ func (c *Generic[T, ListT]) Present(ctx context.Context, options *GenericRequest
 }
 
 func (c *Generic[T, ListT]) Patch(ctx context.Context, options *GenericRequestOptions, patch []byte) error {
-	r := c.restClient.Patch(types.MergePatchType).Body(patch).Resource(c.resource)
+	r := c.restClient.Patch(types.StrategicMergePatchType).Body(patch).Resource(c.resource)
 
 	if options.Namespace != "" {
 		r = r.Namespace(options.Namespace)
