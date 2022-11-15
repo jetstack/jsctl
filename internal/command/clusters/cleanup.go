@@ -83,7 +83,7 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 				return nil
 			}
 
-			fmt.Fprintf(os.Stderr, "Checking for ownerReferences on secrets...\n")
+			fmt.Fprintf(os.Stderr, "Checking for ownerReferences on secrets containing the issued certificates...\n")
 
 			// if the flag is not found, we still want to check that the owner
 			// references are not present. It can take some time for
