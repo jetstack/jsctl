@@ -21,7 +21,7 @@ import (
 func CleanUp(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cleanup",
-		Short: "Contains commands to prepare cluster for uninstallation of Jetstack Secure software",
+		Short: "Contains commands to prepare a cluster for the uninstallation of Jetstack Secure software",
 	}
 
 	cmd.AddCommand(secrets(run, kubeConfigPath))
@@ -32,7 +32,7 @@ func CleanUp(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 func secrets(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "secrets",
-		Short: "Perform cleanup operations related to Kubernetes secrets",
+		Short: "Perform operations to ensure secrets with issued X.509 certificates are not deleted when Jetstack Secure software is uninstalled",
 	}
 
 	cmd.AddCommand(removeSecretOwnerReferences(run, kubeConfigPath))
