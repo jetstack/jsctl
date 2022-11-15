@@ -78,7 +78,7 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 			enableCertificateOwnerRefFlag := "enable-certificate-owner-ref"
 			if found, _ := certManagerStatus.GetControllerFlagValue(enableCertificateOwnerRefFlag); found {
 				fmt.Fprintf(os.Stderr, "cert-manager's Deployment has --%s flag set, this must be set to false or removed.\n\n", enableCertificateOwnerRefFlag)
-				fmt.Fprintf(os.Stderr, "If left set, the controller will re-add owner references to secrets, which will cause them to be deleted as part of the backup process when Certificates are removed from the cluster state. This will lead to reissueance of certificates on restore and could cause potential outages caused by CA rate limiting.\n\n")
+				fmt.Fprintf(os.Stderr, "If left set to true, cert-manager will re-add Certificate owner references to the secrets containing the issued certificates, which will cause the secrets to be garbage collected when Certificates are deleted as part of cert-manager uninstallation\n\n")
 				fmt.Fprintf(os.Stderr, "No cleanup action has been taken at this time\n")
 				return nil
 			}
