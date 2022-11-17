@@ -72,3 +72,34 @@ func TestBackup(t *testing.T) {
 
 	assert.Equal(t, string(expectedBackupYAML), string(backupYAML))
 }
+
+func TestBackup_LegacyAPIVersions(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		w.Header().Set("Content-Type", "application/json")
+
+		var data []byte
+		switch r.URL.Path {
+		case "/apis/apiextensions.k8s.io/v1/customresourcedefinitions":
+			data, err = os.ReadFile("fixtures/crd-list-unsupported.json")
+			require.NoError(t, err)
+		default:
+			t.Fatalf("unexpected request: %s", r.URL.Path)
+		}
+
+		w.Write(data)
+	}))
+
+	opts := ClusterBackupOptions{
+		RestConfig: &rest.Config{Host: server.URL},
+
+		FormatResources: true,
+
+		IncludeCertificates:               true,
+		IncludeCertificateRequestPolicies: true,
+		IncludeIssuers:                    true,
+	}
+
+	_, err := FetchClusterBackup(context.Background(), opts)
+	require.ErrorContains(t, err, "backup only supports cert-manager.io API version v1, found v2")
+}

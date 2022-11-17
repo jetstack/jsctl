@@ -15,6 +15,7 @@ import (
 	v1beta1googlecasissuer "github.com/jetstack/google-cas-issuer/api/v1beta1"
 	v1alpha1vei "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
 	v1beta1stepissuer "github.com/smallstep/step-issuer/api/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/yaml"
 
@@ -66,6 +67,29 @@ func FetchClusterBackup(ctx context.Context, opts ClusterBackupOptions) (*Cluste
 			"/metadata/managedFields",
 			"/status",
 			"/metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration",
+		}
+	}
+
+	// check that the cert-manager API versions are supported
+	crdClient, err := clients.NewCRDClient(opts.RestConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CRD client: %s", err)
+	}
+	var crds apiextensionsv1.CustomResourceDefinitionList
+	err = crdClient.List(ctx, &clients.GenericRequestOptions{}, &crds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list CRDs to determine the cert-manager API version in use: %s", err)
+	}
+	for _, crd := range crds.Items {
+		if crd.Spec.Group != "cert-manager.io" {
+			continue
+		}
+		if len(crd.Spec.Versions) == 0 {
+			return nil, fmt.Errorf("unexpectedly found no versions on cert-manager.io CRD %s", crd.Name)
+		}
+		// the first version in the list must be v1 as we expect v1 resources
+		if crd.Spec.Versions[0].Name != "v1" {
+			return nil, fmt.Errorf("backup only supports cert-manager.io API version v1, found %s", crd.Spec.Versions[0].Name)
 		}
 	}
 
