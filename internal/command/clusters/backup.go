@@ -60,7 +60,7 @@ func Backup(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 	flags.BoolVar(&formatResources, "format-resources", true, "if set, will remove some fields from resources such as status and metadata to allow them to be cleanly applied later")
 	flags.StringVar(&outputFormat, "format", "yaml", "output format, one of: yaml, json")
 
-	flags.BoolVar(&includeCertificates, "include-certificates", true, "if set, certificate resources will be included in the backup")
+	flags.BoolVar(&includeCertificates, "include-certificates", true, "if set, certificate resources will be included in the backup. Note: ingress-shim managed certificates are not included since they are automatically generated.")
 	flags.BoolVar(&includeIssuers, "include-issuers", true, "if set, issuer resources will be included in the backup")
 	flags.BoolVar(&includeCertificateRequestPolicies, "include-certificate-request-policies", true, "if set, certificate request policy resources will be included in the backup")
 
