@@ -95,24 +95,23 @@ func removeSecretOwnerReferences(run types.RunFunc, kubeConfigPath string) *cobr
 
 			var certManagerStatus components.CertManagerStatus
 			found, err := certManagerStatus.Match(&md)
-
-			if !found {
-				fmt.Fprintf(os.Stderr, "cert-manager not found, nothing to do\n")
-				return nil
+			if err != nil {
+				return fmt.Errorf("error matching cert-manager status: %s", err)
 			}
-
-			enableCertificateOwnerRefFlag := "enable-certificate-owner-ref"
-			if found, value := certManagerStatus.GetControllerFlagValue(enableCertificateOwnerRefFlag); found && value != "false" {
-				fmt.Fprintf(os.Stderr, "cert-manager's Deployment has --%s flag set, this must be set to false or removed.\n\n", enableCertificateOwnerRefFlag)
-				fmt.Fprintf(os.Stderr, "If left set to true, cert-manager will re-add Certificate owner references to the secrets containing the issued certificates, which will cause the secrets to be garbage collected when Certificates are deleted as part of cert-manager uninstallation\n\n")
-				fmt.Fprintf(os.Stderr, "No cleanup action has been taken at this time\n")
-				fmt.Fprintf(os.Stderr, `
+			if found {
+				enableCertificateOwnerRefFlag := "enable-certificate-owner-ref"
+				if found, value := certManagerStatus.GetControllerFlagValue(enableCertificateOwnerRefFlag); found && value != "false" {
+					fmt.Fprintf(os.Stderr, "cert-manager's Deployment has --%s flag set, this must be set to false or removed.\n\n", enableCertificateOwnerRefFlag)
+					fmt.Fprintf(os.Stderr, "If left set to true, cert-manager will re-add Certificate owner references to the secrets containing the issued certificates, which will cause the secrets to be garbage collected when Certificates are deleted as part of cert-manager uninstallation\n\n")
+					fmt.Fprintf(os.Stderr, "No cleanup action has been taken at this time\n")
+					fmt.Fprintf(os.Stderr, `
 Next Steps:
 
 1) Unset the --%s flag on the cert-manager Deployment ensuring that the deployment is rolled out and the cert-manager pods are updated with the new args
 2) Run this command again to remove the Certificate owner references from the secrets before uninstalling cert-manager
 `, enableCertificateOwnerRefFlag)
-				return nil
+					return nil
+				}
 			}
 
 			fmt.Fprintf(os.Stderr, "Checking for ownerReferences on secrets containing the issued certificates...\n")
@@ -194,7 +193,7 @@ Next Steps:
 			}
 
 			fmt.Fprintf(os.Stderr, "Found %d secrets with ownerReferences to Certificate resources\n", count)
-			fmt.Fprintf(os.Stderr, "Would you like to update the owner references of %d secrets?\n", count)
+			fmt.Fprintf(os.Stderr, "Would you like to update the owner references of %d secrets? (yes)\n", count)
 			fmt.Fprintf(os.Stderr, "> ")
 			reader := bufio.NewReader(os.Stdin)
 			response, err := reader.ReadString('\n')
