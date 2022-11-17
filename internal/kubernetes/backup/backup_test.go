@@ -60,7 +60,6 @@ func TestBackup(t *testing.T) {
 		FormatResources: true,
 
 		IncludeCertificates:               true,
-		IncludeIngressCertificates:        true,
 		IncludeCertificateRequestPolicies: true,
 		IncludeIssuers:                    true,
 	}

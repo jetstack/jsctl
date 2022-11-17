@@ -20,8 +20,6 @@ func Backup(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 	var includeIssuers bool
 	var includeCertificateRequestPolicies bool
 
-	var skipIngressCerts bool
-
 	cmd := &cobra.Command{
 		Use:   "backup",
 		Short: "This command outputs the YAML data of Jetstack Secure relevant resources in the cluster",
@@ -38,7 +36,6 @@ func Backup(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 				FormatResources: formatResources,
 
 				IncludeCertificates:               includeCertificates,
-				IncludeIngressCertificates:        !skipIngressCerts,
 				IncludeIssuers:                    includeIssuers,
 				IncludeCertificateRequestPolicies: includeCertificateRequestPolicies,
 			}
@@ -66,7 +63,6 @@ func Backup(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 	flags.BoolVar(&includeCertificates, "include-certificates", true, "if set, certificate resources will be included in the backup")
 	flags.BoolVar(&includeIssuers, "include-issuers", true, "if set, issuer resources will be included in the backup")
 	flags.BoolVar(&includeCertificateRequestPolicies, "include-certificate-request-policies", true, "if set, certificate request policy resources will be included in the backup")
-	flags.BoolVar(&skipIngressCerts, "skip-ingress-certs", true, "if set, certificates created by ingress-shim will be skipped")
 
 	return cmd
 }

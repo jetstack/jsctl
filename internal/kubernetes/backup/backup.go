@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	v1alpha1kmsissuer "github.com/Skyscanner/kms-issuer/apis/certmanager/v1alpha1"
@@ -30,7 +31,6 @@ type ClusterBackupOptions struct {
 	FormatResources bool
 
 	IncludeCertificates               bool
-	IncludeIngressCertificates        bool
 	IncludeIssuers                    bool
 	IncludeCertificateRequestPolicies bool
 }
@@ -92,11 +92,12 @@ func FetchClusterBackup(ctx context.Context, opts ClusterBackupOptions) (*Cluste
 		return &ClusterBackup{}, fmt.Errorf("failed to list certificates: %w", err)
 	}
 	for _, c := range certificates.Items {
-		// if we're not including ingress certificates, skip them
+		// we do not include ingress certs, skip them
 		skip := false
-		if !opts.IncludeIngressCertificates && len(c.OwnerReferences) > 0 {
+		if len(c.OwnerReferences) > 0 {
 			for _, owner := range c.OwnerReferences {
 				if owner.Kind == "Ingress" {
+					fmt.Fprintf(os.Stderr, "skipping ingress-shim managed certificate %s/%s\n", c.Namespace, c.Name)
 					skip = true
 					break
 				}
