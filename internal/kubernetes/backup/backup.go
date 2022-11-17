@@ -108,6 +108,8 @@ func FetchClusterBackup(ctx context.Context, opts ClusterBackupOptions) (*Cluste
 	}
 
 	// fetch certificate request policies
+	// Note: this back up data is not used in the migration to an operator managed installation.
+	// These resourcse are only included for disaster recovery purposes.
 	certificateRequestPolicyClient, err := clients.NewCertificateRequestPolicyClient(opts.RestConfig)
 	if err != nil {
 		return &ClusterBackup{}, fmt.Errorf("failed to create client for certificate request policies: %w", err)
