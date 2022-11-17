@@ -21,13 +21,13 @@ import (
 )
 
 // CleanUp returns a new command that wraps cluster clean up commands
-func CleanUp(run types.RunFunc, kubeConfigPath string) *cobra.Command {
+func CleanUp(run types.RunFunc, kubeConfigPath *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cleanup",
 		Short: "Contains commands to prepare a cluster for the uninstallation of Jetstack Secure software",
 	}
 
-	cmd.AddCommand(secrets(run, kubeConfigPath))
+	cmd.AddCommand(secrets(run, *kubeConfigPath))
 
 	return cmd
 }

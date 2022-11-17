@@ -20,9 +20,9 @@ func Clusters() *cobra.Command {
 		clusters.Delete(run, &apiURL),
 		clusters.View(run, &apiURL),
 		clusters.Status(run, &kubeConfig),
-		clusters.Backup(run, &kubeConfig),
-		// TODO cleanup is currently experimental
+		// TODO these commands are currently experimental
 		// clusters.CleanUp(run, kubeConfig),
+		// clusters.Backup(run, kubeConfig),
 	)
 
 	return cmd
