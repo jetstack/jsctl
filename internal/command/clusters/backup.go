@@ -13,7 +13,7 @@ import (
 	"github.com/jetstack/jsctl/internal/kubernetes/clients"
 )
 
-func Backup(run types.RunFunc, kubeConfigPath string) *cobra.Command {
+func Backup(run types.RunFunc, kubeConfigPath *string) *cobra.Command {
 	var formatResources bool
 	var outputFormat string
 
@@ -26,7 +26,7 @@ func Backup(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 		Short: "This command outputs the YAML data of Jetstack Secure relevant resources in the cluster",
 		Args:  cobra.MatchAll(cobra.ExactArgs(0)),
 		Run: run(func(ctx context.Context, args []string) error {
-			kubeCfg, err := kubernetes.NewConfig(kubeConfigPath)
+			kubeCfg, err := kubernetes.NewConfig(*kubeConfigPath)
 			if err != nil {
 				return err
 			}
