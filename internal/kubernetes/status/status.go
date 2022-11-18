@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	v1alpha1kmsissuer "github.com/Skyscanner/kms-issuer/apis/certmanager/v1alpha1"
-	v1beta1awspcaissuer "github.com/cert-manager/aws-privateca-issuer/pkg/api/v1beta1"
-	v1certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	v1origincaissuer "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
-	v1beta1googlecasissuer "github.com/jetstack/google-cas-issuer/api/v1beta1"
-	v1alpha1vei "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
-	v1beta1stepissuer "github.com/smallstep/step-issuer/api/v1beta1"
-	v1core "k8s.io/api/core/v1"
-	v1networking "k8s.io/api/networking/v1"
-	v1apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kmsissuerv1alpha1 "github.com/Skyscanner/kms-issuer/apis/certmanager/v1alpha1"
+	awspcaissuerv1beta1 "github.com/cert-manager/aws-privateca-issuer/pkg/api/v1beta1"
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	origincaissuerv1 "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
+	googlecasissuerv1beta1 "github.com/jetstack/google-cas-issuer/api/v1beta1"
+	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
+	stepissuerv1beta1 "github.com/smallstep/step-issuer/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 
 	"github.com/jetstack/jsctl/internal/kubernetes/clients"
@@ -95,17 +95,17 @@ func GatherClusterStatus(ctx context.Context, cfg *rest.Config) (*ClusterStatus,
 
 	// gather the namespaces in the cluster and list only the ones related to
 	// Jetstack Secure
-	namespaceClient, err := clients.NewGenericClient[*v1core.Namespace, *v1core.NamespaceList](
+	namespaceClient, err := clients.NewGenericClient[*corev1.Namespace, *corev1.NamespaceList](
 		&clients.GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1core.GroupName,
-			Version:    v1core.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "namespaces",
 		},
 	)
 
-	var namespaces v1core.NamespaceList
+	var namespaces corev1.NamespaceList
 	err = namespaceClient.List(ctx, &clients.GenericRequestOptions{}, &namespaces)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list namespaces: %s", err)
@@ -128,7 +128,7 @@ func GatherClusterStatus(ctx context.Context, cfg *rest.Config) (*ClusterStatus,
 		"jetstack.io",
 	}
 
-	var crdList v1apiextensions.CustomResourceDefinitionList
+	var crdList apiextensionsv1.CustomResourceDefinitionList
 
 	err = crdClient.List(ctx, &clients.GenericRequestOptions{}, &crdList)
 	if err != nil {
@@ -147,16 +147,16 @@ func GatherClusterStatus(ctx context.Context, cfg *rest.Config) (*ClusterStatus,
 	}
 
 	// gather ingress shim ingresses, based on their annotations
-	ingressClient, err := clients.NewGenericClient[*v1networking.Ingress, *v1networking.IngressList](
+	ingressClient, err := clients.NewGenericClient[*networkingv1.Ingress, *networkingv1.IngressList](
 		&clients.GenericClientOptions{
 			RestConfig: cfg,
-			Group:      v1networking.GroupName,
-			Version:    v1networking.SchemeGroupVersion.Version,
+			Group:      networkingv1.GroupName,
+			Version:    networkingv1.SchemeGroupVersion.Version,
 			Kind:       "ingresses",
 		},
 	)
 
-	var ingresses v1networking.IngressList
+	var ingresses networkingv1.IngressList
 	err = ingressClient.List(ctx, &clients.GenericRequestOptions{}, &ingresses)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list ingresses: %s", err)
@@ -194,17 +194,17 @@ func GatherClusterStatus(ctx context.Context, cfg *rest.Config) (*ClusterStatus,
 	}
 
 	// gather pods and identify the relevant installed components
-	podClient, err := clients.NewGenericClient[*v1core.Pod, *v1core.PodList](
+	podClient, err := clients.NewGenericClient[*corev1.Pod, *corev1.PodList](
 		&clients.GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1core.GroupName,
-			Version:    v1core.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
 
-	var pods v1core.PodList
+	var pods corev1.PodList
 	err = podClient.List(ctx, &clients.GenericRequestOptions{}, &pods)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods: %s", err)
@@ -246,14 +246,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create clusterissuer client: %s", err)
 			}
-			var issuers v1certmanager.IssuerList
+			var issuers certmanagerv1.IssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list clusterissuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1certmanager.SchemeGroupVersion.String(),
+					APIVersion: certmanagerv1.SchemeGroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -264,14 +264,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create clusterissuer client: %s", err)
 			}
-			var clusterIssuers v1certmanager.ClusterIssuerList
+			var clusterIssuers certmanagerv1.ClusterIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &clusterIssuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list clusterissuers: %s", err)
 			}
 			for _, issuer := range clusterIssuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1certmanager.SchemeGroupVersion.String(),
+					APIVersion: certmanagerv1.SchemeGroupVersion.String(),
 					Name:       issuer.Name,
 					Kind:       issuer.Kind,
 				})
@@ -281,14 +281,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cas client: %s", err)
 			}
-			var issuers v1beta1googlecasissuer.GoogleCASIssuerList
+			var issuers googlecasissuerv1beta1.GoogleCASIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list cas issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1beta1googlecasissuer.GroupVersion.String(),
+					APIVersion: googlecasissuerv1beta1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -299,14 +299,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cas cluster issuer client: %s", err)
 			}
-			var issuers v1beta1googlecasissuer.GoogleCASClusterIssuerList
+			var issuers googlecasissuerv1beta1.GoogleCASClusterIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list cas cluster issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1beta1googlecasissuer.GroupVersion.String(),
+					APIVersion: googlecasissuerv1beta1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Kind:       issuer.Kind,
 				})
@@ -316,14 +316,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create aws pca issuer client: %s", err)
 			}
-			var issuers v1beta1awspcaissuer.AWSPCAIssuerList
+			var issuers awspcaissuerv1beta1.AWSPCAIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list pca issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1beta1awspcaissuer.GroupVersion.String(),
+					APIVersion: awspcaissuerv1beta1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -334,14 +334,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create aws pca cluster issuer client: %s", err)
 			}
-			var issuers v1beta1awspcaissuer.AWSPCAClusterIssuerList
+			var issuers awspcaissuerv1beta1.AWSPCAClusterIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list pca cluster issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1beta1awspcaissuer.GroupVersion.String(),
+					APIVersion: awspcaissuerv1beta1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Kind:       issuer.Kind,
 				})
@@ -351,14 +351,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create kms issuer client: %s", err)
 			}
-			var issuers v1alpha1kmsissuer.KMSIssuerList
+			var issuers kmsissuerv1alpha1.KMSIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list kms issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1alpha1kmsissuer.GroupVersion.String(),
+					APIVersion: kmsissuerv1alpha1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -369,14 +369,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create venafi enhanced issuer client: %s", err)
 			}
-			var issuers v1alpha1vei.VenafiIssuerList
+			var issuers veiv1alpha1.VenafiIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list venafi issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1alpha1kmsissuer.GroupVersion.String(),
+					APIVersion: kmsissuerv1alpha1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -387,14 +387,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create venafi enhanced cluster issuer client: %s", err)
 			}
-			var issuers v1alpha1vei.VenafiClusterIssuerList
+			var issuers veiv1alpha1.VenafiClusterIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list venafi cluster issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1alpha1kmsissuer.GroupVersion.String(),
+					APIVersion: kmsissuerv1alpha1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Kind:       issuer.Kind,
 				})
@@ -404,14 +404,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create origin ca issuer client: %s", err)
 			}
-			var issuers v1origincaissuer.OriginIssuerList
+			var issuers origincaissuerv1.OriginIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list origin ca issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1alpha1kmsissuer.GroupVersion.String(),
+					APIVersion: kmsissuerv1alpha1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -422,14 +422,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create smallstep issuer client: %s", err)
 			}
-			var issuers v1beta1stepissuer.StepIssuerList
+			var issuers stepissuerv1beta1.StepIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list smallstep issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1beta1stepissuer.GroupVersion.String(),
+					APIVersion: stepissuerv1beta1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -440,14 +440,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create smallstep cluster issuer client: %s", err)
 			}
-			var issuers v1beta1stepissuer.StepClusterIssuerList
+			var issuers stepissuerv1beta1.StepClusterIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list smallstep cluster issuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: v1beta1stepissuer.GroupVersion.String(),
+					APIVersion: stepissuerv1beta1.GroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,

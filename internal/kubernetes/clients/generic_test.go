@@ -2,6 +2,8 @@ package clients
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -10,8 +12,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1core "k8s.io/api/core/v1"
-	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/rest"
 )
 
@@ -31,18 +35,18 @@ func TestGeneric_Get(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1core.Pod, *v1core.PodList](
+	client, err := NewGenericClient[*corev1.Pod, *corev1.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1core.GroupName,
-			Version:    v1core.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
 	require.NoError(t, err)
 
-	var result v1core.Pod
+	var result corev1.Pod
 
 	err = client.Get(ctx, &GenericRequestOptions{Name: "test-pod", Namespace: "test-namespace"}, &result)
 	require.NoError(t, err)
@@ -67,16 +71,16 @@ func TestGeneric_Get_ClusterScope(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList](
+	client, err := NewGenericClient[*apiextensionsv1.CustomResourceDefinition, *apiextensionsv1.CustomResourceDefinitionList](
 		&GenericClientOptions{
 			RestConfig: cfg,
-			Group:      v1extensions.GroupName,
-			Version:    v1extensions.SchemeGroupVersion.Version,
+			Group:      apiextensionsv1.GroupName,
+			Version:    apiextensionsv1.SchemeGroupVersion.Version,
 			Kind:       "customresourcedefinitions",
 		},
 	)
 
-	var result v1extensions.CustomResourceDefinition
+	var result apiextensionsv1.CustomResourceDefinition
 	err = client.Get(ctx, &GenericRequestOptions{Name: "crd-name"}, &result)
 	require.NoError(t, err)
 
@@ -101,18 +105,18 @@ func TestGeneric_List(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1core.Pod, *v1core.PodList](
+	client, err := NewGenericClient[*corev1.Pod, *corev1.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
 			APIPath:    "/api/",
-			Group:      v1core.GroupName,
-			Version:    v1core.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
 	require.NoError(t, err)
 
-	var result v1core.PodList
+	var result corev1.PodList
 
 	err = client.List(ctx, &GenericRequestOptions{Namespace: "jetstack-secure"}, &result)
 	require.NoError(t, err)
@@ -141,16 +145,16 @@ func TestGeneric_List_ClusterScope(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList](
+	client, err := NewGenericClient[*apiextensionsv1.CustomResourceDefinition, *apiextensionsv1.CustomResourceDefinitionList](
 		&GenericClientOptions{
 			RestConfig: cfg,
-			Group:      v1extensions.GroupName,
-			Version:    v1extensions.SchemeGroupVersion.Version,
+			Group:      apiextensionsv1.GroupName,
+			Version:    apiextensionsv1.SchemeGroupVersion.Version,
 			Kind:       "customresourcedefinitions",
 		},
 	)
 
-	var result v1extensions.CustomResourceDefinitionList
+	var result apiextensionsv1.CustomResourceDefinitionList
 	err = client.List(ctx, &GenericRequestOptions{}, &result)
 	require.NoError(t, err)
 
@@ -177,11 +181,11 @@ func TestGeneric_Present(t *testing.T) {
 		Host: server.URL,
 	}
 
-	client, err := NewGenericClient[*v1core.Pod, *v1core.PodList](
+	client, err := NewGenericClient[*corev1.Pod, *corev1.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
-			Group:      v1core.GroupName,
-			Version:    v1core.SchemeGroupVersion.Version,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "pods",
 		},
 	)
@@ -195,4 +199,75 @@ func TestGeneric_Present(t *testing.T) {
 	present, err = client.Present(ctx, &GenericRequestOptions{Name: "cainjector-545d764f69-xqmzh", Namespace: "jetstack-secure"})
 	require.NoError(t, err)
 	assert.True(t, present)
+}
+
+func TestGeneric_Update(t *testing.T) {
+	ctx := context.Background()
+
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		require.Equal(t, "PATCH", r.Method)
+		require.Equal(t, "/apis/v1/namespaces/jetstack-secure/secrets/test", r.URL.Path)
+		bodyBytes, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.Equal(t, `{"stringData":{"foo":"bar"}}`, string(bodyBytes))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+    "apiVersion": "v1",
+    "data": {
+        "key": "dmFsdWU="
+    },
+    "kind": "Secret",
+    "metadata": {
+        "name": "test",
+        "namespace": "jetstack-secure",
+    },
+    "type": "Opaque"
+}`))
+	}))
+
+	cfg := &rest.Config{
+		Host: server.URL,
+	}
+
+	client, err := NewGenericClient[*corev1.Secret, *corev1.Secret](
+		&GenericClientOptions{
+			RestConfig: cfg,
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
+			Kind:       "secrets",
+		},
+	)
+	require.NoError(t, err)
+
+	original, err := json.Marshal(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "jetstack-secure",
+		},
+		StringData: map[string]string{
+			"key": "value",
+		},
+	})
+	require.NoError(t, err)
+	updated, err := json.Marshal(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "jetstack-secure",
+		},
+		StringData: map[string]string{
+			"key": "value",
+			"foo": "bar",
+		},
+	})
+	require.NoError(t, err)
+
+	patch, err := strategicpatch.CreateTwoWayMergePatch(original, updated, corev1.Secret{})
+	require.NoError(t, err)
+
+	err = client.Patch(ctx, &GenericRequestOptions{Name: "test", Namespace: "jetstack-secure"}, patch)
+	require.NoError(t, err)
+	require.True(t, called)
 }

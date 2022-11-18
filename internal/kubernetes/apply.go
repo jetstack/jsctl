@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -91,7 +91,7 @@ func (k *KubeConfigApplier) Apply(ctx context.Context, r io.Reader) error {
 
 		client := k.client.Resource(mapping.Resource).Namespace(object.GetNamespace())
 
-		_, err = client.Create(ctx, object, v1.CreateOptions{})
+		_, err = client.Create(ctx, object, metav1.CreateOptions{})
 		if errors.IsAlreadyExists(err) {
 			data, err := runtime.Encode(unstructured.UnstructuredJSONScheme, object)
 			if err != nil {
@@ -100,7 +100,7 @@ func (k *KubeConfigApplier) Apply(ctx context.Context, r io.Reader) error {
 
 			force := true
 
-			_, err = client.Patch(ctx, object.GetName(), types.ApplyPatchType, data, v1.PatchOptions{
+			_, err = client.Patch(ctx, object.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
 				FieldManager: fieldManager,
 				Force:        &force,
 			})

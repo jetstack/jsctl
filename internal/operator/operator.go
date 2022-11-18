@@ -15,11 +15,11 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver"
-	v1certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	v1certmanagermeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	v1alpha1operator "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
-	v1core "k8s.io/api/core/v1"
-	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/jetstack/jsctl/internal/prompt"
@@ -208,32 +208,32 @@ type (
 // ApplyInstallationYAML generates a YAML bundle that describes the kubernetes manifest for the operator's Installation
 // custom resource. The ApplyInstallationYAMLOptions specify additional options used to configure the installation.
 func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyInstallationYAMLOptions) error {
-	apiVersion, kind := v1alpha1operator.InstallationGVK.ToAPIVersionAndKind()
+	apiVersion, kind := operatorv1alpha1.InstallationGVK.ToAPIVersionAndKind()
 
-	installation := &v1alpha1operator.Installation{
-		TypeMeta: v1meta.TypeMeta{
+	installation := &operatorv1alpha1.Installation{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       kind,
 			APIVersion: apiVersion,
 		},
-		ObjectMeta: v1meta.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "installation",
 		},
-		Spec: v1alpha1operator.InstallationSpec{
+		Spec: operatorv1alpha1.InstallationSpec{
 			Registry: options.ImageRegistry,
-			CertManager: &v1alpha1operator.CertManager{
-				Controller: &v1alpha1operator.CertManagerControllerConfig{
+			CertManager: &operatorv1alpha1.CertManager{
+				Controller: &operatorv1alpha1.CertManagerControllerConfig{
 					ReplicaCount: &options.CertManagerReplicas,
 				},
-				Webhook: &v1alpha1operator.CertManagerWebhookConfig{
+				Webhook: &operatorv1alpha1.CertManagerWebhookConfig{
 					ReplicaCount: &options.CertManagerReplicas,
 				},
 			},
-			ApproverPolicy: &v1alpha1operator.ApproverPolicy{},
+			ApproverPolicy: &operatorv1alpha1.ApproverPolicy{},
 		},
 	}
 	manifestTemplates := &manifests{
 		installation: installation,
-		secrets:      make([]*v1core.Secret, 0),
+		secrets:      make([]*corev1.Secret, 0),
 	}
 
 	if err := applyIstioCSRToInstallation(manifestTemplates, options); err != nil {
@@ -312,8 +312,8 @@ func applyCertDiscoveryVenafiManifests(mf *manifests, options ApplyInstallationY
 }
 
 type manifests struct {
-	installation *v1alpha1operator.Installation
-	secrets      []*v1core.Secret
+	installation *operatorv1alpha1.Installation
+	secrets      []*corev1.Secret
 }
 
 func marshalManifests(mf *manifests) (io.Reader, error) {
@@ -362,18 +362,18 @@ func applyCertManagerVersion(manifestTemplates *manifests, options ApplyInstalla
 
 func applyCSIDriversToInstallation(manifests *manifests, options ApplyInstallationYAMLOptions) {
 	var assign bool
-	var drivers v1alpha1operator.CSIDrivers
+	var drivers operatorv1alpha1.CSIDrivers
 
 	// The validating webhook will reject installation.Spec.CSIDrivers being non-null if there is not at least one
 	// CSI driver enabled. So we check each option and set a boolean to know if we should instantiate it.
 	if options.InstallCSIDriver {
 		assign = true
-		drivers.CertManager = &v1alpha1operator.CSIDriverCertManager{}
+		drivers.CertManager = &operatorv1alpha1.CSIDriverCertManager{}
 	}
 
 	if options.InstallSpiffeCSIDriver {
 		assign = true
-		drivers.CertManagerSpiffe = &v1alpha1operator.CSIDriverCertManagerSpiffe{
+		drivers.CertManagerSpiffe = &operatorv1alpha1.CSIDriverCertManagerSpiffe{
 			ReplicaCount: &options.SpiffeCSIDriverReplicas,
 		}
 	}
@@ -388,7 +388,7 @@ func applyIstioCSRToInstallation(manifests *manifests, options ApplyInstallation
 		return nil
 	}
 
-	manifests.installation.Spec.IstioCSR = &v1alpha1operator.IstioCSR{
+	manifests.installation.Spec.IstioCSR = &operatorv1alpha1.IstioCSR{
 		ReplicaCount: &options.IstioCSRReplicas,
 	}
 
@@ -396,10 +396,10 @@ func applyIstioCSRToInstallation(manifests *manifests, options ApplyInstallation
 		return nil
 	}
 
-	manifests.installation.Spec.IstioCSR.IssuerRef = &v1certmanagermeta.ObjectReference{
+	manifests.installation.Spec.IstioCSR.IssuerRef = &certmanagermetav1.ObjectReference{
 		Name:  options.IstioCSRIssuer,
-		Kind:  v1certmanager.IssuerKind,
-		Group: v1certmanager.SchemeGroupVersion.Group,
+		Kind:  certmanagerv1.IssuerKind,
+		Group: certmanagerv1.SchemeGroupVersion.Group,
 	}
 
 	return nil
@@ -414,7 +414,7 @@ func applyVenafiOauthHelperToInstallation(manifests *manifests, options ApplyIns
 	if options.RegistryCredentials != "" || options.RegistryCredentialsPath != "" {
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
-	manifests.installation.Spec.VenafiOauthHelper = &v1alpha1operator.VenafiOauthHelper{
+	manifests.installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{
 		ImagePullSecrets: imagePullSecrets,
 	}
 
@@ -431,19 +431,19 @@ func applyApproverPolicyEnterpriseToInstallation(manifests *manifests, options A
 	if options.RegistryCredentials != "" || options.RegistryCredentialsPath != "" {
 		imagePullSecrets = []string{"jse-gcr-creds"}
 	}
-	manifests.installation.Spec.ApproverPolicyEnterprise = &v1alpha1operator.ApproverPolicyEnterprise{
+	manifests.installation.Spec.ApproverPolicyEnterprise = &operatorv1alpha1.ApproverPolicyEnterprise{
 		ImagePullSecrets: imagePullSecrets,
 	}
 
 	return nil
 }
 
-func applyImagePullSecrets(installation *v1alpha1operator.Installation, options ApplyInstallationYAMLOptions) error {
+func applyImagePullSecrets(installation *operatorv1alpha1.Installation, options ApplyInstallationYAMLOptions) error {
 	if !options.InstallVenafiOauthHelper {
 		return nil
 	}
 
-	installation.Spec.VenafiOauthHelper = &v1alpha1operator.VenafiOauthHelper{}
+	installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{}
 
 	return nil
 }

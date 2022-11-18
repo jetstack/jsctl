@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCertManagerCSIDriver(t *testing.T) {
@@ -15,7 +15,7 @@ func TestCertManagerCSIDriver(t *testing.T) {
 	data, err := os.ReadFile("fixtures/cert-manager-csi-driver.json")
 	require.NoError(t, err)
 
-	var pod v1core.Pod
+	var pod corev1.Pod
 
 	err = json.Unmarshal(data, &pod)
 	require.NoError(t, err)
@@ -23,7 +23,7 @@ func TestCertManagerCSIDriver(t *testing.T) {
 	var status CertManagerCSIDriverStatus
 
 	md := &MatchData{
-		Pods: []v1core.Pod{pod},
+		Pods: []corev1.Pod{pod},
 	}
 
 	found, err := status.Match(md)

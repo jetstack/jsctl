@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/jetstack/jsctl/internal/client"
+	internalerrors "github.com/jetstack/jsctl/internal/command/errors"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/kubernetes"
 	"github.com/jetstack/jsctl/internal/kubernetes/clients"
@@ -78,7 +79,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				return fmt.Errorf("error validating provided flags: %w", err)
 			}
 
-			if stdout {
+			if useStdout {
 				applier = kubernetes.NewStdOutApplier()
 			} else {
 				applier, err = kubernetes.NewKubeConfigApplier(kubeConfig)
@@ -91,7 +92,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 			if registryCredentialsPath == "" && autoFetchRegistryCredentials {
 				cnf, ok := config.FromContext(ctx)
 				if !ok || cnf.Organization == "" {
-					return errNoOrganizationName
+					return internalerrors.ErrNoOrganizationName
 				}
 
 				http := client.New(ctx, apiURL)
@@ -232,7 +233,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 			if registryCredentialsPath == "" && autoFetchRegistryCredentials {
 				cnf, ok := config.FromContext(ctx)
 				if !ok || cnf.Organization == "" {
-					return errNoOrganizationName
+					return internalerrors.ErrNoOrganizationName
 				}
 
 				http := client.New(ctx, apiURL)
@@ -295,7 +296,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 			options.CertDiscoveryVenafi = cdv
 
 			var applier operator.Applier
-			if stdout {
+			if useStdout {
 				applier = kubernetes.NewStdOutApplier()
 			} else {
 				// before starting the application of the installation instance,
@@ -383,7 +384,7 @@ func operatorInstallationStatus() *cobra.Command {
 		Short: "Output the status of all operator components",
 		Args:  cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
-			if stdout {
+			if useStdout {
 				return fmt.Errorf("cannot use --stdout flag with status command. When using --stdout, jsctl does not connect to kubernetes")
 			}
 

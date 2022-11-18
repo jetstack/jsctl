@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	v1core "k8s.io/api/core/v1"
-	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/jetstack/jsctl/internal/docker"
 )
@@ -44,7 +44,7 @@ func DockerConfigJSON(keyData string) ([]byte, error) {
 
 // ImagePullSecret returns a Kubernetes Secret resource that can be used to pull images from the Jetstack Secure
 // The keyData parameter should contain the JSON Google Service account to use in the secret.
-func ImagePullSecret(keyData string) (*v1core.Secret, error) {
+func ImagePullSecret(keyData string) (*corev1.Secret, error) {
 	configJSON, err := DockerConfigJSON(keyData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate docker config: %w", err)
@@ -55,18 +55,18 @@ func ImagePullSecret(keyData string) (*v1core.Secret, error) {
 		namespace  = "jetstack-secure"
 	)
 
-	secret := &v1core.Secret{
-		TypeMeta: v1meta.TypeMeta{
-			APIVersion: v1core.SchemeGroupVersion.String(),
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
 		},
-		ObjectMeta: v1meta.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
 		},
-		Type: v1core.SecretTypeDockerConfigJson,
+		Type: corev1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{
-			v1core.DockerConfigJsonKey: configJSON,
+			corev1.DockerConfigJsonKey: configJSON,
 		},
 	}
 

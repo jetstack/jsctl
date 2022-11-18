@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 )
 
@@ -85,6 +86,8 @@ func (c *Generic[T, ListT]) Get(ctx context.Context, options *GenericRequestOpti
 	return nil
 }
 
+// List is must the same as get, however it returns results in a list type
+// instead
 func (c *Generic[T, ListT]) List(ctx context.Context, options *GenericRequestOptions, result ListT) error {
 	r := c.restClient.Get().Resource(c.resource)
 
@@ -119,4 +122,22 @@ func (c *Generic[T, ListT]) Present(ctx context.Context, options *GenericRequest
 	}
 
 	return true, nil
+}
+
+func (c *Generic[T, ListT]) Patch(ctx context.Context, options *GenericRequestOptions, patch []byte) error {
+	r := c.restClient.Patch(types.StrategicMergePatchType).Body(patch).Resource(c.resource)
+
+	if options.Namespace != "" {
+		r = r.Namespace(options.Namespace)
+	}
+	if options.Name != "" {
+		r = r.Name(options.Name)
+	}
+
+	err := r.Do(ctx).Error()
+	if err != nil {
+		return fmt.Errorf("error patching resource: %w", err)
+	}
+
+	return nil
 }
