@@ -33,7 +33,7 @@ func createServiceAccount(run types.RunFunc, apiURL string) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create-service-account [name]",
-		Short: "Create a new service account identity for a cluster",
+		Short: "Create a new Jetstack Secure service account for a cluster agent",
 		Args:  cobra.MatchAll(cobra.ExactArgs(1)),
 		Long: `Generate a new service account for a Jetstack Secure cluster agent 
 This is only needed if you are not deploying the agent with jsctl.
