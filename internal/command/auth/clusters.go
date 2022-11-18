@@ -62,7 +62,7 @@ Output can be json formatted or as Kubernetes Secret.
 			}
 
 			switch serviceAccountFormat {
-			case "json":
+			case "jsonKeyData":
 				fmt.Println(strings.TrimSpace(string(serviceAccountBytes)))
 			case "secret":
 				secret := cluster.AgentServiceAccountSecret(serviceAccountBytes, secretName, secretNamespace)
@@ -83,8 +83,8 @@ Output can be json formatted or as Kubernetes Secret.
 	flags.StringVar(
 		&serviceAccountFormat,
 		"format",
-		"json",
-		"The desired output format, valid options: [json, secret]",
+		"jsonKeyData",
+		"The desired output format, valid options: [jsonKeyData, secret]",
 	)
 	flags.StringVar(
 		&secretName,
