@@ -64,8 +64,6 @@ func Backup(run types.RunFunc, kubeConfigPath *string) *cobra.Command {
 	}
 	allIssuersString := allIssuers.String()
 
-	fmt.Println(allIssuersString)
-
 	flags := cmd.PersistentFlags()
 	flags.BoolVar(&formatResources, "format-resources", true, "if set, will remove some fields from resources such as status and metadata to allow them to be cleanly applied later")
 	flags.StringVar(&outputFormat, "format", "yaml", "output format, one of: yaml, json")

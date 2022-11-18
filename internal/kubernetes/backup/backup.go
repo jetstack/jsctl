@@ -100,63 +100,69 @@ func FetchClusterBackup(ctx context.Context, opts ClusterBackupOptions) (*Cluste
 	}
 
 	// fetch all configured issuers and external issuers
-	issuers, err := fetchAllIssuers(ctx, opts.RestConfig, dropFields)
-	if err != nil {
-		return &ClusterBackup{}, fmt.Errorf("failed to backup issuers: %w", err)
+	if opts.IncludeIssuers {
+		issuers, err := fetchAllIssuers(ctx, opts.RestConfig, dropFields)
+		if err != nil {
+			return &ClusterBackup{}, fmt.Errorf("failed to backup issuers: %w", err)
+		}
+		clusterBackup = append(clusterBackup, issuers...)
 	}
-	clusterBackup = append(clusterBackup, issuers...)
 
 	// fetch certifcates
-	certificateClient, err := clients.NewCertificateClient(opts.RestConfig)
-	if err != nil {
-		return &ClusterBackup{}, fmt.Errorf("failed to create client for certificates: %w", err)
-	}
+	if opts.IncludeCertificates {
+		certificateClient, err := clients.NewCertificateClient(opts.RestConfig)
+		if err != nil {
+			return &ClusterBackup{}, fmt.Errorf("failed to create client for certificates: %w", err)
+		}
 
-	var certificates v1certmanager.CertificateList
-	err = certificateClient.List(
-		ctx,
-		&clients.GenericRequestOptions{DropFields: dropFields},
-		&certificates,
-	)
-	if err != nil {
-		return &ClusterBackup{}, fmt.Errorf("failed to list certificates: %w", err)
-	}
-	for _, c := range certificates.Items {
-		// we do not include ingress certs, skip them
-		skip := false
-		if len(c.OwnerReferences) > 0 {
-			for _, owner := range c.OwnerReferences {
-				if owner.Kind == "Ingress" {
-					fmt.Fprintf(os.Stderr, "skipping ingress-shim managed certificate %s/%s\n", c.Namespace, c.Name)
-					skip = true
-					break
+		var certificates v1certmanager.CertificateList
+		err = certificateClient.List(
+			ctx,
+			&clients.GenericRequestOptions{DropFields: dropFields},
+			&certificates,
+		)
+		if err != nil {
+			return &ClusterBackup{}, fmt.Errorf("failed to list certificates: %w", err)
+		}
+		for _, c := range certificates.Items {
+			// we do not include ingress certs, skip them
+			skip := false
+			if len(c.OwnerReferences) > 0 {
+				for _, owner := range c.OwnerReferences {
+					if owner.Kind == "Ingress" {
+						fmt.Fprintf(os.Stderr, "skipping ingress-shim managed certificate %s/%s\n", c.Namespace, c.Name)
+						skip = true
+						break
+					}
 				}
 			}
-		}
-		if !skip {
-			clusterBackup = append(clusterBackup, c)
+			if !skip {
+				clusterBackup = append(clusterBackup, c)
+			}
 		}
 	}
 
 	// fetch certificate request policies
 	// Note: this back up data is not used in the migration to an operator managed installation.
 	// These resourcse are only included for disaster recovery purposes.
-	certificateRequestPolicyClient, err := clients.NewCertificateRequestPolicyClient(opts.RestConfig)
-	if err != nil {
-		return &ClusterBackup{}, fmt.Errorf("failed to create client for certificate request policies: %w", err)
-	}
+	if opts.IncludeCertificateRequestPolicies {
+		certificateRequestPolicyClient, err := clients.NewCertificateRequestPolicyClient(opts.RestConfig)
+		if err != nil {
+			return &ClusterBackup{}, fmt.Errorf("failed to create client for certificate request policies: %w", err)
+		}
 
-	var certificateRequestPolicies v1alpha1approverpolicy.CertificateRequestPolicyList
-	err = certificateRequestPolicyClient.List(
-		ctx,
-		&clients.GenericRequestOptions{DropFields: dropFields},
-		&certificateRequestPolicies,
-	)
-	if err != nil {
-		return &ClusterBackup{}, fmt.Errorf("failed to list certificate request policies: %w", err)
-	}
-	for _, p := range certificateRequestPolicies.Items {
-		clusterBackup = append(clusterBackup, p)
+		var certificateRequestPolicies v1alpha1approverpolicy.CertificateRequestPolicyList
+		err = certificateRequestPolicyClient.List(
+			ctx,
+			&clients.GenericRequestOptions{DropFields: dropFields},
+			&certificateRequestPolicies,
+		)
+		if err != nil {
+			return &ClusterBackup{}, fmt.Errorf("failed to list certificate request policies: %w", err)
+		}
+		for _, p := range certificateRequestPolicies.Items {
+			clusterBackup = append(clusterBackup, p)
+		}
 	}
 
 	return &clusterBackup, nil
