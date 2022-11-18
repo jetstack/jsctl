@@ -1,19 +1,11 @@
-## jsctl clusters status
+## jsctl experimental clusters
 
-Prints information about the state in the currently configured cluster in kubeconfig
-
-### Synopsis
-
-The information printed by this command can be used to determine the state of a cluster prior to installing Jetstack Secure.
-
-```
-jsctl clusters status [flags]
-```
+Experimental clusters commands
 
 ### Options
 
 ```
-  -h, --help   help for status
+  -h, --help   help for clusters
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +19,6 @@ jsctl clusters status [flags]
 
 ### SEE ALSO
 
-* [jsctl clusters](jsctl_clusters.md)	 - Subcommands for cluster management
+* [jsctl experimental](jsctl_experimental.md)	 - Experimental jsctl commands
+* [jsctl experimental clusters cleanup](jsctl_experimental_clusters_cleanup.md)	 - Contains commands to prepare a cluster for the uninstallation of Jetstack Secure software
 
