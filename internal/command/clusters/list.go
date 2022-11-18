@@ -17,7 +17,7 @@ import (
 )
 
 // List returns a new cobra.Command for listing clusters in the JSCP api
-func List(run types.RunFunc, apiURL string) *cobra.Command {
+func List(run types.RunFunc, apiURL *string) *cobra.Command {
 	var jsonOut bool
 
 	cmd := &cobra.Command{
@@ -30,7 +30,7 @@ func List(run types.RunFunc, apiURL string) *cobra.Command {
 				return errors.ErrNoOrganizationName
 			}
 
-			http := client.New(ctx, apiURL)
+			http := client.New(ctx, *apiURL)
 
 			clusters, err := cluster.List(ctx, http, cnf.Organization)
 			if err != nil {
