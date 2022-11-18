@@ -19,7 +19,7 @@ func Status(run types.RunFunc, kubeConfigPath *string) *cobra.Command {
 		Use:   "status",
 		Short: "Prints information about the state in the currently configured cluster in kubeconfig",
 		Long:  "The information printed by this command can be used to determine the state of a cluster prior to installing Jetstack Secure.",
-		Args:  cobra.ExactValidArgs(0),
+		Args:  cobra.MatchAll(cobra.ExactArgs(0)),
 		Run: run(func(ctx context.Context, args []string) error {
 			kubeCfg, err := kubernetes.NewConfig(*kubeConfigPath)
 			if err != nil {

@@ -83,9 +83,9 @@ func usersAdd() *cobra.Command {
 	var admin bool
 
 	cmd := &cobra.Command{
-		Use:   "add [email]",
+		Use:   "add email",
 		Short: "Add a user to the current organization",
-		Args:  cobra.ExactValidArgs(1),
+		Args:  cobra.MatchAll(cobra.ExactArgs(1)),
 		Run: run(func(ctx context.Context, args []string) error {
 			http := client.New(ctx, apiURL)
 			cnf, ok := config.FromContext(ctx)
@@ -117,9 +117,9 @@ func usersRemove() *cobra.Command {
 	var force bool
 
 	cmd := &cobra.Command{
-		Use:   "remove [email]",
+		Use:   "remove email",
 		Short: "Remove a user from the current organization",
-		Args:  cobra.ExactValidArgs(1),
+		Args:  cobra.MatchAll(cobra.ExactArgs(1)),
 		Run: run(func(ctx context.Context, args []string) error {
 			http := client.New(ctx, apiURL)
 			cnf, ok := config.FromContext(ctx)

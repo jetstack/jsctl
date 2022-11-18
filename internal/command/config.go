@@ -48,7 +48,7 @@ func configShow() *cobra.Command {
 	return &cobra.Command{
 		Use:   "show",
 		Short: "View your current configuration values",
-		Args:  cobra.ExactValidArgs(0),
+		Args:  cobra.MatchAll(cobra.ExactArgs(0)),
 		Run: run(func(ctx context.Context, args []string) error {
 			cnf, ok := config.FromContext(ctx)
 			if !ok {
@@ -76,9 +76,9 @@ func configShow() *cobra.Command {
 
 func configSetOrganization() *cobra.Command {
 	return &cobra.Command{
-		Use:   "organization [value]",
+		Use:   "organization name",
 		Short: "Set your current organization",
-		Args:  cobra.ExactValidArgs(1),
+		Args:  cobra.MatchAll(cobra.ExactArgs(1)),
 		Run: run(func(ctx context.Context, args []string) error {
 			name := args[0]
 			if name == "" {

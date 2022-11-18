@@ -22,9 +22,9 @@ func Connect(run types.RunFunc, kubeConfigPath, apiURL *string, useStdout *bool)
 	var registry string
 
 	cmd := &cobra.Command{
-		Use:   "connect [name]",
+		Use:   "connect name",
 		Short: "Creates a new cluster in the control plane and deploys the agent in your current kubenetes context",
-		Args:  cobra.ExactValidArgs(1),
+		Args:  cobra.MatchAll(cobra.ExactArgs(1)),
 		Run: run(func(ctx context.Context, args []string) error {
 			name := args[0]
 			if name == "" {

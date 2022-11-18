@@ -23,7 +23,7 @@ func List(run types.RunFunc, apiURL *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Lists all clusters connected to the control plane for the organization",
-		Args:  cobra.ExactValidArgs(0),
+		Args:  cobra.MatchAll(cobra.ExactArgs(0)),
 		Run: run(func(ctx context.Context, args []string) error {
 			cnf, ok := config.FromContext(ctx)
 			if !ok || cnf.Organization == "" {
