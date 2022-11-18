@@ -4,8 +4,6 @@ package command
 import (
 	"fmt"
 	"os"
-	"os/user"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -34,23 +32,17 @@ func Command() *cobra.Command {
 		fmt.Fprintf(os.Stderr, "failed to determine default user config directory, using current directory")
 		defaultConfigDir = "."
 	}
-	// get the current user to replace ~ in the default config dir, this makes
-	// the generation of the docs consistent
-	currentUser, err := user.Current()
-	if err != nil {
-		currentUser.Username = "unknown"
+	// if generating docs, this value must be overridden to something the same
+	// on all platforms
+	if os.Getenv("DOCS_GEN") == "true" {
+		defaultConfigDir = "HOME or USERPROFILE/.jsctl"
 	}
 
 	flags := cmd.PersistentFlags()
 	flags.BoolVar(&useStdout, "stdout", false, "If provided, manifests are written to stdout rather than applied to the current cluster")
 	flags.StringVar(&kubeConfig, "kubeconfig", defaultKubeConfig(), "Location of the user's kubeconfig file for applying directly to the cluster")
 	flags.StringVar(&apiURL, "api-url", "https://platform.jetstack.io", "Base URL of the control-plane API")
-	flags.StringVar(
-		&configDir,
-		"config",
-		strings.Replace(defaultConfigDir, currentUser.Username, "USER", 1),
-		"Location of the user's jsctl config directory",
-	)
+	flags.StringVar(&configDir, "config", defaultConfigDir, "Location of the user's jsctl config directory")
 
 	cmd.AddCommand(
 		Auth(),

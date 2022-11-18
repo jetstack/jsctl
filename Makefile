@@ -12,4 +12,4 @@ test: ## Run all unit tests
 
 .PHONY: docs-gen
 docs-gen: ## Regenerate command line docs
-	$(GO) run $(REPO_ROOT)/tools/cobra/main.go "$(REPO_ROOT)/docs/reference"
+	DOCS_GEN=true $(GO) run $(REPO_ROOT)/tools/cobra/main.go "$(REPO_ROOT)/docs/reference"
