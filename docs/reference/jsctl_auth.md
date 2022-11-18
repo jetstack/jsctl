@@ -20,6 +20,7 @@ Subcommands for authentication
 ### SEE ALSO
 
 * [jsctl](jsctl.md)	 - Command-line tool for the Jetstack Secure Control Plane
+* [jsctl auth clusters](jsctl_auth_clusters.md)	 - 
 * [jsctl auth login](jsctl_auth_login.md)	 - Performs the authentication flow to allow access to other commands
 * [jsctl auth logout](jsctl_auth_logout.md)	 - 
 * [jsctl auth status](jsctl_auth_status.md)	 - Print the logged in account and token location
