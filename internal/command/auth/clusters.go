@@ -29,6 +29,7 @@ func Clusters(run types.RunFunc, apiURL string) *cobra.Command {
 
 func createServiceAccount(run types.RunFunc, apiURL string) *cobra.Command {
 	var serviceAccountFormat string
+	var secretName, secretNamespace string
 
 	cmd := &cobra.Command{
 		Use:   "create-service-account [name]",
@@ -63,7 +64,7 @@ sometimes it's helpful to get a new standalone service account JSON.
 			case "json":
 				fmt.Println(strings.TrimSpace(string(serviceAccountBytes)))
 			case "secret":
-				secret := cluster.AgentServiceAccountSecret(serviceAccountBytes)
+				secret := cluster.AgentServiceAccountSecret(serviceAccountBytes, secretName, secretNamespace)
 				secretYAMLBytes, err := yaml.Marshal(secret)
 				if err != nil {
 					return fmt.Errorf("failed to marshal image pull secret: %s", err)
@@ -83,6 +84,18 @@ sometimes it's helpful to get a new standalone service account JSON.
 		"format",
 		"json",
 		"The desired output format, valid options: [json, secret]",
+	)
+	flags.StringVar(
+		&secretName,
+		"secret-name",
+		"agent-credentials",
+		"If using the 'secret' format, the name of the secret to create",
+	)
+	flags.StringVar(
+		&secretNamespace,
+		"secret-namespace",
+		"jetstack-secure",
+		"If using the 'secret' format, the namespace of the secret to create",
 	)
 
 	return cmd

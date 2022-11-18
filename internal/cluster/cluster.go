@@ -164,15 +164,15 @@ func marshalBase64(in interface{}) ([]byte, error) {
 
 // AgentServiceAccount secret takes a service account json and formats it as a
 // k8s secret.
-func AgentServiceAccountSecret(keyData []byte) *corev1.Secret {
+func AgentServiceAccountSecret(keyData []byte, name, namespace string) *corev1.Secret {
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "agent-credentials",
-			Namespace: "jetstack-secure",
+			Name:      name,
+			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
