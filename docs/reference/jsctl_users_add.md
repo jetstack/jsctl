@@ -3,7 +3,7 @@
 Add a user to the current organization
 
 ```
-jsctl users add [email] [flags]
+jsctl users add email [flags]
 ```
 
 ### Options

@@ -3,7 +3,7 @@
 Opens a browser window to the cluster's dashboard
 
 ```
-jsctl clusters view [name] [flags]
+jsctl clusters view name [flags]
 ```
 
 ### Options

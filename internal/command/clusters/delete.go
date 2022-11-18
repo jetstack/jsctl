@@ -21,9 +21,9 @@ func Delete(run types.RunFunc, apiURL *string) *cobra.Command {
 	var force bool
 
 	cmd := &cobra.Command{
-		Use:   "delete [name]",
+		Use:   "delete name",
 		Short: "Deletes a cluster from the organization",
-		Args:  cobra.ExactValidArgs(1),
+		Args:  cobra.MatchAll(cobra.ExactArgs(1)),
 		Run: run(func(ctx context.Context, args []string) error {
 			cnf, ok := config.FromContext(ctx)
 			if !ok || cnf.Organization == "" {

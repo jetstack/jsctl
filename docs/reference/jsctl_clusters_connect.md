@@ -3,7 +3,7 @@
 Creates a new cluster in the control plane and deploys the agent in your current kubenetes context
 
 ```
-jsctl clusters connect [name] [flags]
+jsctl clusters connect name [flags]
 ```
 
 ### Options

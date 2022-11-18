@@ -3,7 +3,7 @@
 Remove a user from the current organization
 
 ```
-jsctl users remove [email] [flags]
+jsctl users remove email [flags]
 ```
 
 ### Options

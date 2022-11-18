@@ -3,7 +3,7 @@
 Deletes a cluster from the organization
 
 ```
-jsctl clusters delete [name] [flags]
+jsctl clusters delete name [flags]
 ```
 
 ### Options

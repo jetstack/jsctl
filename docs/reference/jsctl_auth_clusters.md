@@ -1,15 +1,11 @@
-## jsctl configuration set organization
+## jsctl auth clusters
 
-Set your current organization
 
-```
-jsctl configuration set organization name [flags]
-```
 
 ### Options
 
 ```
-  -h, --help   help for organization
+  -h, --help   help for clusters
 ```
 
 ### Options inherited from parent commands
@@ -23,5 +19,6 @@ jsctl configuration set organization name [flags]
 
 ### SEE ALSO
 
-* [jsctl configuration set](jsctl_configuration_set.md)	 - Set a configuration value
+* [jsctl auth](jsctl_auth.md)	 - Subcommands for authentication
+* [jsctl auth clusters create-service-account](jsctl_auth_clusters_create-service-account.md)	 - Create a new Jetstack Secure service account for a cluster agent
 
