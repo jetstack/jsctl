@@ -35,8 +35,9 @@ func createServiceAccount(run types.RunFunc, apiURL string) *cobra.Command {
 		Use:   "create-service-account [name]",
 		Short: "Create a new service account identity for a cluster",
 		Args:  cobra.MatchAll(cobra.ExactArgs(1)),
-		Long: `jsctl can do this automatically for you, in jsctl clusters connect. However,
-sometimes it's helpful to get a new standalone service account JSON.
+		Long: `Generate a new service account for a Jetstack Secure cluster agent 
+This is only needed if you are not deploying the agent with jsctl.
+Output can be json formatted or as Kubernetes Secret.
 `,
 		Run: run(func(ctx context.Context, args []string) error {
 			name := args[0]
