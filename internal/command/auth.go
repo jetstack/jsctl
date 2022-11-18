@@ -17,6 +17,7 @@ func Auth() *cobra.Command {
 		auth.Login(run),
 		auth.Logout(run),
 		auth.Status(run),
+		auth.Clusters(run, apiURL),
 	)
 
 	return cmd

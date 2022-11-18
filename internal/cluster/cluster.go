@@ -15,6 +15,9 @@ import (
 	"text/template"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/jetstack/jsctl/internal/client"
 )
 
@@ -157,4 +160,25 @@ func marshalBase64(in interface{}) ([]byte, error) {
 	}
 
 	return buffer.Bytes(), nil
+}
+
+// AgentServiceAccount secret takes a service account json and formats it as a
+// k8s secret.
+func AgentServiceAccountSecret(keyData []byte) *corev1.Secret {
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agent-credentials",
+			Namespace: "jetstack-secure",
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"credentials.json": keyData,
+		},
+	}
+
+	return secret
 }
