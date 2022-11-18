@@ -17,7 +17,7 @@ import (
 )
 
 // Delete returns a new cobra.Command for deleting a cluster in the JSCP api
-func Delete(run types.RunFunc, apiURL string) *cobra.Command {
+func Delete(run types.RunFunc, apiURL *string) *cobra.Command {
 	var force bool
 
 	cmd := &cobra.Command{
@@ -30,7 +30,7 @@ func Delete(run types.RunFunc, apiURL string) *cobra.Command {
 				return errors.ErrNoOrganizationName
 			}
 
-			http := client.New(ctx, apiURL)
+			http := client.New(ctx, *apiURL)
 			name := args[0]
 			if name == "" {
 				return errors2.New("you must specify a cluster name")

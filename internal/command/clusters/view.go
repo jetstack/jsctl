@@ -16,7 +16,7 @@ import (
 )
 
 // View returns a new cobra.Command for viewing a cluster in the JSCP api
-func View(run types.RunFunc, apiURL string) *cobra.Command {
+func View(run types.RunFunc, apiURL *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "view [name]",
 		Short: "Opens a browser window to the cluster's dashboard",
@@ -27,7 +27,7 @@ func View(run types.RunFunc, apiURL string) *cobra.Command {
 				return errors.ErrNoOrganizationName
 			}
 
-			http := client.New(ctx, apiURL)
+			http := client.New(ctx, *apiURL)
 			name := args[0]
 			if name == "" {
 				return errors2.New("you must specify a cluster name")

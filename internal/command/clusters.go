@@ -15,11 +15,11 @@ func Clusters() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		clusters.Connect(run, kubeConfig, apiURL, useStdout),
-		clusters.List(run, apiURL),
-		clusters.Delete(run, apiURL),
-		clusters.View(run, apiURL),
-		clusters.Status(run, kubeConfig),
+		clusters.Connect(run, &kubeConfig, &apiURL, &useStdout),
+		clusters.List(run, &apiURL),
+		clusters.Delete(run, &apiURL),
+		clusters.View(run, &apiURL),
+		clusters.Status(run, &kubeConfig),
 		// TODO cleanup is currently experimental
 		// clusters.CleanUp(run, kubeConfig),
 	)

@@ -17,7 +17,7 @@ import (
 )
 
 // Connect returns a new cobra.Command that connects a cluster to the control plane.
-func Connect(run types.RunFunc, kubeConfigPath, apiURL string, useStdout bool) *cobra.Command {
+func Connect(run types.RunFunc, kubeConfigPath, apiURL *string, useStdout *bool) *cobra.Command {
 	const defaultRegistry = "quay.io/jetstack"
 	var registry string
 
@@ -36,7 +36,7 @@ func Connect(run types.RunFunc, kubeConfigPath, apiURL string, useStdout bool) *
 				return commandErrors.ErrNoOrganizationName
 			}
 
-			http := client.New(ctx, apiURL)
+			http := client.New(ctx, *apiURL)
 
 			serviceAccount, err := cluster.CreateServiceAccount(ctx, http, cnf.Organization, name)
 			if err != nil {
@@ -44,10 +44,10 @@ func Connect(run types.RunFunc, kubeConfigPath, apiURL string, useStdout bool) *
 			}
 
 			var applier cluster.Applier
-			if useStdout {
+			if *useStdout {
 				applier = kubernetes.NewStdOutApplier()
 			} else {
-				applier, err = kubernetes.NewKubeConfigApplier(kubeConfigPath)
+				applier, err = kubernetes.NewKubeConfigApplier(*kubeConfigPath)
 				if err != nil {
 					return err
 				}
