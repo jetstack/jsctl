@@ -10,6 +10,7 @@ import (
 	"github.com/jetstack/jsctl/internal/command/types"
 	"github.com/jetstack/jsctl/internal/kubernetes"
 	"github.com/jetstack/jsctl/internal/kubernetes/backup"
+	"github.com/jetstack/jsctl/internal/kubernetes/clients"
 )
 
 func Backup(run types.RunFunc, kubeConfigPath string) *cobra.Command {
@@ -56,12 +57,21 @@ func Backup(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 		}),
 	}
 
+	allIssuers, err := clients.ListSupportedIssuers()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error determining supported issuers, this is a bug: %s", err)
+		os.Exit(1)
+	}
+	allIssuersString := allIssuers.String()
+
+	fmt.Println(allIssuersString)
+
 	flags := cmd.PersistentFlags()
 	flags.BoolVar(&formatResources, "format-resources", true, "if set, will remove some fields from resources such as status and metadata to allow them to be cleanly applied later")
 	flags.StringVar(&outputFormat, "format", "yaml", "output format, one of: yaml, json")
 
 	flags.BoolVar(&includeCertificates, "include-certificates", true, "if set, certificate resources will be included in the backup. Note: ingress-shim managed certificates are not included since they are automatically generated.")
-	flags.BoolVar(&includeIssuers, "include-issuers", true, "if set, issuer resources will be included in the backup")
+	flags.BoolVar(&includeIssuers, "include-issuers", true, fmt.Sprintf("if set, issuer resources will be included in the backup (supports: %s)", allIssuersString))
 	flags.BoolVar(&includeCertificateRequestPolicies, "include-certificate-request-policies", true, "if set, certificate request policy resources will be included in the backup")
 
 	return cmd
