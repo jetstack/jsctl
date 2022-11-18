@@ -68,7 +68,7 @@ Output can be json formatted or as Kubernetes Secret.
 				secret := cluster.AgentServiceAccountSecret(serviceAccountBytes, secretName, secretNamespace)
 				secretYAMLBytes, err := yaml.Marshal(secret)
 				if err != nil {
-					return fmt.Errorf("failed to marshal image pull secret: %s", err)
+					return fmt.Errorf("failed to marshal agent service account secret: %s", err)
 				}
 
 				fmt.Println(strings.TrimSpace(string(secretYAMLBytes)))
