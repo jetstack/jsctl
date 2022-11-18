@@ -87,9 +87,15 @@ func FetchClusterBackup(ctx context.Context, opts ClusterBackupOptions) (*Cluste
 		if len(crd.Spec.Versions) == 0 {
 			return nil, fmt.Errorf("unexpectedly found no versions on cert-manager.io CRD %s", crd.Name)
 		}
-		// the first version in the list must be v1 as we expect v1 resources
-		if crd.Spec.Versions[0].Name != "v1" {
-			return nil, fmt.Errorf("backup only supports cert-manager.io API version v1, found %s", crd.Spec.Versions[0].Name)
+		v1FoundAndServed := false
+		for _, v := range crd.Spec.Versions {
+			if v.Name == "v1" && v.Served {
+				v1FoundAndServed = true
+				break
+			}
+		}
+		if !v1FoundAndServed {
+			return nil, fmt.Errorf("backup only supports cert-manager.io API version v1. v1 must be present and served")
 		}
 	}
 

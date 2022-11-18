@@ -101,5 +101,5 @@ func TestBackup_LegacyAPIVersions(t *testing.T) {
 	}
 
 	_, err := FetchClusterBackup(context.Background(), opts)
-	require.ErrorContains(t, err, "backup only supports cert-manager.io API version v1, found v2")
+	require.ErrorContains(t, err, "backup only supports cert-manager.io API version v1. v1 must be present and served")
 }
