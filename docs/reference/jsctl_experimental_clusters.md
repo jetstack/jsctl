@@ -20,5 +20,6 @@ Experimental clusters commands
 ### SEE ALSO
 
 * [jsctl experimental](jsctl_experimental.md)	 - Experimental jsctl commands
+* [jsctl experimental clusters backup](jsctl_experimental_clusters_backup.md)	 - This command outputs the YAML data of Jetstack Secure relevant resources in the cluster
 * [jsctl experimental clusters cleanup](jsctl_experimental_clusters_cleanup.md)	 - Contains commands to prepare a cluster for the uninstallation of Jetstack Secure software
 
