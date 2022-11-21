@@ -43,6 +43,7 @@ func InstallationsApply(run types.RunFunc, useStdout *bool, apiURL, kubeConfig *
 		venafiConnections             string
 		venafiIssuers                 []string
 		venafiOauthHelper             bool
+		backupFilePath                string
 	)
 
 	validator := func() error {
@@ -59,6 +60,12 @@ func InstallationsApply(run types.RunFunc, useStdout *bool, apiURL, kubeConfig *
 
 		if tier != "" && tier != tierEnterprise && tier != tierEnterprisePlus {
 			return fmt.Errorf("invalid tier %q, must be either %q, %q or blank", tier, tierEnterprise, tierEnterprisePlus)
+		}
+
+		if backupFilePath != "" {
+			if _, err := os.Stat(backupFilePath); os.IsNotExist(err) {
+				return fmt.Errorf("backup file %q does not exist", backupFilePath)
+			}
 		}
 
 		return nil
@@ -94,6 +101,12 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 			if err := validator(); err != nil {
 				return fmt.Errorf("error validating provided flags: %w", err)
 			}
+
+			// issuers, err := extractIssuersFromBackupFile(backupFilePath)
+			// if err != nil {
+			// 	return fmt.Errorf("error extracting issuers from backup file: %w", err)
+			// }
+			// fmt.Println(issuers)
 
 			options := operator.ApplyInstallationYAMLOptions{
 				ImageRegistry:           operatorImageRegistry,
@@ -202,6 +215,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 	flags.StringVar(&registryCredentialsPath, "registry-credentials-path", "", "Specifies the location of the credentials file to use for image pull secrets")
 	flags.StringVar(&venafiConnections, "experimental-venafi-connections-config", "", "Specifies a path to a file with yaml formatted Venafi connection details")
 	flags.StringVar(&tier, "tier", "", "For users with access to enterprise tier functionality, setting this flag will enable enterprise defaults instead. Valid values are 'enterprise', 'enterprise-plus' or blank")
+	flags.StringVar(&backupFilePath, "experimental-issuers-backup-file", "", "Provide a file containing cert-manager Issuers or ClusterIssuers to be managed in this installation. Note: only cert-manager Issuers and ClusterIssuers are supported, external issuers are not yet supported.")
 
 	return cmd
 }

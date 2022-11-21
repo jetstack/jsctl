@@ -1,0 +1,85 @@
+---
+apiVersion: awspca.cert-manager.io/v1beta1
+kind: AWSPCAIssuer
+metadata:
+  creationTimestamp: null
+  name: pca-sample
+  namespace: jetstack-secure
+spec:
+  arn: acb
+  secretRef:
+    accessKeyIDSelector:
+      key: ""
+    secretAccessKeySelector:
+      key: ""
+status: {}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  creationTimestamp: null
+  name: cm-cluster-issuer-sample
+spec:
+  acme:
+    email: dummy-email@example.com
+    preferredChain: ""
+    privateKeySecretRef:
+      name: example
+    server: https://
+status: {}
+---
+apiVersion: cas-issuer.jetstack.io/v1beta1
+kind: GoogleCASIssuer
+metadata:
+  creationTimestamp: null
+  name: googlecasissuer-sample
+  namespace: jetstack-secure
+spec:
+  caPoolId: my-pool
+  credentials:
+    key: example
+    name: googlesa
+  location: us-east1
+  project: example
+status: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  creationTimestamp: null
+  name: cm-issuer-sample
+  namespace: jetstack-secure
+spec:
+  ca:
+    secretName: ca-key-pair
+status: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  creationTimestamp: null
+  name: example-com
+  namespace: jetstack-secure
+spec:
+  dnsNames:
+  - example.com
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: ca-issuer
+  secretName: example-com-tls
+status: {}
+---
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  creationTimestamp: null
+  name: test-policy
+spec:
+  allowed:
+    commonName:
+      required: true
+      value: hello.world
+  selector:
+    issuerRef: {}
+status: {}
