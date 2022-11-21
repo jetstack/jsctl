@@ -23,6 +23,7 @@ jsctl operator installations apply [flags]
       --csi-driver-spiffe                                      Include the cert-manager spiffe CSI driver (https://github.com/cert-manager/csi-driver-spiffe)
       --csi-driver-spiffe-replicas int                         Specifies the number of replicas for the csi-driver-spiffe deployment (default 2)
       --experimental-cert-discovery-venafi-connection string   The name of the Venafi connection provided via --experimental-venafi-connections-config flag, to be used to configure cert-discovery-venafi
+      --experimental-issuers-backup-file string                Provide a file containing cert-manager Issuers or ClusterIssuers to be managed in this installation. Note: only cert-manager Issuers and ClusterIssuers are supported, external issuers are not yet supported.
       --experimental-venafi-connections-config string          Specifies a path to a file with yaml formatted Venafi connection details
       --experimental-venafi-issuers strings                    Specifies a list of Venafi issuers to configure. Issuer names should be in form 'type:connection:name:[namespace]'. Type can be 'tpp', connection refers to a Venafi connection (see --experimental-venafi-connection flag), name is the name of the issuer and namespace is the namespace in which to create the issuer. Leave out namepsace to create a cluster scoped issuer. This flag is experimental and is likely to change.
   -h, --help                                                   help for apply
