@@ -3,6 +3,7 @@ package restore
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,8 +14,8 @@ import (
 // RestoredIssuers contains the issuers and cluster issuers that were extracted
 // from a backup file. Issuers which were unsupported are listed in MissedIssuers.
 type RestoredIssuers struct {
-	CertManagerIssuers        []certmanagerv1.Issuer
-	CertManagerClusterIssuers []certmanagerv1.ClusterIssuer
+	CertManagerIssuers        []*certmanagerv1.Issuer
+	CertManagerClusterIssuers []*certmanagerv1.ClusterIssuer
 
 	MissedIssuers []string
 }
@@ -34,12 +35,14 @@ func ExtractOperatorManageableIssuersFromBackupFile(backupFilePath string) (*Res
 
 	for _, resource := range resources {
 		if resource.GetAPIVersion() != "cert-manager.io/v1" {
-			restoredIssuers.MissedIssuers = append(restoredIssuers.MissedIssuers, fmt.Sprintf("%s/%s", resource.GetKind(), resource.GetName()))
+			if strings.Contains(resource.GetKind(), "Issuer") {
+				restoredIssuers.MissedIssuers = append(restoredIssuers.MissedIssuers, fmt.Sprintf("%s/%s", resource.GetKind(), resource.GetName()))
+			}
 			continue
 		}
 
 		if resource.GetKind() == "Issuer" {
-			issuer := certmanagerv1.Issuer{}
+			var issuer *certmanagerv1.Issuer
 
 			err = runtime.DefaultUnstructuredConverter.FromUnstructured(resource.Object, &issuer)
 			if err != nil {
@@ -50,7 +53,7 @@ func ExtractOperatorManageableIssuersFromBackupFile(backupFilePath string) (*Res
 		}
 
 		if resource.GetKind() == "ClusterIssuer" {
-			issuer := certmanagerv1.ClusterIssuer{}
+			var issuer *certmanagerv1.ClusterIssuer
 
 			err = runtime.DefaultUnstructuredConverter.FromUnstructured(resource.Object, &issuer)
 			if err != nil {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -15,6 +16,7 @@ import (
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/kubernetes"
 	"github.com/jetstack/jsctl/internal/kubernetes/clients"
+	"github.com/jetstack/jsctl/internal/kubernetes/restore"
 	"github.com/jetstack/jsctl/internal/operator"
 	"github.com/jetstack/jsctl/internal/prompt"
 	"github.com/jetstack/jsctl/internal/registry"
@@ -102,11 +104,13 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				return fmt.Errorf("error validating provided flags: %w", err)
 			}
 
-			// issuers, err := extractIssuersFromBackupFile(backupFilePath)
-			// if err != nil {
-			// 	return fmt.Errorf("error extracting issuers from backup file: %w", err)
-			// }
-			// fmt.Println(issuers)
+			issuers, err := restore.ExtractOperatorManageableIssuersFromBackupFile(backupFilePath)
+			if err != nil {
+				return fmt.Errorf("error extracting issuers from backup file: %w", err)
+			}
+			if len(issuers.MissedIssuers) != 0 {
+				fmt.Fprintf(os.Stderr, "The following issuers cannot be managed by the operator and must be restored manually: %s\n", strings.Join(issuers.MissedIssuers, ", "))
+			}
 
 			options := operator.ApplyInstallationYAMLOptions{
 				ImageRegistry:           operatorImageRegistry,
@@ -130,6 +134,10 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 
 				// Approver Policy configuration
 				InstallApproverPolicyEnterprise: false,
+
+				// Restored Issuers
+				CertManagerIssuers:        issuers.CertManagerIssuers,
+				CertManagerClusterIssuers: issuers.CertManagerClusterIssuers,
 			}
 
 			if tier == tierEnterprisePlus {

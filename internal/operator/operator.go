@@ -15,6 +15,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver"
+	certmanageracmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
@@ -202,6 +203,13 @@ type (
 		CertManagerVersion      string // The version of cert-manager to deploy
 		IstioCSRReplicas        int    // The replica count for the istio-csr component.
 		SpiffeCSIDriverReplicas int    // The replica count for the csi-driver-spiffe component.
+
+		// CertManagerIssuers is a list of cert-manager issuers to include in
+		// the generated installation file
+		CertManagerIssuers []*certmanagerv1.Issuer
+		// CertManagerClusterIssuers is a list of cert-manager cluster issuers
+		// to include in the generated installation file
+		CertManagerClusterIssuers []*certmanagerv1.ClusterIssuer
 	}
 )
 
@@ -271,12 +279,119 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 		return fmt.Errorf("error building manifests for Venafi issuers: %w", err)
 	}
 
+	err := addIssuersToInstallation(
+		manifestTemplates,
+		options.CertManagerIssuers,
+		options.CertManagerClusterIssuers,
+	)
+	if err != nil {
+		return fmt.Errorf("error adding issuers to installation: %w", err)
+	}
+
 	buf, err := marshalManifests(manifestTemplates)
 	if err != nil {
 		return fmt.Errorf("error marshalling manifests: %w", err)
 	}
 
 	return applier.Apply(ctx, buf)
+}
+
+func addIssuersToInstallation(mf *manifests, issuers []*certmanagerv1.Issuer, clusterIssuers []*certmanagerv1.ClusterIssuer) error {
+	for _, issuer := range issuers {
+		mf.installation.Spec.Issuers = append(mf.installation.Spec.Issuers, &operatorv1alpha1.Issuer{
+			ClusterScope: false,
+			Name:         issuer.Name,
+			Namespace:    issuer.Namespace,
+			Labels:       issuer.Labels,
+			Annotations:  issuer.Annotations,
+
+			ACME: func() *certmanageracmev1.ACMEIssuer {
+				if issuer.Spec.ACME != nil {
+					return issuer.Spec.ACME
+				}
+				return nil
+			}(),
+
+			CA: func() *operatorv1alpha1.CAIssuer {
+				if issuer.Spec.CA != nil {
+					return &operatorv1alpha1.CAIssuer{
+						SecretName:            issuer.Spec.CA.SecretName,
+						CRLDistributionPoints: issuer.Spec.CA.CRLDistributionPoints,
+						OCSPServers:           issuer.Spec.CA.OCSPServers,
+					}
+				}
+				return nil
+			}(),
+
+			Vault: func() *certmanagerv1.VaultIssuer {
+				if issuer.Spec.Vault != nil {
+					return issuer.Spec.Vault
+				}
+				return nil
+			}(),
+			SelfSigned: func() *certmanagerv1.SelfSignedIssuer {
+				if issuer.Spec.SelfSigned != nil {
+					return issuer.Spec.SelfSigned
+				}
+				return nil
+			}(),
+			Venafi: func() *certmanagerv1.VenafiIssuer {
+				if issuer.Spec.Venafi != nil {
+					return issuer.Spec.Venafi
+				}
+				return nil
+			}(),
+		})
+	}
+
+	for _, issuer := range clusterIssuers {
+		mf.installation.Spec.Issuers = append(mf.installation.Spec.Issuers, &operatorv1alpha1.Issuer{
+			ClusterScope: true,
+			Name:         issuer.Name,
+			Namespace:    issuer.Namespace,
+			Labels:       issuer.Labels,
+			Annotations:  issuer.Annotations,
+
+			ACME: func() *certmanageracmev1.ACMEIssuer {
+				if issuer.Spec.ACME != nil {
+					return issuer.Spec.ACME
+				}
+				return nil
+			}(),
+
+			CA: func() *operatorv1alpha1.CAIssuer {
+				if issuer.Spec.CA != nil {
+					return &operatorv1alpha1.CAIssuer{
+						SecretName:            issuer.Spec.CA.SecretName,
+						CRLDistributionPoints: issuer.Spec.CA.CRLDistributionPoints,
+						OCSPServers:           issuer.Spec.CA.OCSPServers,
+					}
+				}
+				return nil
+			}(),
+
+			Vault: func() *certmanagerv1.VaultIssuer {
+				if issuer.Spec.Vault != nil {
+					return issuer.Spec.Vault
+				}
+				return nil
+			}(),
+			SelfSigned: func() *certmanagerv1.SelfSignedIssuer {
+				if issuer.Spec.SelfSigned != nil {
+					return issuer.Spec.SelfSigned
+				}
+				return nil
+			}(),
+			Venafi: func() *certmanagerv1.VenafiIssuer {
+				if issuer.Spec.Venafi != nil {
+					return issuer.Spec.Venafi
+				}
+				return nil
+			}(),
+		})
+	}
+
+	return nil
 }
 
 func generateVenafiIssuerManifests(mf *manifests, options ApplyInstallationYAMLOptions) error {
@@ -287,8 +402,8 @@ func generateVenafiIssuerManifests(mf *manifests, options ApplyInstallationYAMLO
 		}
 		mf.secrets = append(mf.secrets, secret)
 		mf.installation.Spec.Issuers = append(mf.installation.Spec.Issuers, issuer)
-
 	}
+
 	return nil
 }
 

@@ -7,10 +7,13 @@ import (
 	"strings"
 	"testing"
 
+	certmanageracmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/jetstack/jsctl/internal/operator"
@@ -370,6 +373,62 @@ func TestApplyInstallationYAML(t *testing.T) {
 
 		assert.Nil(t, actual.Spec.ApproverPolicy)
 		assert.NotNil(t, actual.Spec.ApproverPolicyEnterprise)
+	})
+
+	t.Run("It should generate a manifest with issuers", func(t *testing.T) {
+		iss := certmanagerv1.Issuer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cm-issuer-example",
+				Namespace: "test-namespace",
+			},
+			Spec: certmanagerv1.IssuerSpec{
+				IssuerConfig: certmanagerv1.IssuerConfig{
+					ACME: &certmanageracmev1.ACMEIssuer{
+						Email:  "dummy-email@example.com",
+						Server: "https://",
+						PrivateKey: certmanagermetav1.SecretKeySelector{
+							LocalObjectReference: certmanagermetav1.LocalObjectReference{
+								Name: "example",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		clusterIss := certmanagerv1.ClusterIssuer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cm-cluster-issuer-example",
+				Namespace: "test-namespace",
+			},
+			Spec: certmanagerv1.IssuerSpec{
+				IssuerConfig: certmanagerv1.IssuerConfig{
+					CA: &certmanagerv1.CAIssuer{
+						SecretName: "ca-key-pair",
+					},
+				},
+			},
+		}
+
+		options := operator.ApplyInstallationYAMLOptions{
+			CertManagerIssuers:        []*certmanagerv1.Issuer{&iss},
+			CertManagerClusterIssuers: []*certmanagerv1.ClusterIssuer{&clusterIss},
+		}
+
+		applier := &TestApplier{}
+		err := operator.ApplyInstallationYAML(ctx, applier, options)
+		assert.NoError(t, err)
+
+		var actual operatorv1alpha1.Installation
+		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
+
+		assert.NotNil(t, actual.Spec.Issuers)
+		assert.Equal(t, 2, len(actual.Spec.Issuers))
+
+		assert.Equal(t, "cm-issuer-example", actual.Spec.Issuers[0].Name)
+		assert.Equal(t, "dummy-email@example.com", actual.Spec.Issuers[0].ACME.Email)
+		assert.Equal(t, "cm-cluster-issuer-example", actual.Spec.Issuers[1].Name)
+		assert.Equal(t, "ca-key-pair", actual.Spec.Issuers[1].CA.SecretName)
 	})
 }
 

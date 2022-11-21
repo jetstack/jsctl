@@ -22,10 +22,9 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 	require.Equal(t, []string{
 		"AWSPCAIssuer/pca-sample",
 		"GoogleCASIssuer/googlecasissuer-sample",
-		"CertificateRequestPolicy/test-policy",
 	}, issuers.MissedIssuers)
 
-	require.Equal(t, []certmanagerv1.Issuer{
+	require.Equal(t, []*certmanagerv1.Issuer{
 		{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Issuer",
@@ -45,7 +44,7 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 		},
 	}, issuers.CertManagerIssuers)
 
-	require.Equal(t, []certmanagerv1.ClusterIssuer{
+	require.Equal(t, []*certmanagerv1.ClusterIssuer{
 		{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ClusterIssuer",
