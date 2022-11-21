@@ -1,6 +1,6 @@
 ## jsctl operator
 
-Subcommands for managing the jetstack operator
+Subcommands for managing the Jetstack operator
 
 ### Synopsis
 
