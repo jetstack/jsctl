@@ -2,7 +2,7 @@ package clusters
 
 import (
 	"context"
-	errors2 "errors"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/cluster"
-	"github.com/jetstack/jsctl/internal/command/errors"
+	internalerrors "github.com/jetstack/jsctl/internal/command/errors"
 	"github.com/jetstack/jsctl/internal/command/types"
 	"github.com/jetstack/jsctl/internal/config"
 )
@@ -24,13 +24,13 @@ func View(run types.RunFunc, apiURL *string) *cobra.Command {
 		Run: run(func(ctx context.Context, args []string) error {
 			cnf, ok := config.FromContext(ctx)
 			if !ok || cnf.Organization == "" {
-				return errors.ErrNoOrganizationName
+				return internalerrors.ErrNoOrganizationName
 			}
 
 			http := client.New(ctx, *apiURL)
 			name := args[0]
 			if name == "" {
-				return errors2.New("you must specify a cluster name")
+				return errors.New("you must specify a cluster name")
 			}
 
 			clusters, err := cluster.List(ctx, http, cnf.Organization)
