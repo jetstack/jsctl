@@ -6,7 +6,7 @@ Applies an Installation manifest to the current cluster, configured via flags
 
 Applies an Installation manifest to the current cluster, configured via flags
 
-Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the installation components will be deployed without an image pull secret. The images must be availble for the component pods to start.
+Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the installation components will be deployed without an image pull secret. The images must be available for the component pods to start.
 
 ```
 jsctl operator installations apply [flags]
@@ -48,4 +48,3 @@ jsctl operator installations apply [flags]
 ### SEE ALSO
 
 * [jsctl operator installations](jsctl_operator_installations.md)	 - Subcommands for managing operator installation resources
-

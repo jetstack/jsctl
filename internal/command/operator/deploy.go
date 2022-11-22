@@ -39,7 +39,7 @@ func Deploy(run types.RunFunc, useStdout *bool, apiURL, kubeConfig *string) *cob
 		Short: "Deploys the operator and its components in the current Kubernetes context",
 		Long: `Deploys the operator and its components in the current Kubernetes context
 
-Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the operator will be deployed without an image pull secret. The images must be availble for the operator pods to start.`,
+Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the operator will be deployed without an image pull secret. The images must be available for the operator pods to start.`,
 		Args: cobra.ExactArgs(0),
 		Run: run(func(ctx context.Context, args []string) error {
 			var applier operator.Applier
