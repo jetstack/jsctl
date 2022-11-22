@@ -46,7 +46,7 @@ func ExtractOperatorManageableIssuersFromBackupFile(backupFilePath string) (*Res
 
 			err = runtime.DefaultUnstructuredConverter.FromUnstructured(resource.Object, &issuer)
 			if err != nil {
-				return nil, fmt.Errorf("failed to convert unstructured to issuer: %w", err)
+				return nil, fmt.Errorf("failed to convert unstructured to cert-manager.io/v1 Issuer: %w", err)
 			}
 
 			restoredIssuers.CertManagerIssuers = append(restoredIssuers.CertManagerIssuers, issuer)
