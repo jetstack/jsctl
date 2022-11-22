@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/jetstack/jsctl/internal/client"
-	errors2 "github.com/jetstack/jsctl/internal/command/errors"
+	internalerrors "github.com/jetstack/jsctl/internal/command/errors"
 	"github.com/jetstack/jsctl/internal/command/types"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/kubernetes"
@@ -87,7 +87,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 			if registryCredentialsPath == "" && autoFetchRegistryCredentials {
 				cnf, ok := config.FromContext(ctx)
 				if !ok || cnf.Organization == "" {
-					return errors2.ErrNoOrganizationName
+					return internalerrors.ErrNoOrganizationName
 				}
 
 				http := client.New(ctx, *apiURL)
