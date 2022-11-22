@@ -13,9 +13,6 @@ import (
 )
 
 func TestBackup(t *testing.T) {
-	expectedBackupYAML, err := os.ReadFile("fixtures/backup.yaml")
-	require.NoError(t, err)
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		w.Header().Set("Content-Type", "application/json")
@@ -67,10 +64,23 @@ func TestBackup(t *testing.T) {
 	backup, err := FetchClusterBackup(context.Background(), opts)
 	require.NoError(t, err)
 
+	// test output formats
+	expectedBackupYAML, err := os.ReadFile("fixtures/backup.yaml")
+	require.NoError(t, err)
+
 	backupYAML, err := backup.ToYAML()
 	require.NoError(t, err)
 
 	assert.Equal(t, string(expectedBackupYAML), string(backupYAML))
+
+	// json
+	expectedBackupJSON, err := os.ReadFile("fixtures/backup.json")
+	require.NoError(t, err)
+
+	backupJSON, err := backup.ToJSON()
+	require.NoError(t, err)
+
+	assert.Equal(t, string(expectedBackupJSON), string(backupJSON))
 }
 
 func TestBackup_LegacyAPIVersions(t *testing.T) {

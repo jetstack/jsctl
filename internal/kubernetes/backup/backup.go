@@ -3,6 +3,7 @@ package backup
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -51,6 +52,21 @@ func (c *ClusterBackup) ToYAML() ([]byte, error) {
 	}
 
 	return []byte(strings.TrimSpace(buf.String()) + "\n"), nil
+}
+
+func (c *ClusterBackup) ToJSON() ([]byte, error) {
+	listWrapper := map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "List",
+		"items":      *c,
+	}
+
+	bytes, err := json.MarshalIndent(listWrapper, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling cluster backup to JSON: %s", err)
+	}
+
+	return bytes, nil
 }
 
 func FetchClusterBackup(ctx context.Context, opts ClusterBackupOptions) (*ClusterBackup, error) {

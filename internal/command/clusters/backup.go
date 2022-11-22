@@ -46,12 +46,23 @@ func Backup(run types.RunFunc, kubeConfigPath *string) *cobra.Command {
 				return fmt.Errorf("error backing up cluster: %s", err)
 			}
 
-			backupYAML, err := clusterBackup.ToYAML()
-			if err != nil {
-				return fmt.Errorf("error converting backup to YAML: %s", err)
+			var backupData []byte
+			switch outputFormat {
+			case "yaml":
+				backupData, err = clusterBackup.ToYAML()
+				if err != nil {
+					return fmt.Errorf("error converting backup to YAML: %s", err)
+				}
+			case "json":
+				backupData, err = clusterBackup.ToJSON()
+				if err != nil {
+					return fmt.Errorf("error converting backup to JSON: %s", err)
+				}
+			default:
+				return fmt.Errorf("unknown output format: %s", outputFormat)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s", backupYAML)
+			fmt.Fprintf(os.Stdout, "%s", string(backupData))
 
 			return nil
 		}),

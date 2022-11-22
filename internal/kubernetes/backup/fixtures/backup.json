@@ -1,0 +1,121 @@
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "kind": "AWSPCAIssuer",
+      "apiVersion": "awspca.cert-manager.io/v1beta1",
+      "metadata": {
+        "name": "pca-sample",
+        "namespace": "jetstack-secure",
+        "creationTimestamp": null
+      },
+      "spec": {
+        "arn": "acb",
+        "secretRef": {
+          "accessKeyIDSelector": {
+            "key": ""
+          },
+          "secretAccessKeySelector": {
+            "key": ""
+          }
+        }
+      },
+      "status": {}
+    },
+    {
+      "kind": "ClusterIssuer",
+      "apiVersion": "cert-manager.io/v1",
+      "metadata": {
+        "name": "cm-cluster-issuer-sample",
+        "creationTimestamp": null
+      },
+      "spec": {
+        "acme": {
+          "email": "dummy-email@example.com",
+          "server": "https://",
+          "preferredChain": "",
+          "privateKeySecretRef": {
+            "name": "example"
+          }
+        }
+      },
+      "status": {}
+    },
+    {
+      "kind": "GoogleCASIssuer",
+      "apiVersion": "cas-issuer.jetstack.io/v1beta1",
+      "metadata": {
+        "name": "googlecasissuer-sample",
+        "namespace": "jetstack-secure",
+        "creationTimestamp": null
+      },
+      "spec": {
+        "project": "example",
+        "location": "us-east1",
+        "caPoolId": "my-pool",
+        "credentials": {
+          "name": "googlesa",
+          "key": "example"
+        }
+      },
+      "status": {}
+    },
+    {
+      "kind": "Issuer",
+      "apiVersion": "cert-manager.io/v1",
+      "metadata": {
+        "name": "cm-issuer-sample",
+        "namespace": "jetstack-secure",
+        "creationTimestamp": null
+      },
+      "spec": {
+        "ca": {
+          "secretName": "ca-key-pair"
+        }
+      },
+      "status": {}
+    },
+    {
+      "kind": "Certificate",
+      "apiVersion": "cert-manager.io/v1",
+      "metadata": {
+        "name": "example-com",
+        "namespace": "jetstack-secure",
+        "creationTimestamp": null
+      },
+      "spec": {
+        "dnsNames": [
+          "example.com"
+        ],
+        "secretName": "example-com-tls",
+        "issuerRef": {
+          "name": "ca-issuer",
+          "kind": "Issuer",
+          "group": "cert-manager.io"
+        }
+      },
+      "status": {}
+    },
+    {
+      "kind": "CertificateRequestPolicy",
+      "apiVersion": "policy.cert-manager.io/v1alpha1",
+      "metadata": {
+        "name": "test-policy",
+        "creationTimestamp": null
+      },
+      "spec": {
+        "allowed": {
+          "commonName": {
+            "value": "hello.world",
+            "required": true
+          }
+        },
+        "selector": {
+          "issuerRef": {}
+        }
+      },
+      "status": {}
+    }
+  ],
+  "kind": "List"
+}
