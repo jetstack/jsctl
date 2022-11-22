@@ -223,7 +223,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 	flags.StringVar(&registryCredentialsPath, "registry-credentials-path", "", "Specifies the location of the credentials file to use for image pull secrets")
 	flags.StringVar(&venafiConnections, "experimental-venafi-connections-config", "", "Specifies a path to a file with yaml formatted Venafi connection details")
 	flags.StringVar(&tier, "tier", "", "For users with access to enterprise tier functionality, setting this flag will enable enterprise defaults instead. Valid values are 'enterprise', 'enterprise-plus' or blank")
-	flags.StringVar(&backupFilePath, "experimental-issuers-backup-file", "", "Provide a file containing cert-manager Issuers or ClusterIssuers to be managed in this installation. Note: only cert-manager Issuers and ClusterIssuers are supported, external issuers are not yet supported.")
+	flags.StringVar(&backupFilePath, "experimental-issuers-backup-file", "", "Provide a file containing cert-manager.io/v1 Issuers or ClusterIssuers definitions to be added to Installation and to be managed by the operator. Note: only cert-manager.io/v1 Issuers and ClusterIssuers are currently supported. Support for other issuer groups and versions will be added in future.")
 
 	return cmd
 }
