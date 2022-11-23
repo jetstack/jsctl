@@ -109,7 +109,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				return fmt.Errorf("error extracting issuers from backup file: %w", err)
 			}
 			if len(issuers.MissedIssuers) != 0 {
-				fmt.Fprintf(os.Stderr, "The following issuers cannot be managed by the operator and must be restored manually: %s\n", strings.Join(issuers.MissedIssuers, ", "))
+				fmt.Fprintf(os.Stdout, "The following issuers cannot be managed by the operator and must be restored manually: %s\n", strings.Join(issuers.MissedIssuers, ", "))
 			}
 
 			options := operator.ApplyInstallationYAMLOptions{
