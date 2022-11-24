@@ -99,5 +99,5 @@ metadata:
   name: application-team-b
 spec:
   tpp:
-    policyDN: \VED\Policy\Teams\ApplicationTeamA
+    policyDN: \VED\Policy\Teams\ApplicationTeamB
     url: https://tpp1.example.com
