@@ -11,6 +11,7 @@ import (
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
+	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -376,7 +377,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 	})
 
 	t.Run("It should generate a manifest with issuers", func(t *testing.T) {
-		iss := certmanagerv1.Issuer{
+		certManagerIssuer := certmanagerv1.Issuer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cm-issuer-example",
 				Namespace: "test-namespace",
@@ -396,10 +397,9 @@ func TestApplyInstallationYAML(t *testing.T) {
 			},
 		}
 
-		clusterIss := certmanagerv1.ClusterIssuer{
+		certManagerClusterIssuer := certmanagerv1.ClusterIssuer{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cm-cluster-issuer-example",
-				Namespace: "test-namespace",
+				Name: "cm-cluster-issuer-example",
 			},
 			Spec: certmanagerv1.IssuerSpec{
 				IssuerConfig: certmanagerv1.IssuerConfig{
@@ -410,9 +410,51 @@ func TestApplyInstallationYAML(t *testing.T) {
 			},
 		}
 
+		venafiIssuer := veiv1alpha1.VenafiIssuer{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "VenafiIssuer",
+				APIVersion: "jetstack.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "application-team-b",
+				Namespace: "test-namespace",
+			},
+			Spec: veiv1alpha1.VenafiCertificateSource{
+				Tpp: &veiv1alpha1.TppCertificateIssuer{
+					PolicyDn: `\VED\Policy\Teams\ApplicationTeamA`,
+					Url:      "https://tpp1.example.com",
+				},
+			},
+		}
+
+		venafiClusterIssuer := veiv1alpha1.VenafiClusterIssuer{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "VenafiClusterIssuer",
+				APIVersion: "jetstack.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "application-team-a",
+			},
+			Spec: veiv1alpha1.VenafiCertificateSource{
+				Vaas: &veiv1alpha1.VaasCertificateIssuer{
+					Application: "example",
+					Template:    "example",
+					ApiKey: []veiv1alpha1.SecretSource{
+						{
+							Secret: &veiv1alpha1.Secret{
+								Name: "example",
+							},
+						},
+					},
+				},
+			},
+		}
+
 		options := operator.ApplyInstallationYAMLOptions{
-			CertManagerIssuers:        []*certmanagerv1.Issuer{&iss},
-			CertManagerClusterIssuers: []*certmanagerv1.ClusterIssuer{&clusterIss},
+			ImportedCertManagerIssuers:        []*certmanagerv1.Issuer{&certManagerIssuer},
+			ImportedCertManagerClusterIssuers: []*certmanagerv1.ClusterIssuer{&certManagerClusterIssuer},
+			ImportedVenafiIssuers:             []*veiv1alpha1.VenafiIssuer{&venafiIssuer},
+			ImportedVenafiClusterIssuers:      []*veiv1alpha1.VenafiClusterIssuer{&venafiClusterIssuer},
 		}
 
 		applier := &TestApplier{}
@@ -422,13 +464,58 @@ func TestApplyInstallationYAML(t *testing.T) {
 		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
-		assert.NotNil(t, actual.Spec.Issuers)
-		assert.Equal(t, 2, len(actual.Spec.Issuers))
+		expected := []*operatorv1alpha1.Issuer{
+			{
+				Name:      "cm-issuer-example",
+				Namespace: "test-namespace",
+				ACME: &certmanageracmev1.ACMEIssuer{
+					Email:  "dummy-email@example.com",
+					Server: "https://",
+					PrivateKey: certmanagermetav1.SecretKeySelector{
+						LocalObjectReference: certmanagermetav1.LocalObjectReference{
+							Name: "example",
+						},
+					},
+				},
+			},
+			{
+				Name:         "cm-cluster-issuer-example",
+				ClusterScope: true,
+				CA: &operatorv1alpha1.CAIssuer{
+					SecretName: "ca-key-pair",
+				},
+			},
+			{
+				Name:      "application-team-b",
+				Namespace: "test-namespace",
+				VenafiEnhancedIssuer: &veiv1alpha1.VenafiCertificateSource{
+					Tpp: &veiv1alpha1.TppCertificateIssuer{
+						PolicyDn: `\VED\Policy\Teams\ApplicationTeamA`,
+						Url:      "https://tpp1.example.com",
+					},
+				},
+			},
+			{
+				Name:         "application-team-a",
+				ClusterScope: true,
+				VenafiEnhancedIssuer: &veiv1alpha1.VenafiCertificateSource{
+					Vaas: &veiv1alpha1.VaasCertificateIssuer{
+						Application: "example",
+						Template:    "example",
+						ApiKey: []veiv1alpha1.SecretSource{
+							{
+								Secret: &veiv1alpha1.Secret{
+									Name: "example",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 
-		assert.Equal(t, "cm-issuer-example", actual.Spec.Issuers[0].Name)
-		assert.Equal(t, "dummy-email@example.com", actual.Spec.Issuers[0].ACME.Email)
-		assert.Equal(t, "cm-cluster-issuer-example", actual.Spec.Issuers[1].Name)
-		assert.Equal(t, "ca-key-pair", actual.Spec.Issuers[1].CA.SecretName)
+		assert.NotNil(t, actual.Spec.Issuers)
+		assert.Equal(t, expected, actual.Spec.Issuers)
 	})
 }
 

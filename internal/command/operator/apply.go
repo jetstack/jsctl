@@ -136,8 +136,10 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				InstallApproverPolicyEnterprise: false,
 
 				// Restored Issuers
-				CertManagerIssuers:        issuers.CertManagerIssuers,
-				CertManagerClusterIssuers: issuers.CertManagerClusterIssuers,
+				ImportedCertManagerIssuers:        issuers.CertManagerIssuers,
+				ImportedCertManagerClusterIssuers: issuers.CertManagerClusterIssuers,
+				ImportedVenafiIssuers:             issuers.VenafiIssuers,
+				ImportedVenafiClusterIssuers:      issuers.VenafiClusterIssuers,
 			}
 
 			if tier == tierEnterprisePlus {

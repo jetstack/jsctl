@@ -19,6 +19,7 @@ import (
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
+	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -204,12 +205,19 @@ type (
 		IstioCSRReplicas        int    // The replica count for the istio-csr component.
 		SpiffeCSIDriverReplicas int    // The replica count for the csi-driver-spiffe component.
 
-		// CertManagerIssuers is a list of cert-manager issuers to include in
+		// ImportedCertManagerIssuers is a list of cert-manager issuers to include in
 		// the generated installation file
-		CertManagerIssuers []*certmanagerv1.Issuer
-		// CertManagerClusterIssuers is a list of cert-manager cluster issuers
+		ImportedCertManagerIssuers []*certmanagerv1.Issuer
+		// ImportedCertManagerClusterIssuers is a list of cert-manager cluster issuers
 		// to include in the generated installation file
-		CertManagerClusterIssuers []*certmanagerv1.ClusterIssuer
+		ImportedCertManagerClusterIssuers []*certmanagerv1.ClusterIssuer
+
+		// ImportedVenafiIssuers is a list of Venafi issuers to include in the generated
+		// installation file
+		ImportedVenafiIssuers []*veiv1alpha1.VenafiIssuer
+		// ImportedVenafiClusterIssuers is a list of Venafi cluster issuers to include
+		// in the generated installation file
+		ImportedVenafiClusterIssuers []*veiv1alpha1.VenafiClusterIssuer
 	}
 )
 
@@ -281,8 +289,10 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 
 	err := addIssuersToInstallation(
 		manifestTemplates,
-		options.CertManagerIssuers,
-		options.CertManagerClusterIssuers,
+		options.ImportedCertManagerIssuers,
+		options.ImportedCertManagerClusterIssuers,
+		options.ImportedVenafiIssuers,
+		options.ImportedVenafiClusterIssuers,
 	)
 	if err != nil {
 		return fmt.Errorf("error adding issuers to installation: %w", err)
@@ -296,8 +306,14 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 	return applier.Apply(ctx, buf)
 }
 
-func addIssuersToInstallation(mf *manifests, issuers []*certmanagerv1.Issuer, clusterIssuers []*certmanagerv1.ClusterIssuer) error {
-	for _, issuer := range issuers {
+func addIssuersToInstallation(
+	mf *manifests,
+	certManagerIssuers []*certmanagerv1.Issuer,
+	certManagerClusterIssuers []*certmanagerv1.ClusterIssuer,
+	venafiIssuers []*veiv1alpha1.VenafiIssuer,
+	venafiClusterIssuers []*veiv1alpha1.VenafiClusterIssuer,
+) error {
+	for _, issuer := range certManagerIssuers {
 		mf.installation.Spec.Issuers = append(mf.installation.Spec.Issuers, &operatorv1alpha1.Issuer{
 			ClusterScope: false,
 			Name:         issuer.Name,
@@ -344,7 +360,7 @@ func addIssuersToInstallation(mf *manifests, issuers []*certmanagerv1.Issuer, cl
 		})
 	}
 
-	for _, issuer := range clusterIssuers {
+	for _, issuer := range certManagerClusterIssuers {
 		mf.installation.Spec.Issuers = append(mf.installation.Spec.Issuers, &operatorv1alpha1.Issuer{
 			ClusterScope: true,
 			Name:         issuer.Name,
@@ -388,6 +404,35 @@ func addIssuersToInstallation(mf *manifests, issuers []*certmanagerv1.Issuer, cl
 				}
 				return nil
 			}(),
+		})
+	}
+
+	for _, issuer := range venafiIssuers {
+		mf.installation.Spec.Issuers = append(mf.installation.Spec.Issuers, &operatorv1alpha1.Issuer{
+			ClusterScope: false,
+			Name:         issuer.Name,
+			Namespace:    issuer.Namespace,
+			Labels:       issuer.Labels,
+			Annotations:  issuer.Annotations,
+
+			VenafiEnhancedIssuer: &veiv1alpha1.VenafiCertificateSource{
+				Tpp:  issuer.Spec.Tpp,
+				Vaas: issuer.Spec.Vaas,
+			},
+		})
+	}
+
+	for _, issuer := range venafiClusterIssuers {
+		mf.installation.Spec.Issuers = append(mf.installation.Spec.Issuers, &operatorv1alpha1.Issuer{
+			ClusterScope: true,
+			Name:         issuer.Name,
+			Labels:       issuer.Labels,
+			Annotations:  issuer.Annotations,
+
+			VenafiEnhancedIssuer: &veiv1alpha1.VenafiCertificateSource{
+				Tpp:  issuer.Spec.Tpp,
+				Vaas: issuer.Spec.Vaas,
+			},
 		})
 	}
 
