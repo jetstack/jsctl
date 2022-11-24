@@ -103,6 +103,32 @@
       }
     },
     {
+      "apiVersion": "jetstack.io/v1alpha1",
+      "kind": "VenafiClusterIssuer",
+      "metadata": {
+        "name": "application-team-a"
+      },
+      "spec": {
+        "tpp": {
+          "policyDN": "\\VED\\Policy\\Teams\\ApplicationTeamA",
+          "url": "https://tpp1.example.com"
+        }
+      }
+    },
+    {
+      "apiVersion": "jetstack.io/v1alpha1",
+      "kind": "VenafiIssuer",
+      "metadata": {
+        "name": "application-team-b"
+      },
+      "spec": {
+        "tpp": {
+          "policyDN": "\\VED\\Policy\\Teams\\ApplicationTeamA",
+          "url": "https://tpp1.example.com"
+        }
+      }
+    },
+    {
       "apiVersion": "policy.cert-manager.io/v1alpha1",
       "kind": "CertificateRequestPolicy",
       "metadata": {
