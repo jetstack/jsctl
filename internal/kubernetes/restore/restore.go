@@ -18,14 +18,19 @@ import (
 )
 
 // RestoredIssuers contains the issuers and cluster issuers that were extracted
-// from a backup file. Issuers which were unsupported are listed in MissedIssuers.
+// from a backup file. Issuers which were unsupported are listed in Missed.
 type RestoredIssuers struct {
 	CertManagerIssuers        []*certmanagerv1.Issuer
 	CertManagerClusterIssuers []*certmanagerv1.ClusterIssuer
 	VenafiIssuers             []*veiv1alpha1.VenafiIssuer
 	VenafiClusterIssuers      []*veiv1alpha1.VenafiClusterIssuer
 
-	MissedIssuers []string
+	// Missed is a list of issuers that are not supported for restore.
+	Missed []string
+
+	// NeedsConversion is a list of issuers that are not supported for restore
+	// but could be if converted
+	NeedsConversion []string
 }
 
 func ExtractOperatorManageableIssuersFromBackupFile(backupFilePath string) (*RestoredIssuers, error) {
@@ -77,6 +82,10 @@ func ExtractOperatorManageableIssuersFromBackupFile(backupFilePath string) (*Res
 	for _, resource := range resources {
 		switch resource.GroupVersionKind().Group {
 		case "cert-manager.io":
+			if resource.GetAPIVersion() != "cert-manager.io/v1" {
+				restoredIssuers.NeedsConversion = append(restoredIssuers.NeedsConversion, fmt.Sprintf("%s/%s", resource.GetKind(), resource.GetName()))
+				continue
+			}
 			switch resource.GroupVersionKind().Kind {
 			case "Issuer":
 				var issuer *certmanagerv1.Issuer
@@ -120,7 +129,7 @@ func ExtractOperatorManageableIssuersFromBackupFile(backupFilePath string) (*Res
 			}
 		default:
 			if strings.Contains(resource.GroupVersionKind().Kind, "Issuer") {
-				restoredIssuers.MissedIssuers = append(restoredIssuers.MissedIssuers, fmt.Sprintf("%s/%s", resource.GetKind(), resource.GetName()))
+				restoredIssuers.Missed = append(restoredIssuers.Missed, fmt.Sprintf("%s/%s", resource.GetKind(), resource.GetName()))
 			}
 		}
 	}

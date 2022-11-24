@@ -24,9 +24,12 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 	}
 
 	expectedIssuers := &RestoredIssuers{
-		MissedIssuers: []string{
+		Missed: []string{
 			"AWSPCAIssuer/pca-sample",
 			"GoogleCASIssuer/googlecasissuer-sample",
+		},
+		NeedsConversion: []string{
+			"ClusterIssuer/outdated-cm-issuer",
 		},
 		CertManagerIssuers: []*certmanagerv1.Issuer{
 			{
@@ -82,7 +85,7 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 				},
 				Spec: veiv1alpha1.VenafiCertificateSource{
 					Tpp: &veiv1alpha1.TppCertificateIssuer{
-						PolicyDn: `\VED\Policy\Teams\ApplicationTeamA`,
+						PolicyDn: `\VED\Policy\Teams\ApplicationTeamB`,
 						Url:      "https://tpp1.example.com",
 					},
 				},

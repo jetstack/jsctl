@@ -81,6 +81,25 @@
       }
     },
     {
+      "apiVersion": "cert-manager.io/v1beta1",
+      "kind": "ClusterIssuer",
+      "metadata": {
+        "name": "outdated-cm-issuer"
+      },
+      "spec": {
+        "acme": {
+          "email": "dummy-email@example.com",
+          "preferredChain": "",
+          "privateKeySecretRef": {
+            "name": "example"
+          },
+          "server": "https://"
+        }
+      },
+      "status": {
+      }
+    },
+    {
       "apiVersion": "cert-manager.io/v1",
       "kind": "Certificate",
       "metadata": {

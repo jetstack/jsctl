@@ -108,8 +108,12 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 			if err != nil {
 				return fmt.Errorf("error extracting issuers from backup file: %w", err)
 			}
-			if len(issuers.MissedIssuers) != 0 {
-				fmt.Fprintf(os.Stdout, "The following issuers cannot be managed by the operator and must be restored manually: %s\n", strings.Join(issuers.MissedIssuers, ", "))
+			if len(issuers.Missed) != 0 {
+				fmt.Fprintf(os.Stderr, "The following issuers cannot be managed by the operator and must be restored manually: %s\n", strings.Join(issuers.Missed, ", "))
+			}
+			if len(issuers.NeedsConversion) != 0 {
+				fmt.Fprintf(os.Stderr, "The following issuers need to be converted to cert-manager v1 resources: %s\n", strings.Join(issuers.NeedsConversion, ", "))
+				fmt.Fprintf(os.Stderr, "This can be done using cmctl convert, see here for more information: https://cert-manager.io/docs/reference/cmctl/#convert\n")
 			}
 
 			options := operator.ApplyInstallationYAMLOptions{
