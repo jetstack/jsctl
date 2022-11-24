@@ -10,8 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 )
 
-// LoadYAML takes YAML as []byte and returns a list of
-// unstructured.Unstructured
+// LoadYAML takes YAML as []byte and returns a list of unstructured.Unstructured
 func Load(input io.Reader) ([]*unstructured.Unstructured, error) {
 	var resources []*unstructured.Unstructured
 

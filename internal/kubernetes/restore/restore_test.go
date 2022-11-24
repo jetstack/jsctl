@@ -11,20 +11,18 @@ import (
 )
 
 func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
-	backupFilePath := "fixtures/backup.yaml"
+	testCases := map[string]struct {
+		backupFilePath string
+	}{
+		"yaml": {
+			backupFilePath: "fixtures/backup.yaml",
+		},
+		"json": {
+			backupFilePath: "fixtures/backup.json",
+		},
+	}
 
-	issuers, err := ExtractOperatorManageableIssuersFromBackupFile(backupFilePath)
-	require.NoError(t, err)
-
-	require.Len(t, issuers.CertManagerIssuers, 1)
-	require.Len(t, issuers.CertManagerClusterIssuers, 1)
-
-	require.Equal(t, []string{
-		"AWSPCAIssuer/pca-sample",
-		"GoogleCASIssuer/googlecasissuer-sample",
-	}, issuers.MissedIssuers)
-
-	require.Equal(t, []*certmanagerv1.Issuer{
+	expectedIssuers := []*certmanagerv1.Issuer{
 		{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Issuer",
@@ -42,9 +40,8 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 				},
 			},
 		},
-	}, issuers.CertManagerIssuers)
-
-	require.Equal(t, []*certmanagerv1.ClusterIssuer{
+	}
+	expectedClusterIssuers := []*certmanagerv1.ClusterIssuer{
 		{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ClusterIssuer",
@@ -67,5 +64,23 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 				},
 			},
 		},
-	}, issuers.CertManagerClusterIssuers)
+	}
+
+	for testCaseName, testCase := range testCases {
+		t.Run(testCaseName, func(t *testing.T) {
+			issuers, err := ExtractOperatorManageableIssuersFromBackupFile(testCase.backupFilePath)
+			require.NoError(t, err)
+
+			require.Len(t, issuers.CertManagerIssuers, 1)
+			require.Len(t, issuers.CertManagerClusterIssuers, 1)
+
+			require.Equal(t, []string{
+				"AWSPCAIssuer/pca-sample",
+				"GoogleCASIssuer/googlecasissuer-sample",
+			}, issuers.MissedIssuers)
+
+			require.Equal(t, expectedIssuers, issuers.CertManagerIssuers)
+			require.Equal(t, expectedClusterIssuers, issuers.CertManagerClusterIssuers)
+		})
+	}
 }
