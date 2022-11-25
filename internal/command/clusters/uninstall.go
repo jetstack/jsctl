@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 
@@ -78,7 +78,7 @@ func verify(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 				return fmt.Errorf("error creating certificate client: %s", err)
 			}
 
-			var certificates certmanagerv1.CertificateList
+			var certificates cmapi.CertificateList
 			err = certificateClient.List(
 				ctx,
 				&clients.GenericRequestOptions{},
@@ -115,10 +115,10 @@ func verify(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 				issuing := false
 				ready := false
 				for _, cond := range cert.Status.Conditions {
-					if cond.Type == certmanagerv1.CertificateConditionIssuing && cond.Status == "True" {
+					if cond.Type == cmapi.CertificateConditionIssuing && cond.Status == "True" {
 						issuing = true
 					}
-					if cond.Type == certmanagerv1.CertificateConditionReady && cond.Status == "True" {
+					if cond.Type == cmapi.CertificateConditionReady && cond.Status == "True" {
 						ready = true
 					}
 				}
@@ -133,7 +133,7 @@ func verify(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("error creating certificate request client: %s", err)
 			}
-			var certificateRequests certmanagerv1.CertificateRequestList
+			var certificateRequests cmapi.CertificateRequestList
 			err = certificateRequestClient.List(
 				ctx,
 				&clients.GenericRequestOptions{},
@@ -145,13 +145,13 @@ func verify(run types.RunFunc, kubeConfigPath string) *cobra.Command {
 			for _, cr := range certificateRequests.Items {
 				ready, denied, approved := false, false, false
 				for _, cond := range cr.Status.Conditions {
-					if cond.Type == certmanagerv1.CertificateRequestConditionReady && cond.Status == "True" {
+					if cond.Type == cmapi.CertificateRequestConditionReady && cond.Status == "True" {
 						ready = true
 					}
-					if cond.Type == certmanagerv1.CertificateRequestConditionDenied && cond.Status == "True" {
+					if cond.Type == cmapi.CertificateRequestConditionDenied && cond.Status == "True" {
 						denied = true
 					}
-					if cond.Type == certmanagerv1.CertificateRequestConditionApproved && cond.Status == "True" {
+					if cond.Type == cmapi.CertificateRequestConditionApproved && cond.Status == "True" {
 						approved = true
 					}
 				}
