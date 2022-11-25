@@ -16,7 +16,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	certmanageracmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
 	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
@@ -207,10 +207,10 @@ type (
 
 		// ImportedCertManagerIssuers is a list of cert-manager issuers to include in
 		// the generated installation file
-		ImportedCertManagerIssuers []*certmanagerv1.Issuer
+		ImportedCertManagerIssuers []*cmapi.Issuer
 		// ImportedCertManagerClusterIssuers is a list of cert-manager cluster issuers
 		// to include in the generated installation file
-		ImportedCertManagerClusterIssuers []*certmanagerv1.ClusterIssuer
+		ImportedCertManagerClusterIssuers []*cmapi.ClusterIssuer
 
 		// ImportedVenafiIssuers is a list of Venafi issuers to include in the generated
 		// installation file
@@ -308,8 +308,8 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 
 func addIssuersToInstallation(
 	mf *manifests,
-	certManagerIssuers []*certmanagerv1.Issuer,
-	certManagerClusterIssuers []*certmanagerv1.ClusterIssuer,
+	certManagerIssuers []*cmapi.Issuer,
+	certManagerClusterIssuers []*cmapi.ClusterIssuer,
 	venafiIssuers []*veiv1alpha1.VenafiIssuer,
 	venafiClusterIssuers []*veiv1alpha1.VenafiClusterIssuer,
 ) error {
@@ -339,19 +339,19 @@ func addIssuersToInstallation(
 				return nil
 			}(),
 
-			Vault: func() *certmanagerv1.VaultIssuer {
+			Vault: func() *cmapi.VaultIssuer {
 				if issuer.Spec.Vault != nil {
 					return issuer.Spec.Vault
 				}
 				return nil
 			}(),
-			SelfSigned: func() *certmanagerv1.SelfSignedIssuer {
+			SelfSigned: func() *cmapi.SelfSignedIssuer {
 				if issuer.Spec.SelfSigned != nil {
 					return issuer.Spec.SelfSigned
 				}
 				return nil
 			}(),
-			Venafi: func() *certmanagerv1.VenafiIssuer {
+			Venafi: func() *cmapi.VenafiIssuer {
 				if issuer.Spec.Venafi != nil {
 					return issuer.Spec.Venafi
 				}
@@ -386,19 +386,19 @@ func addIssuersToInstallation(
 				return nil
 			}(),
 
-			Vault: func() *certmanagerv1.VaultIssuer {
+			Vault: func() *cmapi.VaultIssuer {
 				if issuer.Spec.Vault != nil {
 					return issuer.Spec.Vault
 				}
 				return nil
 			}(),
-			SelfSigned: func() *certmanagerv1.SelfSignedIssuer {
+			SelfSigned: func() *cmapi.SelfSignedIssuer {
 				if issuer.Spec.SelfSigned != nil {
 					return issuer.Spec.SelfSigned
 				}
 				return nil
 			}(),
-			Venafi: func() *certmanagerv1.VenafiIssuer {
+			Venafi: func() *cmapi.VenafiIssuer {
 				if issuer.Spec.Venafi != nil {
 					return issuer.Spec.Venafi
 				}
@@ -558,8 +558,8 @@ func applyIstioCSRToInstallation(manifests *manifests, options ApplyInstallation
 
 	manifests.installation.Spec.IstioCSR.IssuerRef = &certmanagermetav1.ObjectReference{
 		Name:  options.IstioCSRIssuer,
-		Kind:  certmanagerv1.IssuerKind,
-		Group: certmanagerv1.SchemeGroupVersion.Group,
+		Kind:  cmapi.IssuerKind,
+		Group: cmapi.SchemeGroupVersion.Group,
 	}
 
 	return nil

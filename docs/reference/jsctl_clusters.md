@@ -24,5 +24,6 @@ Subcommands for cluster management
 * [jsctl clusters delete](jsctl_clusters_delete.md)	 - Deletes a cluster from the organization
 * [jsctl clusters list](jsctl_clusters_list.md)	 - Lists all clusters connected to the control plane for the organization
 * [jsctl clusters status](jsctl_clusters_status.md)	 - Prints information about the state in the currently configured cluster in kubeconfig
+* [jsctl clusters uninstall](jsctl_clusters_uninstall.md)	 - Contains commands to check a cluster before the uninstallation of Jetstack Secure software
 * [jsctl clusters view](jsctl_clusters_view.md)	 - Opens a browser window to the cluster's dashboard
 
