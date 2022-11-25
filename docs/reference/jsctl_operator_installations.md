@@ -19,7 +19,7 @@ Subcommands for managing operator installation resources
 
 ### SEE ALSO
 
-* [jsctl operator](jsctl_operator.md)	 - Subcommands for managing the jetstack operator
+* [jsctl operator](jsctl_operator.md)	 - Subcommands for managing the Jetstack operator
 * [jsctl operator installations apply](jsctl_operator_installations_apply.md)	 - Applies an Installation manifest to the current cluster, configured via flags
 * [jsctl operator installations status](jsctl_operator_installations_status.md)	 - Output the status of all operator components
 

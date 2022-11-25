@@ -6,7 +6,7 @@ Deploys the operator and its components in the current Kubernetes context
 
 Deploys the operator and its components in the current Kubernetes context
 
-Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the operator will be deployed without an image pull secret. The images must be availble for the operator pods to start.
+Note: If --auto-registry-credentials and --registry-credentials-path are unset, then the operator will be deployed without an image pull secret. The images must be available for the operator pods to start.
 
 ```
 jsctl operator deploy [flags]
@@ -33,5 +33,5 @@ jsctl operator deploy [flags]
 
 ### SEE ALSO
 
-* [jsctl operator](jsctl_operator.md)	 - Subcommands for managing the jetstack operator
+* [jsctl operator](jsctl_operator.md)	 - Subcommands for managing the Jetstack operator
 

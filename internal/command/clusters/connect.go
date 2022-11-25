@@ -10,7 +10,7 @@ import (
 
 	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/cluster"
-	commandErrors "github.com/jetstack/jsctl/internal/command/errors"
+	internalerrors "github.com/jetstack/jsctl/internal/command/errors"
 	"github.com/jetstack/jsctl/internal/command/types"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/kubernetes"
@@ -33,7 +33,7 @@ func Connect(run types.RunFunc, kubeConfigPath, apiURL *string, useStdout *bool)
 
 			cnf, ok := config.FromContext(ctx)
 			if !ok || cnf.Organization == "" {
-				return commandErrors.ErrNoOrganizationName
+				return internalerrors.ErrNoOrganizationName
 			}
 
 			http := client.New(ctx, *apiURL)

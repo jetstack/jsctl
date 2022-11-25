@@ -23,5 +23,5 @@ jsctl operator versions [flags]
 
 ### SEE ALSO
 
-* [jsctl operator](jsctl_operator.md)	 - Subcommands for managing the jetstack operator
+* [jsctl operator](jsctl_operator.md)	 - Subcommands for managing the Jetstack operator
 

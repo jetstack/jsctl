@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jetstack/jsctl/internal/client"
-	errors2 "github.com/jetstack/jsctl/internal/command/errors"
+	internalerrors "github.com/jetstack/jsctl/internal/command/errors"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/prompt"
 	"github.com/jetstack/jsctl/internal/table"
@@ -46,7 +46,7 @@ func usersList() *cobra.Command {
 			http := client.New(ctx, apiURL)
 			cnf, ok := config.FromContext(ctx)
 			if !ok || cnf.Organization == "" {
-				return errors2.ErrNoOrganizationName
+				return internalerrors.ErrNoOrganizationName
 			}
 
 			users, err := user.List(ctx, http, cnf.Organization)
@@ -90,7 +90,7 @@ func usersAdd() *cobra.Command {
 			http := client.New(ctx, apiURL)
 			cnf, ok := config.FromContext(ctx)
 			if !ok || cnf.Organization == "" {
-				return errors2.ErrNoOrganizationName
+				return internalerrors.ErrNoOrganizationName
 			}
 
 			email := args[0]
@@ -124,7 +124,7 @@ func usersRemove() *cobra.Command {
 			http := client.New(ctx, apiURL)
 			cnf, ok := config.FromContext(ctx)
 			if !ok || cnf.Organization == "" {
-				return errors2.ErrNoOrganizationName
+				return internalerrors.ErrNoOrganizationName
 			}
 
 			email := args[0]

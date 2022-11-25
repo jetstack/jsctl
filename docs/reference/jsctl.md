@@ -18,7 +18,7 @@ Command-line tool for the Jetstack Secure Control Plane
 * [jsctl clusters](jsctl_clusters.md)	 - Subcommands for cluster management
 * [jsctl configuration](jsctl_configuration.md)	 - Subcommands for configuration management
 * [jsctl experimental](jsctl_experimental.md)	 - Experimental jsctl commands
-* [jsctl operator](jsctl_operator.md)	 - Subcommands for managing the jetstack operator
+* [jsctl operator](jsctl_operator.md)	 - Subcommands for managing the Jetstack operator
 * [jsctl organizations](jsctl_organizations.md)	 - Subcommands for organization management
 * [jsctl registry](jsctl_registry.md)	 - Subcommands for Jetstack Secure registry management
 * [jsctl users](jsctl_users.md)	 - Subcommands for user management
