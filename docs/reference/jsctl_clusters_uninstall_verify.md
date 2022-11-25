@@ -2,6 +2,15 @@
 
 Check that a cluster is ready to have Jetstack Software uninstalled
 
+### Synopsis
+
+Runs the following checks:
+* Checks secrets containing certificates are safe from garbage collection
+* Checks for any upcoming renewals
+* Checks for certificates currently being issued
+* Checks for stuck certificate requests
+
+
 ```
 jsctl clusters uninstall verify [flags]
 ```
