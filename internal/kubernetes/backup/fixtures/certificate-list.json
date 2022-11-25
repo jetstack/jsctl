@@ -1,0 +1,102 @@
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "apiVersion": "cert-manager.io/v1",
+      "kind": "Certificate",
+      "metadata": {
+        "annotations": { },
+        "ownerReferences": [
+          {
+            "apiVersion": "networking.k8s.io/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Ingress",
+            "name": "example-com",
+            "uid": "f9013344-8318-4fd6-b8d3-12345"
+          }
+        ],
+        "creationTimestamp": "2022-11-11T16:00:29Z",
+        "generation": 1,
+        "name": "example-com-ingress",
+        "namespace": "jetstack-secure",
+        "resourceVersion": "2535",
+        "uid": "f9013344-8318-4fd6-b8d3-b8b95a50b7f5"
+      },
+      "spec": {
+        "dnsNames": [
+          "example.com"
+        ],
+        "issuerRef": {
+          "group": "cert-manager.io",
+          "kind": "Issuer",
+          "name": "ca-issuer"
+        },
+        "secretName": "example-com-tls"
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2022-11-11T16:01:23Z",
+            "message": "Certificate is up to date and has not expired",
+            "observedGeneration": 1,
+            "reason": "Ready",
+            "status": "True",
+            "type": "Ready"
+          }
+        ],
+        "notAfter": "2023-02-09T16:01:23Z",
+        "notBefore": "2022-11-11T16:01:23Z",
+        "renewalTime": "2023-01-10T16:01:23Z",
+        "revision": 1
+      }
+    },
+    {
+      "apiVersion": "cert-manager.io/v1",
+      "kind": "Certificate",
+      "metadata": {
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"cert-manager.io/v1\",\"kind\":\"Certificate\",\"metadata\":{\"annotations\":{},\"name\":\"example-com\",\"namespace\":\"jetstack-secure\"},\"spec\":{\"dnsNames\":[\"example.com\"],\"issuerRef\":{\"group\":\"cert-manager.io\",\"kind\":\"Issuer\",\"name\":\"ca-issuer\"},\"secretName\":\"example-com-tls\"}}\n"
+        },
+        "creationTimestamp": "2022-11-11T16:00:29Z",
+        "generation": 1,
+        "name": "example-com",
+        "namespace": "jetstack-secure",
+        "resourceVersion": "2535",
+        "uid": "f9013344-8318-4fd6-b8d3-b8b95a50b7f5"
+      },
+      "spec": {
+        "dnsNames": [
+          "example.com"
+        ],
+        "issuerRef": {
+          "group": "cert-manager.io",
+          "kind": "Issuer",
+          "name": "ca-issuer"
+        },
+        "secretName": "example-com-tls"
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2022-11-11T16:01:23Z",
+            "message": "Certificate is up to date and has not expired",
+            "observedGeneration": 1,
+            "reason": "Ready",
+            "status": "True",
+            "type": "Ready"
+          }
+        ],
+        "notAfter": "2023-02-09T16:01:23Z",
+        "notBefore": "2022-11-11T16:01:23Z",
+        "renewalTime": "2023-01-10T16:01:23Z",
+        "revision": 1
+      }
+    }
+  ],
+  "kind": "List",
+  "metadata": {
+    "resourceVersion": "",
+    "selfLink": ""
+  }
+}

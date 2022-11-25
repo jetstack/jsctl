@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	kmsissuerv1alpha1 "github.com/Skyscanner/kms-issuer/apis/certmanager/v1alpha1"
 	awspcaissuerv1beta1 "github.com/cert-manager/aws-privateca-issuer/pkg/api/v1beta1"
@@ -76,6 +77,60 @@ func (s AnyIssuer) String() string {
 		return "stepclusterissuers.certmanager.step.sm"
 	}
 	return "unknown"
+}
+
+type SupportedIssuer struct {
+	CRDName  string
+	Versions []string
+}
+
+type SupportedIssuerList []SupportedIssuer
+
+func (s SupportedIssuerList) String() string {
+	var items []string
+	for _, issuer := range s {
+		items = append(items, fmt.Sprintf("%s[%s]", issuer.CRDName, strings.Join(issuer.Versions, ",")))
+	}
+	return strings.Join(items, ", ")
+}
+
+// ListSupportedIssuers returns a static list of all supported issuer types and
+// versions. It checks each items in the AllIssuers list is mapped and errors if
+// there are missing Issuers. This is caught in a test to help us keep this up
+// to date.
+func ListSupportedIssuers() (SupportedIssuerList, error) {
+	// this mapping must be manually updated if we change the supported issuers
+	// and versions
+	supportedGroupVersions := map[string][]string{
+		CertManagerIssuer.String():           {"v1"},
+		CertManagerClusterIssuer.String():    {"v1"},
+		VenafiEnhancedIssuer.String():        {"v1alpha1"},
+		VenafiEnhancedClusterIssuer.String(): {"v1alpha1"},
+		AWSPCAIssuer.String():                {"v1beta1"},
+		AWSPCAClusterIssuer.String():         {"v1beta1"},
+		KMSIssuer.String():                   {"v1alpha1"},
+		GoogleCASIssuer.String():             {"v1beta1"},
+		GoogleCASClusterIssuer.String():      {"v1beta1"},
+		OriginCAIssuer.String():              {"v1"},
+		SmallStepIssuer.String():             {"v1beta1"},
+		SmallStepClusterIssuer.String():      {"v1beta1"},
+	}
+
+	var supportedIssuers []SupportedIssuer
+
+	// ensure that we have a list of versions for all supported issuers
+	for _, issuer := range AllIssuersList {
+		_, versionsKnown := supportedGroupVersions[issuer.String()]
+		if !versionsKnown {
+			return nil, fmt.Errorf("unknown issuer type %s", issuer.String())
+		}
+		supportedIssuers = append(supportedIssuers, SupportedIssuer{
+			CRDName:  issuer.String(),
+			Versions: supportedGroupVersions[issuer.String()],
+		})
+	}
+
+	return supportedIssuers, nil
 }
 
 // AllIssuers is a special client to wrap logic for determining the kinds of

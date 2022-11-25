@@ -1,0 +1,29 @@
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "apiVersion": "policy.cert-manager.io/v1alpha1",
+      "kind": "CertificateRequestPolicy",
+      "metadata": {
+        "name": "test-policy"
+      },
+      "spec": {
+        "allowed": {
+          "commonName": {
+            "value": "hello.world",
+            "required": true
+          }
+        },
+        "selector": {
+          "issuerRef": {
+          }
+        }
+      }
+    }
+  ],
+  "kind": "List",
+  "metadata": {
+    "resourceVersion": "",
+    "selfLink": ""
+  }
+}

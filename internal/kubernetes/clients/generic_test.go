@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -52,9 +53,109 @@ func TestGeneric_Get(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, called)
-	assert.Equal(t, result.Name, "test-pod")
-	assert.Equal(t, result.Namespace, "test-namespace")
+	assert.Equal(t, "test-pod", result.Name)
+	assert.Equal(t, "test-namespace", result.Namespace)
 	assert.Equal(t, "/api/v1/namespaces/test-namespace/pods/test-pod", requestedPath)
+}
+
+func TestGeneric_Get_WithDropFields(t *testing.T) {
+	ctx := context.Background()
+
+	var requestedPath string
+	var called bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		requestedPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "test-pod",
+    "namespace": "test-namespace",
+    "annotations": {
+      "kubectl.kubernetes.io/last-applied-configuration": "data"
+    }
+  }
+}`))
+	}))
+
+	cfg := &rest.Config{
+		Host: server.URL,
+	}
+
+	client, err := NewGenericClient[*corev1.Pod, *corev1.PodList](
+		&GenericClientOptions{
+			RestConfig: cfg,
+			APIPath:    "/api/",
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
+			Kind:       "pods",
+		},
+	)
+	require.NoError(t, err)
+
+	var result corev1.Pod
+
+	err = client.Get(ctx, &GenericRequestOptions{
+		Name:      "test-pod",
+		Namespace: "test-namespace",
+		DropFields: []string{
+			"/metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration",
+		},
+	}, &result)
+	require.NoError(t, err)
+
+	assert.True(t, called)
+	assert.Equal(t, "test-pod", result.Name)
+	assert.Equal(t, "test-namespace", result.Namespace)
+	// Field should have been dropped
+	assert.Equal(t, map[string]string{}, result.Annotations)
+	assert.Equal(t, "/api/v1/namespaces/test-namespace/pods/test-pod", requestedPath)
+}
+
+func TestGeneric_List_WithDropFields(t *testing.T) {
+	ctx := context.Background()
+
+	var requestedPath string
+	var called bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		requestedPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		data, err := os.ReadFile("fixtures/pod-list.json")
+		require.NoError(t, err)
+		w.Write(data)
+	}))
+
+	cfg := &rest.Config{
+		Host: server.URL,
+	}
+
+	client, err := NewGenericClient[*corev1.Pod, *corev1.PodList](
+		&GenericClientOptions{
+			RestConfig: cfg,
+			APIPath:    "/api/",
+			Group:      corev1.GroupName,
+			Version:    corev1.SchemeGroupVersion.Version,
+			Kind:       "pods",
+		},
+	)
+	require.NoError(t, err)
+
+	var result corev1.PodList
+
+	err = client.List(ctx, &GenericRequestOptions{
+		Namespace: "test-namespace",
+		DropFields: []string{
+			"/status",
+		},
+	}, &result)
+	require.NoError(t, err)
+
+	assert.True(t, called)
+	assert.Equal(t, "/api/v1/namespaces/test-namespace/pods", requestedPath)
+	assert.Equal(t, "", fmt.Sprintf("%s", result.Items[0].Status.Phase))
 }
 
 func TestGeneric_Get_ClusterScope(t *testing.T) {
