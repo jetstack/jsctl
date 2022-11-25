@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	v1alpha1approverpolicy "github.com/cert-manager/approver-policy/pkg/apis/policy/v1alpha1"
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 )
@@ -28,13 +28,13 @@ func NewCRDClient(config *rest.Config) (*Generic[*v1extensions.CustomResourceDef
 }
 
 // NewCertificateClient returns an instance of a generic client for querying cert-manager Certificates
-func NewCertificateClient(config *rest.Config) (*Generic[*certmanagerv1.Certificate, *certmanagerv1.CertificateList], error) {
-	genericClient, err := NewGenericClient[*certmanagerv1.Certificate, *certmanagerv1.CertificateList](
+func NewCertificateClient(config *rest.Config) (*Generic[*cmapi.Certificate, *cmapi.CertificateList], error) {
+	genericClient, err := NewGenericClient[*cmapi.Certificate, *cmapi.CertificateList](
 		&GenericClientOptions{
 			RestConfig: config,
 			APIPath:    "/apis",
-			Group:      certmanagerv1.SchemeGroupVersion.Group,
-			Version:    certmanagerv1.SchemeGroupVersion.Version,
+			Group:      cmapi.SchemeGroupVersion.Group,
+			Version:    cmapi.SchemeGroupVersion.Version,
 			Kind:       "certificates",
 		},
 	)
@@ -46,13 +46,13 @@ func NewCertificateClient(config *rest.Config) (*Generic[*certmanagerv1.Certific
 }
 
 // NewCertificateRequestClient returns an instance of a generic client for querying cert-manager CertificateRequests
-func NewCertificateRequestClient(config *rest.Config) (*Generic[*certmanagerv1.CertificateRequest, *certmanagerv1.CertificateRequestList], error) {
-	genericClient, err := NewGenericClient[*certmanagerv1.CertificateRequest, *certmanagerv1.CertificateRequestList](
+func NewCertificateRequestClient(config *rest.Config) (*Generic[*cmapi.CertificateRequest, *cmapi.CertificateRequestList], error) {
+	genericClient, err := NewGenericClient[*cmapi.CertificateRequest, *cmapi.CertificateRequestList](
 		&GenericClientOptions{
 			RestConfig: config,
 			APIPath:    "/apis",
-			Group:      certmanagerv1.SchemeGroupVersion.Group,
-			Version:    certmanagerv1.SchemeGroupVersion.Version,
+			Group:      cmapi.SchemeGroupVersion.Group,
+			Version:    cmapi.SchemeGroupVersion.Version,
 			Kind:       "certificaterequests",
 		},
 	)
