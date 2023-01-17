@@ -16,7 +16,6 @@ builds:
     - linux
     goarch:
     - amd64
-    - arm
     - arm64
   - id: "darwin"
     env:
@@ -45,41 +44,29 @@ builds:
     - windows
     goarch:
     - amd64
-    - "386"
     - arm64
 archives:
   - id: linux
     format: tar.gz
-    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
     wrap_in_directory: true
     builds:
     - "linux"
-    replacements:
-      arm: armv7l
-      arm64: aarch64
-      amd64: x86_64
   - id: darwin
     format: tar.gz
-    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
     wrap_in_directory: true
     builds:
     - "darwin"
-    replacements:
-      arm: armv7l
-      amd64: x86_64
   - id: windows
     format: tar.gz
-    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
     wrap_in_directory: true
     builds:
     - "windows"
-    replacements:
-      arm64: Arm64
-      amd64: 64bit
-      386: 32bit
 
 checksum:
-  name_template: "{{ .ProjectName }}-{{ .Version }}-SHA256SUMS"
+  name_template: "{{ .ProjectName }}-SHA256SUMS"
   algorithm: sha256
 release:
   draft: true
