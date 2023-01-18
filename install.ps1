@@ -20,8 +20,8 @@ $Target = if ($ENV:OS -eq "Windows_NT") {
     }
 
     switch ($arch) {
-        "AMD64" { "jsctl-amd64-windows" }
-        "ARM64" { "jsctl-arm64-windows" }
+        "AMD64" { "jsctl-windows-amd64" }
+        "ARM64" { "jsctl-windows-arm64" }
         default { throw "Error: Unsupported windows achitecture: ${arch}" }
     }
 } else {

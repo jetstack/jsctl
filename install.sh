@@ -20,8 +20,8 @@ if [ "$OS" = "Windows_NT" ]; then
     fi
 
     case $arch in
-    "AMD64") target="jsctl-amd64-windows" ;;
-    "ARM64") target="jsctl-arm64-windows" ;;
+    "AMD64") target="jsctl-windows-amd64" ;;
+    "ARM64") target="jsctl-windows-arm64" ;;
     *)
         echo "Error: Unsupported windows achitecture: ${arch}" 1>&2
         exit 1 ;;
@@ -29,10 +29,10 @@ if [ "$OS" = "Windows_NT" ]; then
     target_file="jsctl.exe"
 else
 	case $(uname -sm) in
-	"Darwin x86_64") target="jsctl-amd64-darwin" ;;
-	"Darwin arm64")  target="jsctl-arm64-darwin" ;;
-    "Linux x86_64")  target="jsctl-amd64-linux" ;;
-	"Linux aarch64") target="jsctl-arm64-linux" ;;
+	"Darwin x86_64") target="jsctl-darwin-amd64" ;;
+	"Darwin arm64")  target="jsctl-darwin-arm64" ;;
+    "Linux x86_64")  target="jsctl-linux-amd64" ;;
+	"Linux aarch64") target="jsctl-linux-arm64" ;;
     *)
         echo "Error: Unsupported operating system or architecture: $(uname -sm)" 1>&2
         exit 1 ;;
