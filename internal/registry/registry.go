@@ -69,7 +69,7 @@ func FetchOrLoadJetstackSecureEnterpriseRegistryCredentials(ctx context.Context,
 	// organization must be set here so that we know which org to create
 	// the credentials in
 	if cnf.Organization == "" {
-		return nil, fmt.Errorf("no organization must be set")
+		return nil, fmt.Errorf("an organization must be set")
 	}
 
 	serviceAccounts, err := subscription.CreateGoogleServiceAccount(
