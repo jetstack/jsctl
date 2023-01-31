@@ -96,7 +96,11 @@ func FetchClusterBackup(ctx context.Context, opts ClusterBackupOptions) (*Cluste
 	if err != nil {
 		return nil, fmt.Errorf("failed to list CRDs to determine the cert-manager API version in use: %s", err)
 	}
+	policyCRDsFound := false
 	for _, crd := range crds.Items {
+		if crd.Spec.Group == v1alpha1approverpolicy.SchemeGroupVersion.Group {
+			policyCRDsFound = true
+		}
 		if crd.Spec.Group != "cert-manager.io" {
 			continue
 		}
@@ -161,7 +165,7 @@ func FetchClusterBackup(ctx context.Context, opts ClusterBackupOptions) (*Cluste
 	// fetch certificate request policies
 	// Note: this back up data is not used in the migration to an operator managed installation.
 	// These resourcse are only included for disaster recovery purposes.
-	if opts.IncludeCertificateRequestPolicies {
+	if policyCRDsFound && opts.IncludeCertificateRequestPolicies {
 		certificateRequestPolicyClient, err := clients.NewCertificateRequestPolicyClient(opts.RestConfig)
 		if err != nil {
 			return &ClusterBackup{}, fmt.Errorf("failed to create client for certificate request policies: %w", err)

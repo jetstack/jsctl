@@ -376,7 +376,7 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: kmsissuerv1alpha1.GroupVersion.String(),
+					APIVersion: veiv1alpha1.SchemeGroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -394,7 +394,7 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: kmsissuerv1alpha1.GroupVersion.String(),
+					APIVersion: veiv1alpha1.SchemeGroupVersion.String(),
 					Name:       issuer.Name,
 					Kind:       issuer.Kind,
 				})
