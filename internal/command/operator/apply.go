@@ -104,9 +104,12 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 				return fmt.Errorf("error validating provided flags: %w", err)
 			}
 
-			issuers, err := restore.ExtractOperatorManageableIssuersFromBackupFile(backupFilePath)
-			if err != nil {
-				return fmt.Errorf("error extracting issuers from backup file: %w", err)
+			issuers := &restore.RestoredIssuers{}
+			if backupFilePath != "" {
+				issuers, err = restore.ExtractOperatorManageableIssuersFromBackupFile(backupFilePath)
+				if err != nil {
+					return fmt.Errorf("error extracting issuers from backup file: %w", err)
+				}
 			}
 			if len(issuers.Missed) != 0 {
 				fmt.Fprintf(os.Stderr, "The following issuers cannot be managed by the operator and must be restored manually: %s\n", strings.Join(issuers.Missed, ", "))
