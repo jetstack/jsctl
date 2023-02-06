@@ -449,19 +449,19 @@ data:
           version: v1alpha3
           resource: virtualservices
     - kind: "k8s-dynamic"
-      name: "k8s/venaficlusterissuer"
+      name: "k8s/venaficlusterissuers"
       config:
         resource-type:
           group: jetstack.io
           version: v1alpha1
-          resource: venaficlusterissuer
+          resource: venaficlusterissuers
     - kind: "k8s-dynamic"
-      name: "k8s/venafiissuer"
+      name: "k8s/venafiissuers"
       config:
         resource-type:
           group: jetstack.io
           version: v1alpha1
-          resource: venafiissuer
+          resource: venafiissuers
 kind: ConfigMap
 metadata:
   name: agent-config
