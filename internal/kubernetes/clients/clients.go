@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	v1alpha1approverpolicy "github.com/cert-manager/approver-policy/pkg/apis/policy/v1alpha1"
-	v1certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	v1extensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 )
@@ -28,13 +28,13 @@ func NewCRDClient(config *rest.Config) (*Generic[*v1extensions.CustomResourceDef
 }
 
 // NewCertificateClient returns an instance of a generic client for querying cert-manager Certificates
-func NewCertificateClient(config *rest.Config) (*Generic[*v1certmanager.Certificate, *v1certmanager.CertificateList], error) {
-	genericClient, err := NewGenericClient[*v1certmanager.Certificate, *v1certmanager.CertificateList](
+func NewCertificateClient(config *rest.Config) (*Generic[*cmapi.Certificate, *cmapi.CertificateList], error) {
+	genericClient, err := NewGenericClient[*cmapi.Certificate, *cmapi.CertificateList](
 		&GenericClientOptions{
 			RestConfig: config,
 			APIPath:    "/apis",
-			Group:      v1certmanager.SchemeGroupVersion.Group,
-			Version:    v1certmanager.SchemeGroupVersion.Version,
+			Group:      cmapi.SchemeGroupVersion.Group,
+			Version:    cmapi.SchemeGroupVersion.Version,
 			Kind:       "certificates",
 		},
 	)

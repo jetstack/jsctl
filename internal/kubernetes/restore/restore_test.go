@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	certmanageracmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
 	"github.com/stretchr/testify/require"
@@ -31,7 +31,7 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 		NeedsConversion: []string{
 			"ClusterIssuer/outdated-cm-issuer",
 		},
-		CertManagerIssuers: []*certmanagerv1.Issuer{
+		CertManagerIssuers: []*cmapi.Issuer{
 			{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Issuer",
@@ -41,16 +41,16 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 					Name:      "cm-issuer-sample",
 					Namespace: "jetstack-secure",
 				},
-				Spec: certmanagerv1.IssuerSpec{
-					IssuerConfig: certmanagerv1.IssuerConfig{
-						CA: &certmanagerv1.CAIssuer{
+				Spec: cmapi.IssuerSpec{
+					IssuerConfig: cmapi.IssuerConfig{
+						CA: &cmapi.CAIssuer{
 							SecretName: "ca-key-pair",
 						},
 					},
 				},
 			},
 		},
-		CertManagerClusterIssuers: []*certmanagerv1.ClusterIssuer{
+		CertManagerClusterIssuers: []*cmapi.ClusterIssuer{
 			{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ClusterIssuer",
@@ -59,8 +59,8 @@ func TestExtractOperatorManageableIssuersFromBackupFile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cm-cluster-issuer-sample",
 				},
-				Spec: certmanagerv1.IssuerSpec{
-					IssuerConfig: certmanagerv1.IssuerConfig{
+				Spec: cmapi.IssuerSpec{
+					IssuerConfig: cmapi.IssuerConfig{
 						ACME: &certmanageracmev1.ACMEIssuer{
 							Email:  "dummy-email@example.com",
 							Server: "https://",

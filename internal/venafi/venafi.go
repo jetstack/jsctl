@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	alpha1operatorv1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -120,9 +120,9 @@ func GenerateOperatorManifestsForIssuer(issuer *VenafiIssuer) (*alpha1operatorv1
 	}
 	vc := issuer.Conn.VC
 	iss := &alpha1operatorv1.Issuer{
-		Venafi: &certmanagerv1.VenafiIssuer{
+		Venafi: &cmapi.VenafiIssuer{
 			Zone: vc.Zone,
-			TPP: &certmanagerv1.VenafiTPP{
+			TPP: &cmapi.VenafiTPP{
 				URL: vc.URL,
 			},
 		},

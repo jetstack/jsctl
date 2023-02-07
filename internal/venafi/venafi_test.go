@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
 	"github.com/stretchr/testify/assert"
@@ -176,9 +176,9 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 			expectedIssuer: &operatorv1alpha1.Issuer{
 				Name:      "foo",
 				Namespace: "foo",
-				Venafi: &certmanagerv1.VenafiIssuer{
+				Venafi: &cmapi.VenafiIssuer{
 					Zone: "foo",
-					TPP: &certmanagerv1.VenafiTPP{
+					TPP: &cmapi.VenafiTPP{
 						URL: "foo",
 						CredentialsRef: certmanagermetav1.LocalObjectReference{
 							Name: "foo-jsctl",
@@ -210,9 +210,9 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 				Name:         "foo",
 				Namespace:    "foo",
 				ClusterScope: true,
-				Venafi: &certmanagerv1.VenafiIssuer{
+				Venafi: &cmapi.VenafiIssuer{
 					Zone: "foo",
-					TPP: &certmanagerv1.VenafiTPP{
+					TPP: &cmapi.VenafiTPP{
 						URL: "foo",
 						CredentialsRef: certmanagermetav1.LocalObjectReference{
 							Name: "foo-jsctl",
@@ -245,9 +245,9 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 			expectedIssuer: &operatorv1alpha1.Issuer{
 				Name:      "foo",
 				Namespace: "foo",
-				Venafi: &certmanagerv1.VenafiIssuer{
+				Venafi: &cmapi.VenafiIssuer{
 					Zone: "foo",
-					TPP: &certmanagerv1.VenafiTPP{
+					TPP: &cmapi.VenafiTPP{
 						URL: "foo",
 						CredentialsRef: certmanagermetav1.LocalObjectReference{
 							Name: "foo-jsctl",
@@ -298,9 +298,9 @@ func TestGenerateOperatorManifestsForIssuer(t *testing.T) {
 			expectedIssuer: &operatorv1alpha1.Issuer{
 				Name:      "foo",
 				Namespace: "foo",
-				Venafi: &certmanagerv1.VenafiIssuer{
+				Venafi: &cmapi.VenafiIssuer{
 					Zone: "foo",
-					TPP: &certmanagerv1.VenafiTPP{
+					TPP: &cmapi.VenafiTPP{
 						URL: "foo",
 						CredentialsRef: certmanagermetav1.LocalObjectReference{
 							Name: "foo-jsctl",

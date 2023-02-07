@@ -7,7 +7,7 @@ import (
 
 	kmsissuerv1alpha1 "github.com/Skyscanner/kms-issuer/apis/certmanager/v1alpha1"
 	awspcaissuerv1beta1 "github.com/cert-manager/aws-privateca-issuer/pkg/api/v1beta1"
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	origincaissuerv1 "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
 	googlecasissuerv1beta1 "github.com/jetstack/google-cas-issuer/api/v1beta1"
 	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
@@ -246,14 +246,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create clusterissuer client: %s", err)
 			}
-			var issuers certmanagerv1.IssuerList
+			var issuers cmapi.IssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &issuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list clusterissuers: %s", err)
 			}
 			for _, issuer := range issuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: certmanagerv1.SchemeGroupVersion.String(),
+					APIVersion: cmapi.SchemeGroupVersion.String(),
 					Name:       issuer.Name,
 					Namespace:  issuer.Namespace,
 					Kind:       issuer.Kind,
@@ -264,14 +264,14 @@ func findIssuers(ctx context.Context, cfg *rest.Config) ([]summaryIssuer, error)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create clusterissuer client: %s", err)
 			}
-			var clusterIssuers certmanagerv1.ClusterIssuerList
+			var clusterIssuers cmapi.ClusterIssuerList
 			err = client.List(ctx, &clients.GenericRequestOptions{}, &clusterIssuers)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list clusterissuers: %s", err)
 			}
 			for _, issuer := range clusterIssuers.Items {
 				summaryIssuers = append(summaryIssuers, summaryIssuer{
-					APIVersion: certmanagerv1.SchemeGroupVersion.String(),
+					APIVersion: cmapi.SchemeGroupVersion.String(),
 					Name:       issuer.Name,
 					Kind:       issuer.Kind,
 				})

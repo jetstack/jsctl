@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	certmanageracmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	operatorv1alpha1 "github.com/jetstack/js-operator/pkg/apis/operator/v1alpha1"
 	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
@@ -267,8 +267,8 @@ func TestApplyInstallationYAML(t *testing.T) {
 		if assert.NotNil(t, actual.Spec.IstioCSR) && assert.NotNil(t, actual.Spec.IstioCSR.IssuerRef) {
 			issuer := actual.Spec.IstioCSR.IssuerRef
 
-			assert.EqualValues(t, certmanagerv1.SchemeGroupVersion.Group, issuer.Group)
-			assert.EqualValues(t, certmanagerv1.IssuerKind, issuer.Kind)
+			assert.EqualValues(t, cmapi.SchemeGroupVersion.Group, issuer.Group)
+			assert.EqualValues(t, cmapi.IssuerKind, issuer.Kind)
 			assert.EqualValues(t, options.IstioCSRIssuer, issuer.Name)
 		}
 	})
@@ -377,13 +377,13 @@ func TestApplyInstallationYAML(t *testing.T) {
 	})
 
 	t.Run("It should generate a manifest with issuers", func(t *testing.T) {
-		certManagerIssuer := certmanagerv1.Issuer{
+		certManagerIssuer := cmapi.Issuer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cm-issuer-example",
 				Namespace: "test-namespace",
 			},
-			Spec: certmanagerv1.IssuerSpec{
-				IssuerConfig: certmanagerv1.IssuerConfig{
+			Spec: cmapi.IssuerSpec{
+				IssuerConfig: cmapi.IssuerConfig{
 					ACME: &certmanageracmev1.ACMEIssuer{
 						Email:  "dummy-email@example.com",
 						Server: "https://",
@@ -397,13 +397,13 @@ func TestApplyInstallationYAML(t *testing.T) {
 			},
 		}
 
-		certManagerClusterIssuer := certmanagerv1.ClusterIssuer{
+		certManagerClusterIssuer := cmapi.ClusterIssuer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "cm-cluster-issuer-example",
 			},
-			Spec: certmanagerv1.IssuerSpec{
-				IssuerConfig: certmanagerv1.IssuerConfig{
-					CA: &certmanagerv1.CAIssuer{
+			Spec: cmapi.IssuerSpec{
+				IssuerConfig: cmapi.IssuerConfig{
+					CA: &cmapi.CAIssuer{
 						SecretName: "ca-key-pair",
 					},
 				},
@@ -451,8 +451,8 @@ func TestApplyInstallationYAML(t *testing.T) {
 		}
 
 		options := operator.ApplyInstallationYAMLOptions{
-			ImportedCertManagerIssuers:        []*certmanagerv1.Issuer{&certManagerIssuer},
-			ImportedCertManagerClusterIssuers: []*certmanagerv1.ClusterIssuer{&certManagerClusterIssuer},
+			ImportedCertManagerIssuers:        []*cmapi.Issuer{&certManagerIssuer},
+			ImportedCertManagerClusterIssuers: []*cmapi.ClusterIssuer{&certManagerClusterIssuer},
 			ImportedVenafiIssuers:             []*veiv1alpha1.VenafiIssuer{&venafiIssuer},
 			ImportedVenafiClusterIssuers:      []*veiv1alpha1.VenafiClusterIssuer{&venafiClusterIssuer},
 		}
