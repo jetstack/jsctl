@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -20,8 +20,8 @@ import (
 // RestoredIssuers contains the issuers and cluster issuers that were extracted
 // from a backup file. Issuers which were unsupported are listed in Missed.
 type RestoredIssuers struct {
-	CertManagerIssuers        []*certmanagerv1.Issuer
-	CertManagerClusterIssuers []*certmanagerv1.ClusterIssuer
+	CertManagerIssuers        []*cmapi.Issuer
+	CertManagerClusterIssuers []*cmapi.ClusterIssuer
 	VenafiIssuers             []*veiv1alpha1.VenafiIssuer
 	VenafiClusterIssuers      []*veiv1alpha1.VenafiClusterIssuer
 
@@ -88,7 +88,7 @@ func ExtractOperatorManageableIssuersFromBackupFile(backupFilePath string) (*Res
 			}
 			switch resource.GroupVersionKind().Kind {
 			case "Issuer":
-				var issuer *certmanagerv1.Issuer
+				var issuer *cmapi.Issuer
 
 				err = runtime.DefaultUnstructuredConverter.FromUnstructured(resource.Object, &issuer)
 				if err != nil {
@@ -97,7 +97,7 @@ func ExtractOperatorManageableIssuersFromBackupFile(backupFilePath string) (*Res
 
 				restoredIssuers.CertManagerIssuers = append(restoredIssuers.CertManagerIssuers, issuer)
 			case "ClusterIssuer":
-				var issuer *certmanagerv1.ClusterIssuer
+				var issuer *cmapi.ClusterIssuer
 
 				err = runtime.DefaultUnstructuredConverter.FromUnstructured(resource.Object, &issuer)
 				if err != nil {

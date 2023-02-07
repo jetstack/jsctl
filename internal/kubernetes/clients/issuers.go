@@ -7,7 +7,7 @@ import (
 
 	kmsissuerv1alpha1 "github.com/Skyscanner/kms-issuer/apis/certmanager/v1alpha1"
 	awspcaissuerv1beta1 "github.com/cert-manager/aws-privateca-issuer/pkg/api/v1beta1"
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	origincaissuerv1 "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
 	googlecasissuerv1beta1 "github.com/jetstack/google-cas-issuer/api/v1beta1"
 	veiv1alpha1 "github.com/jetstack/venafi-enhanced-issuer/api/v1alpha1"
@@ -178,13 +178,13 @@ func NewAllIssuers(config *rest.Config) (*AllIssuers, error) {
 
 // NewCertManagerIssuerClient returns an instance of a generic client for querying
 // cert-manager Issuers
-func NewCertManagerIssuerClient(config *rest.Config) (*Generic[*certmanagerv1.Issuer, *certmanagerv1.IssuerList], error) {
-	genericClient, err := NewGenericClient[*certmanagerv1.Issuer, *certmanagerv1.IssuerList](
+func NewCertManagerIssuerClient(config *rest.Config) (*Generic[*cmapi.Issuer, *cmapi.IssuerList], error) {
+	genericClient, err := NewGenericClient[*cmapi.Issuer, *cmapi.IssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
 			APIPath:    "/apis",
-			Group:      certmanagerv1.SchemeGroupVersion.Group,
-			Version:    certmanagerv1.SchemeGroupVersion.Version,
+			Group:      cmapi.SchemeGroupVersion.Group,
+			Version:    cmapi.SchemeGroupVersion.Version,
 			Kind:       "issuers",
 		},
 	)
@@ -197,13 +197,13 @@ func NewCertManagerIssuerClient(config *rest.Config) (*Generic[*certmanagerv1.Is
 
 // NewCertManagerClusterIssuerClient returns an instance of a generic client
 // for querying cert-manager ClusterIssuers
-func NewCertManagerClusterIssuerClient(config *rest.Config) (*Generic[*certmanagerv1.ClusterIssuer, *certmanagerv1.ClusterIssuerList], error) {
-	genericClient, err := NewGenericClient[*certmanagerv1.ClusterIssuer, *certmanagerv1.ClusterIssuerList](
+func NewCertManagerClusterIssuerClient(config *rest.Config) (*Generic[*cmapi.ClusterIssuer, *cmapi.ClusterIssuerList], error) {
+	genericClient, err := NewGenericClient[*cmapi.ClusterIssuer, *cmapi.ClusterIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
 			APIPath:    "/apis",
-			Group:      certmanagerv1.SchemeGroupVersion.Group,
-			Version:    certmanagerv1.SchemeGroupVersion.Version,
+			Group:      cmapi.SchemeGroupVersion.Group,
+			Version:    cmapi.SchemeGroupVersion.Version,
 			Kind:       "clusterissuers",
 		},
 	)
