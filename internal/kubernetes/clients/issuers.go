@@ -136,7 +136,7 @@ func ListSupportedIssuers() (SupportedIssuerList, error) {
 // AllIssuers is a special client to wrap logic for determining the kinds of
 // issuers present in a cluster
 type AllIssuers struct {
-	crdClient *Generic[*apiextensionsv1.CustomResourceDefinition, *apiextensionsv1.CustomResourceDefinitionList]
+	crdClient Generic[*apiextensionsv1.CustomResourceDefinition, *apiextensionsv1.CustomResourceDefinitionList]
 }
 
 func (a *AllIssuers) ListKinds(ctx context.Context) ([]AnyIssuer, error) {
@@ -178,7 +178,7 @@ func NewAllIssuers(config *rest.Config) (*AllIssuers, error) {
 
 // NewCertManagerIssuerClient returns an instance of a generic client for querying
 // cert-manager Issuers
-func NewCertManagerIssuerClient(config *rest.Config) (*Generic[*cmapi.Issuer, *cmapi.IssuerList], error) {
+func NewCertManagerIssuerClient(config *rest.Config) (Generic[*cmapi.Issuer, *cmapi.IssuerList], error) {
 	genericClient, err := NewGenericClient[*cmapi.Issuer, *cmapi.IssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -197,7 +197,7 @@ func NewCertManagerIssuerClient(config *rest.Config) (*Generic[*cmapi.Issuer, *c
 
 // NewCertManagerClusterIssuerClient returns an instance of a generic client
 // for querying cert-manager ClusterIssuers
-func NewCertManagerClusterIssuerClient(config *rest.Config) (*Generic[*cmapi.ClusterIssuer, *cmapi.ClusterIssuerList], error) {
+func NewCertManagerClusterIssuerClient(config *rest.Config) (Generic[*cmapi.ClusterIssuer, *cmapi.ClusterIssuerList], error) {
 	genericClient, err := NewGenericClient[*cmapi.ClusterIssuer, *cmapi.ClusterIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -216,7 +216,7 @@ func NewCertManagerClusterIssuerClient(config *rest.Config) (*Generic[*cmapi.Clu
 
 // NewGoogleCASIssuerClient returns an instance of a generic client for querying
 // google CAS Issuers
-func NewGoogleCASIssuerClient(config *rest.Config) (*Generic[*googlecasissuerv1beta1.GoogleCASIssuer, *googlecasissuerv1beta1.GoogleCASIssuerList], error) {
+func NewGoogleCASIssuerClient(config *rest.Config) (Generic[*googlecasissuerv1beta1.GoogleCASIssuer, *googlecasissuerv1beta1.GoogleCASIssuerList], error) {
 	genericClient, err := NewGenericClient[*googlecasissuerv1beta1.GoogleCASIssuer, *googlecasissuerv1beta1.GoogleCASIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -235,7 +235,7 @@ func NewGoogleCASIssuerClient(config *rest.Config) (*Generic[*googlecasissuerv1b
 
 // NewGoogleCASClusterIssuerClient returns an instance of a generic client for querying
 // google CAS cluster Issuers
-func NewGoogleCASClusterIssuerClient(config *rest.Config) (*Generic[*googlecasissuerv1beta1.GoogleCASClusterIssuer, *googlecasissuerv1beta1.GoogleCASClusterIssuerList], error) {
+func NewGoogleCASClusterIssuerClient(config *rest.Config) (Generic[*googlecasissuerv1beta1.GoogleCASClusterIssuer, *googlecasissuerv1beta1.GoogleCASClusterIssuerList], error) {
 	genericClient, err := NewGenericClient[*googlecasissuerv1beta1.GoogleCASClusterIssuer, *googlecasissuerv1beta1.GoogleCASClusterIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -254,7 +254,7 @@ func NewGoogleCASClusterIssuerClient(config *rest.Config) (*Generic[*googlecasis
 
 // NewAWSPCAIssuerClient returns an instance of a generic client for querying
 // AWS PCA Issuers
-func NewAWSPCAIssuerClient(config *rest.Config) (*Generic[*awspcaissuerv1beta1.AWSPCAIssuer, *awspcaissuerv1beta1.AWSPCAIssuerList], error) {
+func NewAWSPCAIssuerClient(config *rest.Config) (Generic[*awspcaissuerv1beta1.AWSPCAIssuer, *awspcaissuerv1beta1.AWSPCAIssuerList], error) {
 	genericClient, err := NewGenericClient[*awspcaissuerv1beta1.AWSPCAIssuer, *awspcaissuerv1beta1.AWSPCAIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -273,7 +273,7 @@ func NewAWSPCAIssuerClient(config *rest.Config) (*Generic[*awspcaissuerv1beta1.A
 
 // NewAWSPCAClusterIssuerClient returns an instance of a generic client for querying
 // AWS PCA cluster Issuers
-func NewAWSPCAClusterIssuerClient(config *rest.Config) (*Generic[*awspcaissuerv1beta1.AWSPCAClusterIssuer, *awspcaissuerv1beta1.AWSPCAClusterIssuerList], error) {
+func NewAWSPCAClusterIssuerClient(config *rest.Config) (Generic[*awspcaissuerv1beta1.AWSPCAClusterIssuer, *awspcaissuerv1beta1.AWSPCAClusterIssuerList], error) {
 	genericClient, err := NewGenericClient[*awspcaissuerv1beta1.AWSPCAClusterIssuer, *awspcaissuerv1beta1.AWSPCAClusterIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -292,7 +292,7 @@ func NewAWSPCAClusterIssuerClient(config *rest.Config) (*Generic[*awspcaissuerv1
 
 // NewKMSIssuerClient returns an instance of a generic client for querying
 // KMS Issuers
-func NewKMSIssuerClient(config *rest.Config) (*Generic[*kmsissuerv1alpha1.KMSIssuer, *kmsissuerv1alpha1.KMSIssuerList], error) {
+func NewKMSIssuerClient(config *rest.Config) (Generic[*kmsissuerv1alpha1.KMSIssuer, *kmsissuerv1alpha1.KMSIssuerList], error) {
 	genericClient, err := NewGenericClient[*kmsissuerv1alpha1.KMSIssuer, *kmsissuerv1alpha1.KMSIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -311,7 +311,7 @@ func NewKMSIssuerClient(config *rest.Config) (*Generic[*kmsissuerv1alpha1.KMSIss
 
 // NewVenafiEnhancedIssuerClient returns an instance of a generic client for querying
 // Venafi enhanced issuers
-func NewVenafiEnhancedIssuerClient(config *rest.Config) (*Generic[*veiv1alpha1.VenafiIssuer, *veiv1alpha1.VenafiIssuerList], error) {
+func NewVenafiEnhancedIssuerClient(config *rest.Config) (Generic[*veiv1alpha1.VenafiIssuer, *veiv1alpha1.VenafiIssuerList], error) {
 	genericClient, err := NewGenericClient[*veiv1alpha1.VenafiIssuer, *veiv1alpha1.VenafiIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -330,7 +330,7 @@ func NewVenafiEnhancedIssuerClient(config *rest.Config) (*Generic[*veiv1alpha1.V
 
 // NewVenafiEnhancedClusterIssuerClient returns an instance of a generic client for querying
 // Venafi enhanced cluster issuers
-func NewVenafiEnhancedClusterIssuerClient(config *rest.Config) (*Generic[*veiv1alpha1.VenafiClusterIssuer, *veiv1alpha1.VenafiClusterIssuerList], error) {
+func NewVenafiEnhancedClusterIssuerClient(config *rest.Config) (Generic[*veiv1alpha1.VenafiClusterIssuer, *veiv1alpha1.VenafiClusterIssuerList], error) {
 	genericClient, err := NewGenericClient[*veiv1alpha1.VenafiClusterIssuer, *veiv1alpha1.VenafiClusterIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -349,7 +349,7 @@ func NewVenafiEnhancedClusterIssuerClient(config *rest.Config) (*Generic[*veiv1a
 
 // NewOriginCAIssuerClient returns an instance of a generic client for querying
 // Origin CA Issuers
-func NewOriginCAIssuerClient(config *rest.Config) (*Generic[*origincaissuerv1.OriginIssuer, *origincaissuerv1.OriginIssuerList], error) {
+func NewOriginCAIssuerClient(config *rest.Config) (Generic[*origincaissuerv1.OriginIssuer, *origincaissuerv1.OriginIssuerList], error) {
 	genericClient, err := NewGenericClient[*origincaissuerv1.OriginIssuer, *origincaissuerv1.OriginIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -368,7 +368,7 @@ func NewOriginCAIssuerClient(config *rest.Config) (*Generic[*origincaissuerv1.Or
 
 // NewSmallStepIssuerClient returns an instance of a generic client for querying
 // Step Issuers
-func NewSmallStepIssuerClient(config *rest.Config) (*Generic[*stepissuerv1beta1.StepIssuer, *stepissuerv1beta1.StepIssuerList], error) {
+func NewSmallStepIssuerClient(config *rest.Config) (Generic[*stepissuerv1beta1.StepIssuer, *stepissuerv1beta1.StepIssuerList], error) {
 	genericClient, err := NewGenericClient[*stepissuerv1beta1.StepIssuer, *stepissuerv1beta1.StepIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -387,7 +387,7 @@ func NewSmallStepIssuerClient(config *rest.Config) (*Generic[*stepissuerv1beta1.
 
 // NewSmallStepClusterIssuerClient returns an instance of a generic client for querying
 // Step Cluster Issuers
-func NewSmallStepClusterIssuerClient(config *rest.Config) (*Generic[*stepissuerv1beta1.StepClusterIssuer, *stepissuerv1beta1.StepClusterIssuerList], error) {
+func NewSmallStepClusterIssuerClient(config *rest.Config) (Generic[*stepissuerv1beta1.StepClusterIssuer, *stepissuerv1beta1.StepClusterIssuerList], error) {
 	genericClient, err := NewGenericClient[*stepissuerv1beta1.StepClusterIssuer, *stepissuerv1beta1.StepClusterIssuerList](
 		&GenericClientOptions{
 			RestConfig: config,

@@ -14,7 +14,7 @@ import (
 type (
 	// The InstallationClient is used to query information on an Installation resource within a Kubernetes cluster.
 	InstallationClient struct {
-		client *Generic[*v1alpha1.Installation, *v1alpha1.InstallationList]
+		client Generic[*v1alpha1.Installation, *v1alpha1.InstallationList]
 	}
 
 	// ComponentStatus describes the status of an individual operator component.
