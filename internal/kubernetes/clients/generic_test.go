@@ -3,7 +3,6 @@ package clients
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -155,7 +154,7 @@ func TestGeneric_List_WithDropFields(t *testing.T) {
 
 	assert.True(t, called)
 	assert.Equal(t, "/api/v1/namespaces/test-namespace/pods", requestedPath)
-	assert.Equal(t, "", fmt.Sprintf("%s", result.Items[0].Status.Phase))
+	assert.Equal(t, "", string(result.Items[0].Status.Phase))
 }
 
 func TestGeneric_Get_ClusterScope(t *testing.T) {
@@ -175,11 +174,13 @@ func TestGeneric_Get_ClusterScope(t *testing.T) {
 	client, err := NewGenericClient[*apiextensionsv1.CustomResourceDefinition, *apiextensionsv1.CustomResourceDefinitionList](
 		&GenericClientOptions{
 			RestConfig: cfg,
+			APIPath:    "/apis/",
 			Group:      apiextensionsv1.GroupName,
 			Version:    apiextensionsv1.SchemeGroupVersion.Version,
 			Kind:       "customresourcedefinitions",
 		},
 	)
+	require.NoError(t, err)
 
 	var result apiextensionsv1.CustomResourceDefinition
 	err = client.Get(ctx, &GenericRequestOptions{Name: "crd-name"}, &result)
@@ -249,11 +250,13 @@ func TestGeneric_List_ClusterScope(t *testing.T) {
 	client, err := NewGenericClient[*apiextensionsv1.CustomResourceDefinition, *apiextensionsv1.CustomResourceDefinitionList](
 		&GenericClientOptions{
 			RestConfig: cfg,
+			APIPath:    "/apis/",
 			Group:      apiextensionsv1.GroupName,
 			Version:    apiextensionsv1.SchemeGroupVersion.Version,
 			Kind:       "customresourcedefinitions",
 		},
 	)
+	require.NoError(t, err)
 
 	var result apiextensionsv1.CustomResourceDefinitionList
 	err = client.List(ctx, &GenericRequestOptions{}, &result)
@@ -285,6 +288,7 @@ func TestGeneric_Present(t *testing.T) {
 	client, err := NewGenericClient[*corev1.Pod, *corev1.PodList](
 		&GenericClientOptions{
 			RestConfig: cfg,
+			APIPath:    "/api/",
 			Group:      corev1.GroupName,
 			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "pods",
@@ -309,7 +313,7 @@ func TestGeneric_Update(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		require.Equal(t, "PATCH", r.Method)
-		require.Equal(t, "/apis/v1/namespaces/jetstack-secure/secrets/test", r.URL.Path)
+		require.Equal(t, "/api/v1/namespaces/jetstack-secure/secrets/test", r.URL.Path)
 		bodyBytes, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 		require.Equal(t, `{"stringData":{"foo":"bar"}}`, string(bodyBytes))
@@ -336,6 +340,7 @@ func TestGeneric_Update(t *testing.T) {
 	client, err := NewGenericClient[*corev1.Secret, *corev1.Secret](
 		&GenericClientOptions{
 			RestConfig: cfg,
+			APIPath:    "/api/",
 			Group:      corev1.GroupName,
 			Version:    corev1.SchemeGroupVersion.Version,
 			Kind:       "secrets",
