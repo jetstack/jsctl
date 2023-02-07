@@ -150,6 +150,7 @@ func GatherClusterStatus(ctx context.Context, cfg *rest.Config) (*ClusterStatus,
 	ingressClient, err := clients.NewGenericClient[*networkingv1.Ingress, *networkingv1.IngressList](
 		&clients.GenericClientOptions{
 			RestConfig: cfg,
+			APIPath:    "/apis/",
 			Group:      networkingv1.GroupName,
 			Version:    networkingv1.SchemeGroupVersion.Version,
 			Kind:       "ingresses",
