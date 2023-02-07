@@ -21,7 +21,7 @@ import (
 
 const (
 	hasOwnerRefInfoTemplate      = "%s/%s secret has certificate owner ref"
-	hasOwnerRefHeader            = "Secrets with Certificate owner refs were found. These Secrets will be garbage collected when Certificate CRD is uninstalled. You can run 'jsctl experimental clusters cleanup secrets remove-certificate-owner-refs' command to remove the owner references."
+	hasOwnerRefHeader            = "Secrets with Certificate owner refs were found. These Secrets will be garbage collected when Certificate CRD is uninstalled.\nYou can run 'jsctl experimental clusters cleanup secrets remove-certificate-owner-refs' command to remove the owner references."
 	upcomingRenewalInfoTemplate  = "%s/%s certificate will be renewed soon (%s)"
 	upcomingRenewalInfoHeader    = "Some certificates will be renewed soon. You might want to ensure that uninstall is completed before any renewals kick in. Or use 'cmctl renew' command to renew the certificates now."
 	upcomingExpiriesInfoTemplate = "%s/%s certificate will expire soon (%s)"
@@ -107,7 +107,8 @@ func findIssues(ctx context.Context, clientset allClients, clock clock.Clock) ([
 		return nil, fmt.Errorf("error listing cluster secrets: %w", err)
 	}
 
-	fmt.Fprintf(os.Stdout, "Checking that issued certificates are safe from garbage collection...\n")
+	fmt.Fprintf(os.Stdout, "Running checks against cluster Secrets:\n")
+	fmt.Fprintf(os.Stdout, "	* Checking that issued certificates are safe from garbage collection...\n")
 	ownerRefsNotification := notification{}
 	for i := range secretsList.Items {
 		secret := &secretsList.Items[i]
@@ -153,6 +154,11 @@ func findIssues(ctx context.Context, clientset allClients, clock clock.Clock) ([
 	if err != nil {
 		return nil, fmt.Errorf("error parsing duration, this is a bug: %s", err)
 	}
+	fmt.Fprintf(os.Stdout, "Running checks against cluster Certificates:\n")
+	fmt.Fprintf(os.Stdout, "	* Checking for upcoming renewals\n")
+	fmt.Fprintf(os.Stdout, "	* Checking for upcoming expiries\n")
+	fmt.Fprintf(os.Stdout, "	* Checking for currently failing issuances\n")
+	fmt.Fprintf(os.Stdout, "	* Checking for unready Certificates\n")
 	for _, cert := range certificates.Items {
 		if isUnReady(cert) {
 			unreadyNotification.resourceInfos = append(unreadyNotification.resourceInfos, fmt.Sprintf(unreadyInfoTemplate, cert.Namespace, cert.Name))
@@ -212,6 +218,10 @@ func findIssues(ctx context.Context, clientset allClients, clock clock.Clock) ([
 	// Check whether cert-manager-csi-driver, cert-manager-csi-driver-spiffe and/or istio-csr are installed in cluster
 	// There aren't really any non-parameterizable values in csi-driver or
 	// istio-csr Helm charts so we use image names.
+	fmt.Fprintf(os.Stdout, "Running checks against cert-manager integrations installed in cluster:\n")
+	fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-istio-csr\n")
+	fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-csi-driver\n")
+	fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-csi-driver-spiffe\n")
 	pods := &corev1.PodList{}
 	err = clientset.pods.List(ctx, &clients.GenericRequestOptions{}, pods)
 	if err != nil {
