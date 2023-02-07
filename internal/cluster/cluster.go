@@ -162,7 +162,7 @@ func marshalBase64(in interface{}) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// AgentServiceAccount secret takes a service account json and formats it as a
+// AgentServiceAccountSecret takes a service account json and formats it as a
 // k8s secret.
 func AgentServiceAccountSecret(keyData []byte, name, namespace string) *corev1.Secret {
 	secret := &corev1.Secret{

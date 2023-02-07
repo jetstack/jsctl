@@ -10,8 +10,9 @@ import (
 // "jsctl experimental" subcommands.
 func Experimental() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "experimental",
-		Short: "Experimental jsctl commands",
+		Use:     "experimental",
+		Short:   "Experimental jsctl commands",
+		Aliases: []string{"x"},
 	}
 
 	experimentalClustersCommands := &cobra.Command{
