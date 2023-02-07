@@ -160,7 +160,7 @@ func findIssues(ctx context.Context, clientset allClients, clock clock.Clock) ([
 	fmt.Fprintf(os.Stdout, "	* Checking for currently failing issuances\n")
 	fmt.Fprintf(os.Stdout, "	* Checking for unready Certificates\n")
 	for _, cert := range certificates.Items {
-		if isUnReady(cert) {
+		if isUnready(cert) {
 			unreadyNotification.resourceInfos = append(unreadyNotification.resourceInfos, fmt.Sprintf(unreadyInfoTemplate, cert.Namespace, cert.Name))
 		}
 		if willBeRenewedSoon(cert, renewalWarnBuffer, nowTime) {
@@ -315,7 +315,7 @@ type allClients struct {
 	pods         clients.Generic[*corev1.Pod, *corev1.PodList]
 }
 
-func isUnReady(cert cmapi.Certificate) bool {
+func isUnready(cert cmapi.Certificate) bool {
 	hasReady := false
 	for _, cond := range cert.Status.Conditions {
 		if cond.Type == cmapi.CertificateConditionReady {
