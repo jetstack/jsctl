@@ -32,14 +32,10 @@ func (o *OriginCAIssuerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "origin-ca-issuer") {
+			if strings.Contains(container.Image, "origin-ca-issuer:") {
 				found = true
 				o.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					o.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					o.version = "unknown"
-				}
+				o.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

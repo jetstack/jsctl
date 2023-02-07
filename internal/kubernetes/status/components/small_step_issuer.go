@@ -32,14 +32,10 @@ func (s *SmallStepIssuerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "step-issuer") {
+			if strings.Contains(container.Image, "step-issuer:") {
 				found = true
 				s.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					s.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					s.version = "unknown"
-				}
+				s.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

@@ -32,14 +32,10 @@ func (c *CertManagerTrustManagerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "trust-manager") {
+			if strings.Contains(container.Image, "trust-manager:") {
 				found = true
 				c.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					c.version = "unknown"
-				}
+				c.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}
