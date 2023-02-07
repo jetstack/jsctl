@@ -32,14 +32,10 @@ func (j *JetstackSecureOperatorStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "js-operator") {
+			if strings.Contains(container.Image, "js-operator:") {
 				found = true
 				j.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					j.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					j.version = "unknown"
-				}
+				j.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

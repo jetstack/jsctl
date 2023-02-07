@@ -32,14 +32,10 @@ func (k *KMSIssuerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "kms-issuer") {
+			if strings.Contains(container.Image, "kms-issuer:") {
 				found = true
 				k.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					k.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					k.version = "unknown"
-				}
+				k.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

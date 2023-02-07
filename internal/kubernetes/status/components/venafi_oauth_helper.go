@@ -32,14 +32,10 @@ func (v *VenafiOAuthHelperStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "venafi-oauth-helper") {
+			if strings.Contains(container.Image, "venafi-oauth-helper:") {
 				found = true
 				v.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					v.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					v.version = "unknown"
-				}
+				v.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

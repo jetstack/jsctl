@@ -32,14 +32,10 @@ func (g *GoogleCASIssuerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "google-cas-issuer") {
+			if strings.Contains(container.Image, "google-cas-issuer:") {
 				found = true
 				g.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					g.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					g.version = "unknown"
-				}
+				g.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

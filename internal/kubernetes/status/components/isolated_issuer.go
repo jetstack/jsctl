@@ -32,14 +32,10 @@ func (i *IsolatedIssuerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "isolated-issuer") {
+			if strings.Contains(container.Image, "isolated-issuer:") {
 				found = true
 				i.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					i.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					i.version = "unknown"
-				}
+				i.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

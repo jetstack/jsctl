@@ -39,24 +39,16 @@ func (c *CertManagerCSIDriverSPIFFEStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "cert-manager-csi-driver-spiffe") {
+			if strings.Contains(container.Image, "cert-manager-csi-driver-spiffe:") {
 				found = true
 				c.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					c.csiDriverVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					c.csiDriverVersion = "unknown"
-				}
+				c.csiDriverVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 
-			if strings.Contains(container.Image, "cert-manager-csi-driver-spiffe-approver") {
+			if strings.Contains(container.Image, "cert-manager-csi-driver-spiffe-approver:") {
 				found = true
 				c.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					c.approverVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					c.approverVersion = "unknown"
-				}
+				c.approverVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

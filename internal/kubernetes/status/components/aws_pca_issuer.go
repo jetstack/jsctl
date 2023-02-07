@@ -32,14 +32,10 @@ func (a *AWSPCAIssuerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "cert-manager-aws-privateca-issuer") {
+			if strings.Contains(container.Image, "cert-manager-aws-privateca-issuer:") {
 				found = true
 				a.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					a.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					a.version = "unknown"
-				}
+				a.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

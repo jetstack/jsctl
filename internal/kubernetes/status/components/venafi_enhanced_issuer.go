@@ -32,14 +32,10 @@ func (v *VenafiEnhancedIssuerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "venafi-enhanced-issuer") {
+			if strings.Contains(container.Image, "venafi-enhanced-issuer:") {
 				found = true
 				v.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					v.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					v.version = "unknown"
-				}
+				v.version = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}

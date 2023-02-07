@@ -56,36 +56,24 @@ func (c *CertManagerStatus) Match(md *MatchData) (bool, error) {
 
 	for _, pod := range md.Pods {
 		for _, container := range pod.Spec.Containers {
-			if strings.Contains(container.Image, "cert-manager-controller") {
+			if strings.Contains(container.Image, "cert-manager-controller:") {
 				found = true
 				c.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					c.controllerVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					c.controllerVersion = unknownVersionString
-				}
+				c.controllerVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
 
 				c.controllerArgs = container.Args
 			}
 
-			if strings.Contains(container.Image, "cert-manager-cainjector") {
+			if strings.Contains(container.Image, "cert-manager-cainjector:") {
 				found = true
 				c.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					c.cainjectorVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					c.cainjectorVersion = unknownVersionString
-				}
+				c.cainjectorVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 
-			if strings.Contains(container.Image, "cert-manager-webhook") {
+			if strings.Contains(container.Image, "cert-manager-webhook:") {
 				found = true
 				c.namespace = pod.Namespace
-				if strings.Contains(container.Image, ":") {
-					c.webhookVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
-				} else {
-					c.webhookVersion = unknownVersionString
-				}
+				c.webhookVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
 			}
 		}
 	}
