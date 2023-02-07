@@ -14,11 +14,19 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// Generic is a client which can be configured to query any Kubernetes resource
-type Generic[T, ListT runtime.Object] struct {
-	restClient *rest.RESTClient
+type Generic[T, ListT runtime.Object] interface {
+	Get(context.Context, *GenericRequestOptions, T) error
+	List(context.Context, *GenericRequestOptions, ListT) error
+	Present(ctx context.Context, options *GenericRequestOptions) (bool, error)
+	Patch(ctx context.Context, options *GenericRequestOptions, patch []byte) error
+}
+
+type generic[T, ListT runtime.Object] struct {
+	restClient rest.Interface
 	resource   string
 }
+
+var _ Generic[*runtime.Unknown, *runtime.Unknown] = &generic[*runtime.Unknown, *runtime.Unknown]{}
 
 // GenericClientOptions wrap the options for a Generic client initialization
 type GenericClientOptions struct {
@@ -46,7 +54,7 @@ type GenericRequestOptions struct {
 // query the specified resource. Use type parameters for types and list types
 // for the desired result types and gvk function parameters to specify the
 // group, version, and kind of the resource to query.
-func NewGenericClient[T, ListT runtime.Object](opts *GenericClientOptions) (*Generic[T, ListT], error) {
+func NewGenericClient[T, ListT runtime.Object](opts *GenericClientOptions) (Generic[T, ListT], error) {
 	config := opts.RestConfig
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
 	config.NegotiatedSerializer = serializer.NewCodecFactory(runtime.NewScheme())
@@ -67,13 +75,13 @@ func NewGenericClient[T, ListT runtime.Object](opts *GenericClientOptions) (*Gen
 		return nil, err
 	}
 
-	return &Generic[T, ListT]{
+	return &generic[T, ListT]{
 		restClient: restClient,
 		resource:   opts.Kind,
 	}, nil
 }
 
-func (c *Generic[T, ListT]) Get(ctx context.Context, options *GenericRequestOptions, result T) error {
+func (c *generic[T, ListT]) Get(ctx context.Context, options *GenericRequestOptions, result T) error {
 	r := c.restClient.Get().Resource(c.resource)
 
 	if options.Namespace != "" {
@@ -124,7 +132,7 @@ func (c *Generic[T, ListT]) Get(ctx context.Context, options *GenericRequestOpti
 
 // List is must the same as get, however it returns results in a list type
 // instead
-func (c *Generic[T, ListT]) List(ctx context.Context, options *GenericRequestOptions, result ListT) error {
+func (c *generic[T, ListT]) List(ctx context.Context, options *GenericRequestOptions, result ListT) error {
 	r := c.restClient.Get().Resource(c.resource)
 
 	if options.Namespace != "" {
@@ -178,7 +186,7 @@ func (c *Generic[T, ListT]) List(ctx context.Context, options *GenericRequestOpt
 	return nil
 }
 
-func (c *Generic[T, ListT]) Present(ctx context.Context, options *GenericRequestOptions) (bool, error) {
+func (c *generic[T, ListT]) Present(ctx context.Context, options *GenericRequestOptions) (bool, error) {
 	r := c.restClient.Get().Resource(c.resource)
 
 	if options.Namespace != "" {
@@ -199,7 +207,7 @@ func (c *Generic[T, ListT]) Present(ctx context.Context, options *GenericRequest
 	return true, nil
 }
 
-func (c *Generic[T, ListT]) Patch(ctx context.Context, options *GenericRequestOptions, patch []byte) error {
+func (c *generic[T, ListT]) Patch(ctx context.Context, options *GenericRequestOptions, patch []byte) error {
 	r := c.restClient.Patch(types.StrategicMergePatchType).Body(patch).Resource(c.resource)
 
 	if options.Namespace != "" {

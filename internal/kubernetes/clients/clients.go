@@ -10,7 +10,7 @@ import (
 )
 
 // NewCRDClient returns an instance of a generic client for querying CRDs
-func NewCRDClient(config *rest.Config) (*Generic[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList], error) {
+func NewCRDClient(config *rest.Config) (Generic[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList], error) {
 	genericClient, err := NewGenericClient[*v1extensions.CustomResourceDefinition, *v1extensions.CustomResourceDefinitionList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -28,7 +28,7 @@ func NewCRDClient(config *rest.Config) (*Generic[*v1extensions.CustomResourceDef
 }
 
 // NewCertificateClient returns an instance of a generic client for querying cert-manager Certificates
-func NewCertificateClient(config *rest.Config) (*Generic[*cmapi.Certificate, *cmapi.CertificateList], error) {
+func NewCertificateClient(config *rest.Config) (Generic[*cmapi.Certificate, *cmapi.CertificateList], error) {
 	genericClient, err := NewGenericClient[*cmapi.Certificate, *cmapi.CertificateList](
 		&GenericClientOptions{
 			RestConfig: config,
@@ -45,9 +45,27 @@ func NewCertificateClient(config *rest.Config) (*Generic[*cmapi.Certificate, *cm
 	return genericClient, nil
 }
 
+// NewCertificateRequestClient returns an instance of a generic client for querying cert-manager CertificateRequests
+func NewCertificateRequestClient(config *rest.Config) (Generic[*cmapi.CertificateRequest, *cmapi.CertificateRequestList], error) {
+	genericClient, err := NewGenericClient[*cmapi.CertificateRequest, *cmapi.CertificateRequestList](
+		&GenericClientOptions{
+			RestConfig: config,
+			APIPath:    "/apis",
+			Group:      cmapi.SchemeGroupVersion.Group,
+			Version:    cmapi.SchemeGroupVersion.Version,
+			Kind:       "certificaterequests",
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating generic client: %w", err)
+	}
+
+	return genericClient, nil
+}
+
 // NewCertificateRequestPolicyClient returns an instance of a generic client for
 // querying approver policy CertificateRequestPolicies
-func NewCertificateRequestPolicyClient(config *rest.Config) (*Generic[*v1alpha1approverpolicy.CertificateRequestPolicy, *v1alpha1approverpolicy.CertificateRequestPolicyList], error) {
+func NewCertificateRequestPolicyClient(config *rest.Config) (Generic[*v1alpha1approverpolicy.CertificateRequestPolicy, *v1alpha1approverpolicy.CertificateRequestPolicyList], error) {
 	genericClient, err := NewGenericClient[*v1alpha1approverpolicy.CertificateRequestPolicy, *v1alpha1approverpolicy.CertificateRequestPolicyList](
 		&GenericClientOptions{
 			RestConfig: config,
