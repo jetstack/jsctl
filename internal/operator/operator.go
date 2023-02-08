@@ -241,7 +241,6 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 			Name: installationName,
 		},
 		Spec: operatorv1alpha1.InstallationSpec{
-			Registry: options.ImageRegistry,
 			CertManager: &operatorv1alpha1.CertManager{
 				Controller: &operatorv1alpha1.CertManagerControllerConfig{
 					ReplicaCount: &options.CertManagerReplicas,
@@ -272,21 +271,10 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 
 	applyCertDiscoveryVenafiManifests(manifestTemplates, options)
 
-	registryCredentials := options.RegistryCredentials
-	if registryCredentials == "" && options.RegistryCredentialsPath != "" {
-		registryCredentialsBytes, err := os.ReadFile(options.RegistryCredentialsPath)
-		if err != nil {
-			return fmt.Errorf("failed to read registry credentials file: %w", err)
-		}
-		registryCredentials = string(registryCredentialsBytes)
-	}
+	applyRegistryToManifests(manifestTemplates, options)
 
-	if registryCredentials != "" {
-		secret, err := registry.ImagePullSecret(registryCredentials)
-		if err != nil {
-			return fmt.Errorf("failed to parse image pull secret: %w", err)
-		}
-		manifestTemplates.secrets = append(manifestTemplates.secrets, secret)
+	if err := applyImagePullSecretToManifests(manifestTemplates, options); err != nil {
+		return fmt.Errorf("failed to configure component image pull secret: %w", err)
 	}
 
 	if err := generateVenafiIssuerManifests(manifestTemplates, options); err != nil {
@@ -463,18 +451,41 @@ func applyCertDiscoveryVenafiManifests(mf *manifests, options ApplyInstallationY
 		return
 	}
 	cdv, secret := venafi.GenerateManifestsForCertDiscoveryVenafi(options.CertDiscoveryVenafi)
-	var imagePullSecrets []string
-	if options.RegistryCredentialsPath != "" || options.RegistryCredentials != "" {
-		imagePullSecrets = []string{"jse-gcr-creds"}
-	}
-	// Eventually we probably want to have a single field for image pull
-	// secrets on Installation resource, but this change will happen in the
-	// operator.
-	if cdv != nil {
-		cdv.ImagePullSecrets = imagePullSecrets
-	}
 	mf.installation.Spec.CertDiscoveryVenafi = cdv
 	mf.secrets = append(mf.secrets, secret)
+}
+
+func applyImagePullSecretToManifests(mf *manifests, options ApplyInstallationYAMLOptions) error {
+	registryCredentials := options.RegistryCredentials
+	if registryCredentials == "" && options.RegistryCredentialsPath != "" {
+		registryCredentialsBytes, err := os.ReadFile(options.RegistryCredentialsPath)
+		if err != nil {
+			return fmt.Errorf("failed to read registry credentials file: %w", err)
+		}
+		registryCredentials = string(registryCredentialsBytes)
+	}
+
+	if registryCredentials != "" {
+		secret, err := registry.ImagePullSecret(registryCredentials)
+		if err != nil {
+			return fmt.Errorf("failed to parse image pull secret: %w", err)
+		}
+		mf.secrets = append(mf.secrets, secret)
+		if mf.installation.Spec.Images == nil {
+			mf.installation.Spec.Images = &operatorv1alpha1.Images{}
+		}
+		mf.installation.Spec.Images.Secret = secret.Name
+	}
+	return nil
+}
+
+func applyRegistryToManifests(mf *manifests, options ApplyInstallationYAMLOptions) {
+	if options.ImageRegistry != "" {
+		if mf.installation.Spec.Images == nil {
+			mf.installation.Spec.Images = &operatorv1alpha1.Images{}
+		}
+		mf.installation.Spec.Images.Registry = options.ImageRegistry
+	}
 }
 
 type manifests struct {
@@ -570,15 +581,7 @@ func applyVenafiOauthHelperToInstallation(manifests *manifests, options ApplyIns
 	if !options.InstallVenafiOauthHelper {
 		return nil
 	}
-
-	var imagePullSecrets []string
-	if options.RegistryCredentials != "" || options.RegistryCredentialsPath != "" {
-		imagePullSecrets = []string{"jse-gcr-creds"}
-	}
-	manifests.installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{
-		ImagePullSecrets: imagePullSecrets,
-	}
-
+	manifests.installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{}
 	return nil
 }
 func applyApproverPolicyEnterpriseToInstallation(manifests *manifests, options ApplyInstallationYAMLOptions) error {
@@ -588,23 +591,7 @@ func applyApproverPolicyEnterpriseToInstallation(manifests *manifests, options A
 
 	manifests.installation.Spec.ApproverPolicy = nil
 
-	var imagePullSecrets []string
-	if options.RegistryCredentials != "" || options.RegistryCredentialsPath != "" {
-		imagePullSecrets = []string{"jse-gcr-creds"}
-	}
-	manifests.installation.Spec.ApproverPolicyEnterprise = &operatorv1alpha1.ApproverPolicyEnterprise{
-		ImagePullSecrets: imagePullSecrets,
-	}
-
-	return nil
-}
-
-func applyImagePullSecrets(installation *operatorv1alpha1.Installation, options ApplyInstallationYAMLOptions) error {
-	if !options.InstallVenafiOauthHelper {
-		return nil
-	}
-
-	installation.Spec.VenafiOauthHelper = &operatorv1alpha1.VenafiOauthHelper{}
+	manifests.installation.Spec.ApproverPolicyEnterprise = &operatorv1alpha1.ApproverPolicyEnterprise{}
 
 	return nil
 }

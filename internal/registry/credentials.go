@@ -11,6 +11,10 @@ import (
 	"github.com/jetstack/jsctl/internal/docker"
 )
 
+const (
+	ImagePullSecretName = "jse-gcr-creds"
+)
+
 // DockerConfifJSON returns a valid docker config JSON for the given JSON Google Service Account key data
 func DockerConfigJSON(keyData string) ([]byte, error) {
 	// When constructing a docker config for GCR, you must use the _json_key username and provide
@@ -52,8 +56,7 @@ func ImagePullSecret(keyData string) (*corev1.Secret, error) {
 	}
 
 	const (
-		secretName = "jse-gcr-creds"
-		namespace  = "jetstack-secure"
+		namespace = "jetstack-secure"
 	)
 
 	secret := &corev1.Secret{
@@ -62,7 +65,7 @@ func ImagePullSecret(keyData string) (*corev1.Secret, error) {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
+			Name:      ImagePullSecretName,
 			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
