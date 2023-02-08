@@ -100,164 +100,176 @@ func findIssues(ctx context.Context, clientset allClients, clock clock.Clock) ([
 	notifications := []notification{}
 	nowTime := clock.Now()
 
-	// Check all cluster Secrets for potential issues
-	var secretsList corev1.SecretList
-	err := clientset.secrets.List(ctx, &clients.GenericRequestOptions{}, &secretsList)
-	if err != nil {
-		return nil, fmt.Errorf("error listing cluster secrets: %w", err)
-	}
+	{
+		// Check all cluster Secrets for potential issues
+		var secretsList corev1.SecretList
+		if err := clientset.secrets.List(ctx, &clients.GenericRequestOptions{}, &secretsList); err != nil {
+			return nil, fmt.Errorf("error listing cluster secrets: %w", err)
+		}
 
-	fmt.Fprintf(os.Stdout, "Running checks against cluster Secrets:\n")
-	fmt.Fprintf(os.Stdout, "	* Checking that issued certificates are safe from garbage collection...\n")
-	ownerRefsNotification := notification{}
-	for i := range secretsList.Items {
-		secret := &secretsList.Items[i]
+		fmt.Fprintf(os.Stdout, "Running checks against cluster Secrets:\n")
+		fmt.Fprintf(os.Stdout, "	* Checking that issued certificates are safe from garbage collection...\n")
+		ownerRefsResourceInfos := []string{}
+		for i := range secretsList.Items {
+			secret := &secretsList.Items[i]
 
-		hasCertificateOwnerRef := false
-		for _, ownerRef := range secret.OwnerReferences {
-			if ownerRef.Kind == cmapi.CertificateKind {
-				hasCertificateOwnerRef = true
-				break
+			hasCertificateOwnerRef := false
+			for _, ownerRef := range secret.OwnerReferences {
+				if ownerRef.Kind == cmapi.CertificateKind {
+					hasCertificateOwnerRef = true
+					break
+				}
+			}
+
+			if hasCertificateOwnerRef {
+				ownerRefsResourceInfos = append(ownerRefsResourceInfos, fmt.Sprintf(hasOwnerRefInfoTemplate, secret.Namespace, secret.Name))
 			}
 		}
 
-		if hasCertificateOwnerRef {
-			ownerRefsNotification.resourceInfos = append(ownerRefsNotification.resourceInfos, fmt.Sprintf(hasOwnerRefInfoTemplate, secret.Namespace, secret.Name))
+		if len(ownerRefsResourceInfos) > 0 {
+			notifications = append(notifications, notification{
+				header:        hasOwnerRefHeader,
+				resourceInfos: ownerRefsResourceInfos,
+			})
 		}
 	}
 
-	if len(ownerRefsNotification.resourceInfos) > 0 {
-		ownerRefsNotification.header = hasOwnerRefHeader
-		notifications = append(notifications, ownerRefsNotification)
-	}
-	var certificates cmapi.CertificateList
-	err = clientset.certificates.List(
-		ctx,
-		&clients.GenericRequestOptions{},
-		&certificates,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error listing certificates: %s", err)
+	{
+		var certificates cmapi.CertificateList
+		if err := clientset.certificates.List(ctx, &clients.GenericRequestOptions{}, &certificates); err != nil {
+			return nil, fmt.Errorf("error listing certificates: %s", err)
+		}
+
+		// Check all cluster Certificates for potential issues
+		unreadyResourceInfos := []string{}
+		upcomingRenewalsResourceInfos := []string{}
+		upcomingExpiriesResourceInfos := []string{}
+		currentIssuancesResourceInfos := []string{}
+		failedResourceInfos := []string{}
+
+		renewalWarnBuffer, err := time.ParseDuration("1h")
+		if err != nil {
+			return nil, fmt.Errorf("error parsing duration, this is a bug: %s", err)
+		}
+		expiryWarnBuffer, err := time.ParseDuration("12h")
+		if err != nil {
+			return nil, fmt.Errorf("error parsing duration, this is a bug: %s", err)
+		}
+
+		fmt.Fprintf(os.Stdout, "Running checks against cluster Certificates:\n")
+		fmt.Fprintf(os.Stdout, "	* Checking for upcoming renewals\n")
+		fmt.Fprintf(os.Stdout, "	* Checking for upcoming expiries\n")
+		fmt.Fprintf(os.Stdout, "	* Checking for currently failing issuances\n")
+		fmt.Fprintf(os.Stdout, "	* Checking for unready Certificates\n")
+		for _, cert := range certificates.Items {
+			if isUnready(cert) {
+				unreadyResourceInfos = append(unreadyResourceInfos, fmt.Sprintf(unreadyInfoTemplate, cert.Namespace, cert.Name))
+			}
+			if willBeRenewedSoon(cert, renewalWarnBuffer, nowTime) {
+				upcomingRenewalsResourceInfos = append(
+					upcomingRenewalsResourceInfos,
+					fmt.Sprintf(
+						upcomingRenewalInfoTemplate,
+						cert.Namespace,
+						cert.Name,
+						cert.Status.RenewalTime.Time,
+					),
+				)
+			}
+			if willExpireSoon(cert, expiryWarnBuffer, nowTime) {
+				upcomingExpiriesResourceInfos = append(
+					upcomingExpiriesResourceInfos,
+					fmt.Sprintf(
+						upcomingExpiriesInfoTemplate,
+						cert.Namespace,
+						cert.Name,
+						cert.Status.NotAfter.Time,
+					),
+				)
+			}
+			if isCurrentlyBeingIssued(cert) {
+				currentIssuancesResourceInfos = append(currentIssuancesResourceInfos, fmt.Sprintf(currentIssuancesInfoTemplate, cert.Namespace, cert.Name))
+
+			}
+			if isCurrentlyFailingIssuance(cert) {
+				failedAttempts := cert.Status.FailedIssuanceAttempts
+				failedResourceInfos = append(failedResourceInfos, fmt.Sprintf(failedInfoTemplate, cert.Namespace, cert.Name, *failedAttempts))
+			}
+		}
+
+		if len(unreadyResourceInfos) > 0 {
+			notifications = append(notifications, notification{
+				header:        unreadyHeader,
+				resourceInfos: unreadyResourceInfos,
+			})
+		}
+		if len(upcomingRenewalsResourceInfos) > 0 {
+			notifications = append(notifications, notification{
+				header:        upcomingRenewalInfoHeader,
+				resourceInfos: upcomingRenewalsResourceInfos,
+			})
+		}
+		if len(upcomingExpiriesResourceInfos) > 0 {
+			notifications = append(notifications, notification{
+				header:        upcomingExpiriesHeader,
+				resourceInfos: upcomingExpiriesResourceInfos,
+			})
+		}
+		if len(currentIssuancesResourceInfos) > 0 {
+			notifications = append(notifications, notification{
+				header:        currentIssuancesHeader,
+				resourceInfos: currentIssuancesResourceInfos,
+			})
+		}
+		if len(failedResourceInfos) > 0 {
+			notifications = append(notifications, notification{
+				header:        failedInfoHeader,
+				resourceInfos: failedResourceInfos,
+			})
+		}
 	}
 
-	// Check all cluster Certificates for potential issues
-	unreadyNotification := notification{}
-	upcomingRenewalsNotification := notification{}
-	upcomingExpiriesNotification := notification{}
-	currentIssuancesNotification := notification{}
-	failedNotification := notification{}
-	renewalWarnBuffer, err := time.ParseDuration("1h")
-	if err != nil {
-		return nil, fmt.Errorf("error parsing duration, this is a bug: %s", err)
-	}
-	expiryWarnBuffer, err := time.ParseDuration("12h")
-	if err != nil {
-		return nil, fmt.Errorf("error parsing duration, this is a bug: %s", err)
-	}
-	fmt.Fprintf(os.Stdout, "Running checks against cluster Certificates:\n")
-	fmt.Fprintf(os.Stdout, "	* Checking for upcoming renewals\n")
-	fmt.Fprintf(os.Stdout, "	* Checking for upcoming expiries\n")
-	fmt.Fprintf(os.Stdout, "	* Checking for currently failing issuances\n")
-	fmt.Fprintf(os.Stdout, "	* Checking for unready Certificates\n")
-	for _, cert := range certificates.Items {
-		if isUnready(cert) {
-			unreadyNotification.resourceInfos = append(unreadyNotification.resourceInfos, fmt.Sprintf(unreadyInfoTemplate, cert.Namespace, cert.Name))
-		}
-		if willBeRenewedSoon(cert, renewalWarnBuffer, nowTime) {
-			upcomingRenewalsNotification.resourceInfos = append(
-				upcomingRenewalsNotification.resourceInfos,
-				fmt.Sprintf(
-					upcomingRenewalInfoTemplate,
-					cert.Namespace,
-					cert.Name,
-					cert.Status.RenewalTime.Time,
-				),
-			)
-		}
-		if willExpireSoon(cert, expiryWarnBuffer, nowTime) {
-			upcomingExpiriesNotification.resourceInfos = append(
-				upcomingExpiriesNotification.resourceInfos,
-				fmt.Sprintf(
-					upcomingExpiriesInfoTemplate,
-					cert.Namespace,
-					cert.Name,
-					cert.Status.NotAfter.Time,
-				),
-			)
-		}
-		if isCurrentlyBeingIssued(cert) {
-			currentIssuancesNotification.resourceInfos = append(currentIssuancesNotification.resourceInfos, fmt.Sprintf(currentIssuancesInfoTemplate, cert.Namespace, cert.Name))
+	{
+		// Check whether cert-manager-csi-driver, cert-manager-csi-driver-spiffe and/or istio-csr are installed in cluster
+		// There aren't really any non-parameterizable values in csi-driver or
+		// istio-csr Helm charts so we use image names.
+		fmt.Fprintf(os.Stdout, "Running checks against cert-manager integrations installed in cluster:\n")
+		fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-istio-csr\n")
+		fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-csi-driver\n")
+		fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-csi-driver-spiffe\n")
 
+		pods := &corev1.PodList{}
+		if err := clientset.pods.List(ctx, &clients.GenericRequestOptions{}, pods); err != nil {
+			return nil, fmt.Errorf("failed to list pods: %s", err)
 		}
-		if isCurrentlyFailingIssuance(cert) {
-			failedAttempts := cert.Status.FailedIssuanceAttempts
-			failedNotification.resourceInfos = append(failedNotification.resourceInfos, fmt.Sprintf(failedInfoTemplate, cert.Namespace, cert.Name, *failedAttempts))
-		}
-	}
-	if len(unreadyNotification.resourceInfos) > 0 {
-		unreadyNotification.header = unreadyHeader
-		notifications = append(notifications, unreadyNotification)
-	}
-	if len(upcomingRenewalsNotification.resourceInfos) > 0 {
-		upcomingRenewalsNotification.header = upcomingRenewalInfoHeader
-		notifications = append(notifications, upcomingRenewalsNotification)
-	}
-	if len(upcomingExpiriesNotification.resourceInfos) > 0 {
-		upcomingExpiriesNotification.header = upcomingExpiriesHeader
-		notifications = append(notifications, upcomingExpiriesNotification)
-	}
-	if len(currentIssuancesNotification.resourceInfos) > 0 {
-		currentIssuancesNotification.header = currentIssuancesHeader
-		notifications = append(notifications, currentIssuancesNotification)
-	}
-	if len(failedNotification.resourceInfos) > 0 {
-		failedNotification.header = failedInfoHeader
-		notifications = append(notifications, failedNotification)
-	}
+		md := &components.MatchData{Pods: pods.Items}
 
-	// Check whether cert-manager-csi-driver, cert-manager-csi-driver-spiffe and/or istio-csr are installed in cluster
-	// There aren't really any non-parameterizable values in csi-driver or
-	// istio-csr Helm charts so we use image names.
-	fmt.Fprintf(os.Stdout, "Running checks against cert-manager integrations installed in cluster:\n")
-	fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-istio-csr\n")
-	fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-csi-driver\n")
-	fmt.Fprintf(os.Stdout, "	* Checking for cert-manager-csi-driver-spiffe\n")
-	pods := &corev1.PodList{}
-	err = clientset.pods.List(ctx, &clients.GenericRequestOptions{}, pods)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list pods: %s", err)
-	}
-	md := &components.MatchData{
-		Pods: pods.Items,
-	}
-	certManagerIntegrationsNotification := notification{}
-	s := &components.CertManagerCSIDriverSPIFFEStatus{}
-	found, err := s.Match(md)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detemine if cert-manager-csi-driver-spiffe exists: %w", err)
-	}
-	if found {
-		certManagerIntegrationsNotification.resourceInfos = append(certManagerIntegrationsNotification.resourceInfos, fmt.Sprintf(integrationInfoTemplate, "cert-manager-csi-driver-spiffe"))
-	}
-	c := &components.CertManagerCSIDriverStatus{}
-	found, err = c.Match(md)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detemine if cert-manager-csi-driver exists: %w", err)
-	}
-	if found {
-		certManagerIntegrationsNotification.resourceInfos = append(certManagerIntegrationsNotification.resourceInfos, fmt.Sprintf(integrationInfoTemplate, "cert-manager-csi-driver"))
-	}
-	i := &components.CertManagerIstioCSRStatus{}
-	found, err = i.Match(md)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detemine if istio-csr exists: %w", err)
-	}
-	if found {
-		certManagerIntegrationsNotification.resourceInfos = append(certManagerIntegrationsNotification.resourceInfos, fmt.Sprintf(integrationInfoTemplate, "cert-manager-istio-csr"))
-	}
-	if len(certManagerIntegrationsNotification.resourceInfos) > 0 {
-		certManagerIntegrationsNotification.header = integrationHeader
-		notifications = append(notifications, certManagerIntegrationsNotification)
+		certManagerIntegrationsResourceInfos := []string{}
+
+		if found, err := (&components.CertManagerCSIDriverSPIFFEStatus{}).Match(md); err != nil {
+			return nil, fmt.Errorf("failed to detemine if cert-manager-csi-driver-spiffe exists: %w", err)
+		} else if found {
+			certManagerIntegrationsResourceInfos = append(certManagerIntegrationsResourceInfos, fmt.Sprintf(integrationInfoTemplate, "cert-manager-csi-driver-spiffe"))
+		}
+
+		if found, err := (&components.CertManagerCSIDriverStatus{}).Match(md); err != nil {
+			return nil, fmt.Errorf("failed to detemine if cert-manager-csi-driver exists: %w", err)
+		} else if found {
+			certManagerIntegrationsResourceInfos = append(certManagerIntegrationsResourceInfos, fmt.Sprintf(integrationInfoTemplate, "cert-manager-csi-driver"))
+		}
+
+		if found, err := (&components.CertManagerIstioCSRStatus{}).Match(md); err != nil {
+			return nil, fmt.Errorf("failed to detemine if istio-csr exists: %w", err)
+		} else if found {
+			certManagerIntegrationsResourceInfos = append(certManagerIntegrationsResourceInfos, fmt.Sprintf(integrationInfoTemplate, "cert-manager-istio-csr"))
+		}
+
+		if len(certManagerIntegrationsResourceInfos) > 0 {
+			notifications = append(notifications, notification{
+				header:        integrationHeader,
+				resourceInfos: certManagerIntegrationsResourceInfos,
+			})
+		}
 	}
 
 	return notifications, nil
@@ -345,5 +357,5 @@ func isCurrentlyBeingIssued(cert cmapi.Certificate) bool {
 
 func isCurrentlyFailingIssuance(cert cmapi.Certificate) bool {
 	failedAttempts := cert.Status.FailedIssuanceAttempts
-	return cert.Status.FailedIssuanceAttempts != nil && *failedAttempts > 0
+	return failedAttempts != nil && *failedAttempts > 0
 }
