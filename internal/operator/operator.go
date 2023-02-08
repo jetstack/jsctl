@@ -91,16 +91,16 @@ func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperat
 	}
 
 	if err != nil {
-		return err
+		return fmt.Errorf("error determining manifest version: %w", err)
 	}
 
 	if _, err = io.Copy(buf, file); err != nil {
-		return err
+		return fmt.Errorf("error reading manifest contents: %w", err)
 	}
 
 	tpl, err := template.New("install").Parse(buf.String())
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating new template: %w", err)
 	}
 
 	output := bytes.NewBuffer([]byte{})
@@ -108,7 +108,7 @@ func ApplyOperatorYAML(ctx context.Context, applier Applier, options ApplyOperat
 		"ImageRegistry": options.ImageRegistry,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("error parsing manifest template: %w", err)
 	}
 
 	return applier.Apply(ctx, output)
@@ -224,6 +224,12 @@ type (
 // ApplyInstallationYAML generates a YAML bundle that describes the kubernetes manifest for the operator's Installation
 // custom resource. The ApplyInstallationYAMLOptions specify additional options used to configure the installation.
 func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyInstallationYAMLOptions) error {
+
+	const (
+		// TODO: what should this be?
+		installationName = "jetstack-secure"
+	)
+
 	apiVersion, kind := operatorv1alpha1.InstallationGVK.ToAPIVersionAndKind()
 
 	installation := &operatorv1alpha1.Installation{
@@ -232,7 +238,7 @@ func ApplyInstallationYAML(ctx context.Context, applier Applier, options ApplyIn
 			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "installation",
+			Name: installationName,
 		},
 		Spec: operatorv1alpha1.InstallationSpec{
 			Registry: options.ImageRegistry,
@@ -503,14 +509,9 @@ func marshalManifests(mf *manifests) (io.Reader, error) {
 	installationBuffer := bytes.NewReader(installationData)
 
 	if _, err = io.Copy(buf, installationBuffer); err != nil {
-		return nil, fmt.Errorf("Error writing installation data to buffer: %w", err)
+		return nil, fmt.Errorf("error writing installation data to buffer: %w", err)
 	}
-
 	return buf, nil
-}
-
-func applyVenafiIssuerResources(manifestTemplates *manifests, options ApplyOperatorYAMLOptions) error {
-	return nil
 }
 
 func applyCertManagerVersion(manifestTemplates *manifests, options ApplyInstallationYAMLOptions) {

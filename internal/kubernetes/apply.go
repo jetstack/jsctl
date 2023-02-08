@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 
@@ -86,27 +87,34 @@ func (k *KubeConfigApplier) Apply(ctx context.Context, r io.Reader) error {
 		gvk := object.GroupVersionKind()
 		mapping, err := k.mapper.RESTMapping(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 		if err != nil {
-			return err
+			return fmt.Errorf("error creating REST mapping for %s %s: %w", object.GetKind(), object.GetName(), err)
 		}
 
 		client := k.client.Resource(mapping.Resource).Namespace(object.GetNamespace())
 
+		// TODO: output what resource is being created
 		_, err = client.Create(ctx, object, metav1.CreateOptions{})
 		if errors.IsAlreadyExists(err) {
 			data, err := runtime.Encode(unstructured.UnstructuredJSONScheme, object)
 			if err != nil {
-				return err
+				return fmt.Errorf("error encoding %s %s: %w", object.GetKind(), object.GetName(), err)
 			}
 
 			force := true
 
+			// TODO: output what change is being applied
 			_, err = client.Patch(ctx, object.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
 				FieldManager: fieldManager,
 				Force:        &force,
 			})
-			return err
+			if err != nil {
+				return fmt.Errorf("error applying patch update to %s %s: %w", object.GetKind(), object.GetName(), err)
+			}
+			return nil
 		}
-
-		return err
+		if err != nil {
+			return fmt.Errorf("error creating %s %s: %w", object.GetKind(), object.GetName(), err)
+		}
+		return nil
 	})
 }

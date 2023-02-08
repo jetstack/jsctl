@@ -45,8 +45,7 @@ func TestApplyOperatorYAML(t *testing.T) {
 			Version: "v99.99.99",
 		}
 
-		err := operator.ApplyOperatorYAML(ctx, nil, opts)
-		assert.Equal(t, operator.ErrNoManifest, err)
+		assert.Error(t, operator.ApplyOperatorYAML(ctx, nil, opts))
 	})
 }
 
@@ -201,7 +200,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 
 		var secret corev1.Secret
 		var installation operatorv1alpha1.Installation
-		s := strings.Split(string(applier.data.Bytes()), "---")
+		s := strings.Split(applier.data.String(), "---")
 		assert.Len(t, s, 2)
 		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
 		assert.NoError(t, yaml.Unmarshal([]byte(s[1]), &installation))
@@ -517,17 +516,4 @@ func TestApplyInstallationYAML(t *testing.T) {
 		assert.NotNil(t, actual.Spec.Issuers)
 		assert.Equal(t, expected, actual.Spec.Issuers)
 	})
-}
-
-func findIssuer(t *testing.T, name, namespace string, issuers []*operatorv1alpha1.Issuer) *operatorv1alpha1.Issuer {
-	t.Helper()
-
-	for _, issuer := range issuers {
-		if issuer.Name == name && issuer.Namespace == namespace {
-			return issuer
-		}
-	}
-
-	assert.Fail(t, "invalid issuer lookup")
-	return nil
 }

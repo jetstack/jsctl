@@ -25,6 +25,7 @@ func DockerConfigJSON(keyData string) ([]byte, error) {
 	auth := username + ":" + keyData
 	config := docker.ConfigJSON{
 		Auths: map[string]docker.ConfigEntry{
+			// TODO: add the same for US since we now sync images there
 			"eu.gcr.io": {
 				Username: username,
 				Password: string(keyData),
