@@ -350,7 +350,9 @@ func willExpireSoon(cert cmapi.Certificate, buffer time.Duration, nowTime time.T
 
 func isCurrentlyBeingIssued(cert cmapi.Certificate) bool {
 	for _, cond := range cert.Status.Conditions {
-		return cond.Type == cmapi.CertificateConditionIssuing && cond.Status == cmmeta.ConditionTrue
+		if cond.Type == cmapi.CertificateConditionIssuing && cond.Status == cmmeta.ConditionTrue {
+			return true
+		}
 	}
 	return false
 }
