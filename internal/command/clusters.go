@@ -23,6 +23,7 @@ func Clusters() *cobra.Command {
 		// TODO these commands are currently experimental
 		// clusters.CleanUp(run, kubeConfig),
 		// clusters.Backup(run, kubeConfig),
+		// clusters.Uninstall(run, &kubeConfig),
 	)
 
 	return cmd

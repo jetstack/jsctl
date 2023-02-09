@@ -23,6 +23,7 @@ func Experimental() *cobra.Command {
 	experimentalClustersCommands.AddCommand(
 		clusters.CleanUp(run, &kubeConfig),
 		clusters.Backup(run, &kubeConfig),
+		clusters.Uninstall(run, &kubeConfig),
 	)
 
 	cmd.AddCommand(experimentalClustersCommands)

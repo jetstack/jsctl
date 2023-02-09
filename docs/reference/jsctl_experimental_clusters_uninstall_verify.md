@@ -1,11 +1,26 @@
-## jsctl experimental clusters
+## jsctl experimental clusters uninstall verify
 
-Experimental clusters commands
+Check that a cluster is ready to have Jetstack Software uninstalled
+
+### Synopsis
+
+Runs the following checks:
+* Checks secrets containing certificates are safe from garbage collection
+* Checks for any upcoming renewals
+* Checks for certificates currently being issued
+* Checks for certificates that will expire soon
+* Checks for unready certificates
+* Checks for failing issuances
+
+
+```
+jsctl experimental clusters uninstall verify [flags]
+```
 
 ### Options
 
 ```
-  -h, --help   help for clusters
+  -h, --help   help for verify
 ```
 
 ### Options inherited from parent commands
@@ -19,8 +34,5 @@ Experimental clusters commands
 
 ### SEE ALSO
 
-* [jsctl experimental](jsctl_experimental.md)	 - Experimental jsctl commands
-* [jsctl experimental clusters backup](jsctl_experimental_clusters_backup.md)	 - This command outputs the YAML data of Jetstack Secure relevant resources in the cluster
-* [jsctl experimental clusters cleanup](jsctl_experimental_clusters_cleanup.md)	 - Contains commands to prepare a cluster for the uninstallation of Jetstack Secure software
 * [jsctl experimental clusters uninstall](jsctl_experimental_clusters_uninstall.md)	 - Contains commands to check a cluster before the uninstallation of Jetstack Secure software
 
