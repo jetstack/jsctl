@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -57,12 +58,12 @@ func (oj *ObjectScanner) ForEach(ctx context.Context, fn ObjectCallback) error {
 
 			var object unstructured.Unstructured
 			if err := yaml.Unmarshal(buf.Bytes(), &object); err != nil {
-				return err
+				return fmt.Errorf("error unmarshalling %s %s: %w", object.GetKind(), object.GetName(), err)
 			}
 
 			buf.Reset()
 			if err := fn(ctx, &object); err != nil {
-				return err
+				return fmt.Errorf("error applying object %s %s: %w", object.GetKind(), object.GetName(), err)
 			}
 		}
 	}

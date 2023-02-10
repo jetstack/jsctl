@@ -94,7 +94,7 @@ Note: If --auto-registry-credentials and --registry-credentials-path are unset, 
 
 			switch {
 			case errors.Is(err, operator.ErrNoManifest):
-				return fmt.Errorf("operator version %s is unknown or not supported by this version of jsctl. Run 'jsctl operator versions' to see the supported operator versions.", version)
+				return fmt.Errorf("operator version %s is unknown or not supported by this version of jsctl. Run 'jsctl operator versions' to see the supported operator versions", version)
 			case errors.Is(err, operator.ErrNoKeyFile):
 				return fmt.Errorf("no key file exists at %s", registryCredentialsPath)
 			case err != nil:

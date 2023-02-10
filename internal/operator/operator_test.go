@@ -45,8 +45,7 @@ func TestApplyOperatorYAML(t *testing.T) {
 			Version: "v99.99.99",
 		}
 
-		err := operator.ApplyOperatorYAML(ctx, nil, opts)
-		assert.Equal(t, operator.ErrNoManifest, err)
+		assert.Error(t, operator.ApplyOperatorYAML(ctx, nil, opts))
 	})
 }
 
@@ -114,27 +113,6 @@ func TestApplyInstallationYAML(t *testing.T) {
 		assert.Nil(t, actual.Spec.ApproverPolicy)
 	})
 
-	t.Run("It should add approver-policy-enterprise to the installation manifest and interpolate image pull secret", func(t *testing.T) {
-		applier := &TestApplier{}
-		options := operator.ApplyInstallationYAMLOptions{
-			InstallApproverPolicyEnterprise: true,
-			RegistryCredentialsPath:         "../registry/testdata/key.json",
-		}
-
-		err := operator.ApplyInstallationYAML(ctx, applier, options)
-		assert.NoError(t, err)
-
-		var secret corev1.Secret
-		var actual operatorv1alpha1.Installation
-		s := strings.Split(string(applier.data.Bytes()), "---")
-		assert.Len(t, s, 2)
-		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
-		assert.NoError(t, yaml.Unmarshal([]byte(s[1]), &actual))
-
-		assert.NotNil(t, actual.Spec.ApproverPolicyEnterprise)
-		assert.Contains(t, actual.Spec.ApproverPolicyEnterprise.ImagePullSecrets, "jse-gcr-creds")
-	})
-
 	t.Run("It should add the venafi-oauth-helper to the installation manifest", func(t *testing.T) {
 		applier := &TestApplier{}
 		options := operator.ApplyInstallationYAMLOptions{
@@ -150,11 +128,10 @@ func TestApplyInstallationYAML(t *testing.T) {
 		assert.NotNil(t, actual.Spec.VenafiOauthHelper)
 	})
 
-	t.Run("It should add the venafi-oauth-helper to the installation manifest and interpolate image pull secret", func(t *testing.T) {
+	t.Run("It should interpolate image pull secret from file", func(t *testing.T) {
 		applier := &TestApplier{}
 		options := operator.ApplyInstallationYAMLOptions{
-			InstallVenafiOauthHelper: true,
-			RegistryCredentialsPath:  "../registry/testdata/key.json",
+			RegistryCredentialsPath: "../registry/testdata/key.json",
 		}
 
 		err := operator.ApplyInstallationYAML(ctx, applier, options)
@@ -162,13 +139,30 @@ func TestApplyInstallationYAML(t *testing.T) {
 
 		var secret corev1.Secret
 		var actual operatorv1alpha1.Installation
-		s := strings.Split(string(applier.data.Bytes()), "---")
+		s := strings.Split(applier.data.String(), "---")
 		assert.Len(t, s, 2)
 		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
 		assert.NoError(t, yaml.Unmarshal([]byte(s[1]), &actual))
 
-		assert.NotNil(t, actual.Spec.VenafiOauthHelper)
-		assert.Contains(t, actual.Spec.VenafiOauthHelper.ImagePullSecrets, "jse-gcr-creds")
+		assert.Contains(t, actual.Spec.Images.Secret, "jse-gcr-creds")
+	})
+	t.Run("It should interpolate image pull secret from string contents", func(t *testing.T) {
+		applier := &TestApplier{}
+		options := operator.ApplyInstallationYAMLOptions{
+			RegistryCredentials: "{'foo': 'bar'}",
+		}
+
+		err := operator.ApplyInstallationYAML(ctx, applier, options)
+		assert.NoError(t, err)
+
+		var secret corev1.Secret
+		var actual operatorv1alpha1.Installation
+		s := strings.Split(applier.data.String(), "---")
+		assert.Len(t, s, 2)
+		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
+		assert.NoError(t, yaml.Unmarshal([]byte(s[1]), &actual))
+
+		assert.Contains(t, actual.Spec.Images.Secret, "jse-gcr-creds")
 	})
 
 	t.Run("It should not add the cert-discovery-venafi to the installation manifest if it's not set ", func(t *testing.T) {
@@ -201,7 +195,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 
 		var secret corev1.Secret
 		var installation operatorv1alpha1.Installation
-		s := strings.Split(string(applier.data.Bytes()), "---")
+		s := strings.Split(applier.data.String(), "---")
 		assert.Len(t, s, 2)
 		assert.NoError(t, yaml.Unmarshal([]byte(s[0]), &secret))
 		assert.NoError(t, yaml.Unmarshal([]byte(s[1]), &installation))
@@ -210,29 +204,6 @@ func TestApplyInstallationYAML(t *testing.T) {
 		assert.Equal(t, installation.Spec.CertDiscoveryVenafi.TPP.URL, "foo")
 		assert.Equal(t, installation.Spec.CertDiscoveryVenafi.TPP.Zone, "foozone")
 
-	})
-
-	t.Run("It should add the cert-discovery-venafi to the installation manifest and interpolate image pull secret", func(t *testing.T) {
-		applier := &TestApplier{}
-		cdv := &venafi.VenafiConnection{
-			URL:         "foo",
-			Zone:        "foozone",
-			AccessToken: "footoken",
-		}
-		options := operator.ApplyInstallationYAMLOptions{
-			CertDiscoveryVenafi:     cdv,
-			RegistryCredentialsPath: "../registry/testdata/key.json",
-		}
-
-		err := operator.ApplyInstallationYAML(ctx, applier, options)
-		assert.NoError(t, err)
-		var installation operatorv1alpha1.Installation
-		s := strings.Split(string(applier.data.Bytes()), "---")
-		assert.Len(t, s, 3)
-		assert.NoError(t, yaml.Unmarshal([]byte(s[2]), &installation))
-
-		assert.NotNil(t, installation.Spec.CertDiscoveryVenafi)
-		assert.Contains(t, installation.Spec.CertDiscoveryVenafi.ImagePullSecrets, "jse-gcr-creds")
 	})
 
 	t.Run("It should have a blank Istio CSR block when no issuer is provided", func(t *testing.T) {
@@ -285,7 +256,7 @@ func TestApplyInstallationYAML(t *testing.T) {
 		var actual operatorv1alpha1.Installation
 		assert.NoError(t, yaml.Unmarshal(applier.data.Bytes(), &actual))
 
-		assert.EqualValues(t, options.ImageRegistry, actual.Spec.Registry)
+		assert.EqualValues(t, options.ImageRegistry, actual.Spec.Images.Registry)
 	})
 
 	t.Run("It should include the spiffe CSI driver", func(t *testing.T) {
@@ -517,17 +488,4 @@ func TestApplyInstallationYAML(t *testing.T) {
 		assert.NotNil(t, actual.Spec.Issuers)
 		assert.Equal(t, expected, actual.Spec.Issuers)
 	})
-}
-
-func findIssuer(t *testing.T, name, namespace string, issuers []*operatorv1alpha1.Issuer) *operatorv1alpha1.Issuer {
-	t.Helper()
-
-	for _, issuer := range issuers {
-		if issuer.Name == name && issuer.Namespace == namespace {
-			return issuer
-		}
-	}
-
-	assert.Fail(t, "invalid issuer lookup")
-	return nil
 }

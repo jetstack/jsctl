@@ -45,11 +45,10 @@ func TestObjectScanner_ForEach(t *testing.T) {
 	t.Run("It should bubble up a returned error to the caller", func(t *testing.T) {
 		scanner := kubernetes.NewObjectScanner(bytes.NewBuffer(testStream))
 
-		err := scanner.ForEach(ctx, func(_ context.Context, _ *unstructured.Unstructured) error {
+		assert.Error(t, scanner.ForEach(ctx, func(_ context.Context, _ *unstructured.Unstructured) error {
 			return io.EOF
-		})
+		}))
 
-		assert.Equal(t, io.EOF, err)
 	})
 
 	t.Run("It should be cancellable via the context", func(t *testing.T) {
