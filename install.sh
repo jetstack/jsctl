@@ -46,6 +46,12 @@ jsctl_install="${JSCTL_INSTALL:-$HOME/.jsctl}"
 bin_dir="$jsctl_install/bin"
 bin="$bin_dir/$target_file"
 
+if current_install=$( command -v jsctl ) && [ ! -x "$bin" ] && [ "$current_install" != "$bin" ]; then
+    echo "failed to install jsctl to \"$bin\"" >&2
+    echo "jsctl is already installed in another location: \"$current_install\"" >&2
+    exit 1
+fi
+
 if [ ! -d "$bin_dir" ]; then
 	mkdir -p "$bin_dir"
 fi
