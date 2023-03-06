@@ -74,7 +74,7 @@ else
 	echo "  export JSCTL_INSTALL=\"$jsctl_install\""
 	echo "  export PATH=\"\$JSCTL_INSTALL/bin:\$PATH\""
     echo
-	echo "And run \"source $HOME/.bashrc\" to update your current shell"
+	echo "And run \"source $HOME/$shell_profile\" to update your current shell"
     echo
 	echo "Run '$bin --help' to get started"
 fi
