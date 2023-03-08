@@ -30,9 +30,9 @@ $Target = if ($ENV:OS -eq "Windows_NT") {
 
 $DownloadUrl = "https://github.com/jetstack/jsctl/releases/latest/download/${Target}.tar.gz"
 
-$CurrentInstall = (Get-Command jsctl).Definition
-if (!(Test-Path $JsctlExe) -and ($CurrentInstall -ne $JsctlExe)) {
-    throw "Error: tried to install jsctl to "$JsctlExe", but is already installed at "$CurrentInstall"."
+$CurrentInstall = (Get-Command jsctl -ErrorAction SilentlyContinue).Definition
+if (!(Test-Path $JsctlExe) -and $CurrentInstall -and ($CurrentInstall -ne $JsctlExe)) {
+    throw "Error: tried to install jsctl to '$JsctlExe', but is already installed at '$CurrentInstall'."
 }
 
 if (!(Test-Path $BinDir)) {
