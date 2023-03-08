@@ -9,6 +9,7 @@ jsctl auth login [flags]
 ### Options
 
 ```
+      --api-url string       Base URL of the control-plane API (default "https://platform.jetstack.io")
       --credentials string   The location of service account credentials file to use instead of the normal oauth login flow
       --disconnected         Use a disconnected login flow where browser and terminal are not running on the same machine
   -h, --help                 help for login
@@ -17,7 +18,6 @@ jsctl auth login [flags]
 ### Options inherited from parent commands
 
 ```
-      --api-url string      Base URL of the control-plane API (default "https://platform.jetstack.io")
       --config string       Location of the user's jsctl config directory (default "HOME or USERPROFILE/.jsctl")
       --kubeconfig string   Location of the user's kubeconfig file for applying directly to the cluster (default "~/.kube/config")
       --stdout              If provided, manifests are written to stdout rather than applied to the current cluster
