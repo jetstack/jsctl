@@ -65,10 +65,11 @@ echo "jsctl was installed successfully to $bin"
 if command -v jsctl >/dev/null; then
 	echo "Run 'jsctl --help' to get started"
 else
-	case $SHELL in
-	/bin/zsh) shell_profile=".zshrc" ;;
-	*) shell_profile=".bashrc" ;;
-	esac
+	if [ "$SHELL" = "/bin/zsh" ] || [ "$ZSH_NAME" = "zsh" ]; then
+        shell_profile=".zshrc"
+    else
+        shell_profile=".bashrc"
+	fi
     echo
 	echo "Manually add the directory to your \$HOME/$shell_profile (or similar)"
 	echo "  export JSCTL_INSTALL=\"$jsctl_install\""
