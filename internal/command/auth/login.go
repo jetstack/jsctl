@@ -9,13 +9,16 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/jetstack/jsctl/internal/auth"
+	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/command/types"
 	"github.com/jetstack/jsctl/internal/config"
+	"github.com/jetstack/jsctl/internal/organization"
 )
 
 func Login(run types.RunFunc) *cobra.Command {
 	var credentials string
 	var disconnected bool
+	var apiURL string
 
 	cmd := &cobra.Command{
 		Use:   "login",
@@ -40,17 +43,48 @@ func Login(run types.RunFunc) *cobra.Command {
 				return fmt.Errorf("failed to save token: %w", err)
 			}
 
+			// update the context with the new token
+			ctx = auth.TokenToContext(ctx, token)
+
 			fmt.Println("Login succeeded")
 
-			err = config.Save(ctx, &config.Config{})
-			if err != nil {
-				return fmt.Errorf("failed to save configuration: %w", err)
+			cnf := &config.Config{}
+
+			// if the user already has an organization selected, we don't need to do anything
+			cnf, ok := config.FromContext(ctx)
+			if ok && cnf.Organization != "" {
+				return nil
 			}
 
-			cnf, ok := config.FromContext(ctx)
-			if !ok || cnf.Organization == "" {
-				fmt.Println("You do not have an organization selected, select one using: \n\n\tjsctl config set organization [name]\n\n" +
-					"To view organizations you have access to, list them using: \n\n\tjsctl organizations list")
+			http := client.New(ctx, apiURL)
+			organizations, err := organization.List(ctx, http)
+			if err != nil {
+				return fmt.Errorf("failed to list organizations: %w", err)
+			}
+
+			fmt.Println()
+
+			if len(organizations) == 1 {
+				cnf.Organization = organizations[0].ID
+
+				fmt.Println("Automatically selected the only organization you have access to: " + organizations[0].ID)
+			} else {
+				fmt.Println(
+					"You do not have an organization selected, select one using:\n" +
+						"\n" +
+						"\tjsctl config set organization [name]\n" +
+						"\n" +
+						"You have access to the following organizations (run 'jsctl organizations list'):",
+				)
+
+				for _, org := range organizations {
+					fmt.Println("  - " + org.ID)
+				}
+			}
+
+			// save the configuration to disk
+			if err = config.Save(ctx, cnf); err != nil {
+				return fmt.Errorf("failed to save configuration: %w", err)
 			}
 
 			return nil
@@ -70,6 +104,7 @@ func Login(run types.RunFunc) *cobra.Command {
 		false,
 		"Use a disconnected login flow where browser and terminal are not running on the same machine",
 	)
+	flags.StringVar(&apiURL, "api-url", "https://platform.jetstack.io", "Base URL of the control-plane API")
 
 	return cmd
 }
