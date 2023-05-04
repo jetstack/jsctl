@@ -13,6 +13,7 @@ import (
 	"github.com/jetstack/jsctl/internal/client"
 	"github.com/jetstack/jsctl/internal/config"
 	"github.com/jetstack/jsctl/internal/registry"
+	registrylist "github.com/jetstack/jsctl/internal/registry/list"
 )
 
 func Registry() *cobra.Command {
@@ -22,6 +23,7 @@ func Registry() *cobra.Command {
 	}
 
 	cmd.AddCommand(registryAuth())
+	cmd.AddCommand(registryList())
 
 	return cmd
 }
@@ -36,6 +38,56 @@ func registryAuth() *cobra.Command {
 	cmd.AddCommand(registryAuthInit())
 	cmd.AddCommand(registryAuthOutput())
 
+	return cmd
+}
+
+const registryListDescription = `
+Creates a markdown list of all the images in the Jetstack Enterprise Registry
+
+Lists the tags for each image in the OCI repository,
+filters out the semver tags and
+prints the latest stable version (non-prerelease) for each image.
+Images without any semver tags or without a stable version are omitted.
+
+Requirements:
+* gcloud >=426.0.0 (authenticated)
+`
+const registryListExample = `
+# Show only FIPS images
+jsctl registry list  --images-filter 'name~-fips'
+
+# Show non-FIPS images
+jsctl registry list --images-filter 'name!~-fips'
+
+# Show images in the US registry
+jsctl registry list --repository us.gcr.io/jetstack-secure-enterprise
+`
+
+func registryList() *cobra.Command {
+	const (
+		defaultRepository = "eu.gcr.io/jetstack-secure-enterprise"
+	)
+	var (
+		repository   string
+		imagesFilter string
+	)
+	cmd := &cobra.Command{
+		Use:     "list",
+		Short:   "List all the images in the registry",
+		Long:    registryListDescription,
+		Example: registryListExample,
+		Args:    cobra.ExactArgs(0),
+		Run: run(func(ctx context.Context, args []string) error {
+			registrylist.Print(ctx, repository, imagesFilter)
+			return nil
+		}),
+	}
+	flags := cmd.Flags()
+	flags.StringVar(&repository, "repository", defaultRepository, "The OCI repository to search")
+	flags.StringVar(&imagesFilter, "images-filter", "",
+		"A 'gcloud container images list --filter' value, to limit the list of images by keyword. "+
+			"E.g. 'name~fips'. "+
+			"See https://cloud.google.com/sdk/gcloud/reference/topic/filters")
 	return cmd
 }
 
