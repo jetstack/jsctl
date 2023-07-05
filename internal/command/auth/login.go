@@ -48,12 +48,16 @@ func Login(run types.RunFunc) *cobra.Command {
 
 			fmt.Println("Login succeeded")
 
-			cnf := &config.Config{}
+			var cnf *config.Config
 
 			// if the user already has an organization selected, we don't need to do anything
 			cnf, ok := config.FromContext(ctx)
 			if ok && cnf.Organization != "" {
 				return nil
+			}
+			// initiate empty config
+			if !ok {
+				cnf = &config.Config{}
 			}
 
 			http := client.New(ctx, apiURL)
