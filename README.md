@@ -298,15 +298,13 @@ To release a new version of `jsctl`:
 
 3. (If command line flags have changed) regenerate docs with `make docs-gen` locally, commmit and make a PR
 
-## Attributions
+## Special Thanks
 
-When this project was made public commit history was wiped. The current
-maintainers of the project are:
+When this project was made public, its commit history was wiped.
 
-* [Irbe Krumina](https://github.com/irbekrm)
-* [Charlie Egan](https://github.com/charlieegan3)
+We thank these users for their contributions to `jsctl`:
 
-The original author of the project was
-[David Bond](https://github.com/davidsbond).
-[Mathias Gees](https://github.com/MattiasGees) has also contributed to the
-project.
+* [Irbe Krumina](https://github.com/irbekrm) - @irbekrm
+* [Charlie Egan](https://github.com/charlieegan3) - @charlieegan3
+* [David Bond](https://github.com/davidsbond) - @davidsbond
+* [Mathias Gees](https://github.com/MattiasGees) - @MattiasGees
